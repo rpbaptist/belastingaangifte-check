@@ -13,12 +13,12 @@ A tool that helps Dutch taxpayers verify their tax return is complete and correc
 
 ### Report categories
 
-| | Category | Meaning |
-|---|---|---|
-| ✅ | **Gedekt** | Item in both aangifte and jaaropgave, amounts match |
-| ⚠️ | **Jaaropgave ontbreekt** | Item in aangifte but no matching document uploaded |
-| 📝 | **Niet ingevuld in aangifte** | Jaaropgave uploaded but item missing or zero in aangifte |
-| 💡 | **Aandachtspunten** | Substantive flags — e.g. aflossingsvrij hypotheek, buitenlands dividend |
+|     | Category                      | Meaning                                                                 |
+| --- | ----------------------------- | ----------------------------------------------------------------------- |
+| ✅  | **Gedekt**                    | Item in both aangifte and jaaropgave, amounts match                     |
+| ⚠️  | **Jaaropgave ontbreekt**      | Item in aangifte but no matching document uploaded                      |
+| 📝  | **Niet ingevuld in aangifte** | Jaaropgave uploaded but item missing or zero in aangifte                |
+| 💡  | **Aandachtspunten**           | Substantive flags — e.g. aflossingsvrij hypotheek, buitenlands dividend |
 
 ## Tech stack
 
