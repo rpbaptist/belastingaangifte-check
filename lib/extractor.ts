@@ -59,13 +59,14 @@ Rules:
 - Return ONLY the raw JSON object, no markdown fences, no explanation`;
 
 function parseJsonResponse(text: string): unknown {
-  const stripped = text.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();
+  const stripped = text
+    .replace(/^```(?:json)?\s*/m, "")
+    .replace(/\s*```$/m, "")
+    .trim();
   return JSON.parse(stripped);
 }
 
-export async function extractAnnualStatement(
-  pdfBase64: string
-): Promise<AnnualStatementData> {
+export async function extractAnnualStatement(pdfBase64: string): Promise<AnnualStatementData> {
   const response = await client.messages.create({
     model: MODEL,
     max_tokens: 2048,
@@ -105,9 +106,7 @@ export async function extractAnnualStatement(
   return parseJsonResponse(textBlock.text) as AnnualStatementData;
 }
 
-export async function extractTaxReturn(
-  pdfBase64: string
-): Promise<TaxReturnData> {
+export async function extractTaxReturn(pdfBase64: string): Promise<TaxReturnData> {
   const response = await client.messages.create({
     model: MODEL,
     max_tokens: 4096,
