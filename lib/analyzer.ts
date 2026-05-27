@@ -33,7 +33,7 @@ ${rules}
 
 ## Output
 
-Return ONLY a raw JSON object. No markdown fences. No explanation.
+Your response must be a single raw JSON object — nothing before the opening brace, nothing after the closing brace. No markdown fences, no prose, no explanation. If you write anything other than JSON your response will break the parser.
 
 {
   "taxYear": 2023,
@@ -92,11 +92,7 @@ export async function analyzeDocuments(
     messages: [
       {
         role: "user",
-        content: `## Belastingaangifte\n\n${JSON.stringify(taxReturn, null, 2)}\n\n## Jaaropgaves (${annualStatements.length})\n\n${JSON.stringify(annualStatements, null, 2)}\n\nProduce the analysis report.`,
-      },
-      {
-        role: "assistant",
-        content: "{",
+        content: `## Belastingaangifte\n\n${JSON.stringify(taxReturn, null, 2)}\n\n## Jaaropgaves (${annualStatements.length})\n\n${JSON.stringify(annualStatements, null, 2)}\n\nProduce the analysis report. Respond with the raw JSON object only — start your response with \`{\`.`,
       },
     ],
   });
@@ -106,7 +102,7 @@ export async function analyzeDocuments(
     throw new Error("No text response from LLM during analysis");
   }
 
-  const json = ("{" + textBlock.text)
+  const json = textBlock.text
     .replace(/^```(?:json)?\s*/m, "")
     .replace(/\s*```$/m, "")
     .trim();
