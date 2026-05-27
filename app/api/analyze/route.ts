@@ -7,8 +7,8 @@ import type {
   ExtractionError,
 } from "@/lib/types";
 
-// Allow up to 60s — LLM extraction + analysis can be slow
-export const maxDuration = 60;
+// Allow up to 300s — parallel extraction + analysis across many PDFs
+export const maxDuration = 300;
 
 export async function POST(request: NextRequest) {
   let body: AnalyseRequest;
