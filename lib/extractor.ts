@@ -69,7 +69,7 @@ function parseJsonResponse(text: string): unknown {
 export async function extractAnnualStatement(pdfBase64: string): Promise<AnnualStatementData> {
   const response = await client.messages.create({
     model: MODEL,
-    max_tokens: 2048,
+    max_tokens: 4096,
     system: [
       {
         type: "text",
@@ -98,6 +98,9 @@ export async function extractAnnualStatement(pdfBase64: string): Promise<AnnualS
     ],
   });
 
+  if (response.stop_reason === "max_tokens") {
+    throw new Error("Extraction output truncated — PDF may be too large or complex");
+  }
   const textBlock = response.content.find((b) => b.type === "text");
   if (!textBlock || textBlock.type !== "text") {
     throw new Error("No text response from LLM during annual statement extraction");
@@ -109,7 +112,7 @@ export async function extractAnnualStatement(pdfBase64: string): Promise<AnnualS
 export async function extractTaxReturn(pdfBase64: string): Promise<TaxReturnData> {
   const response = await client.messages.create({
     model: MODEL,
-    max_tokens: 4096,
+    max_tokens: 8192,
     system: [
       {
         type: "text",
@@ -138,6 +141,9 @@ export async function extractTaxReturn(pdfBase64: string): Promise<TaxReturnData
     ],
   });
 
+  if (response.stop_reason === "max_tokens") {
+    throw new Error("Extraction output truncated — PDF may be too large or complex");
+  }
   const textBlock = response.content.find((b) => b.type === "text");
   if (!textBlock || textBlock.type !== "text") {
     throw new Error("No text response from LLM during tax return extraction");
