@@ -354,23 +354,25 @@ export default function Home() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <DropZone
-            label="Belastingaangifte"
-            hint="Sleep je aangifte PDF hierheen, of klik om te bladeren"
-            accept="application/pdf"
-            multiple={false}
-            files={aangifte}
-            onFiles={setAangifte}
-          />
+          <div className="grid grid-cols-2 gap-4">
+            <DropZone
+              label="Belastingaangifte"
+              hint="Sleep je aangifte PDF hierheen, of klik om te bladeren"
+              accept="application/pdf"
+              multiple={false}
+              files={aangifte}
+              onFiles={setAangifte}
+            />
 
-          <DropZone
-            label="Jaaropgaves"
-            hint="Sleep één of meerdere jaaropgave PDFs hierheen (ING, Rabobank, DEGIRO, hypotheek, …)"
-            accept="application/pdf"
-            multiple={true}
-            files={jaaropgaves}
-            onFiles={(incoming) => setJaaropgaves((prev) => [...prev, ...incoming])}
-          />
+            <DropZone
+              label="Jaaropgaves"
+              hint="Sleep één of meerdere jaaropgave PDFs hierheen (ING, Rabobank, DEGIRO, hypotheek, …)"
+              accept="application/pdf"
+              multiple={true}
+              files={jaaropgaves}
+              onFiles={(incoming) => setJaaropgaves((prev) => [...prev, ...incoming])}
+            />
+          </div>
 
           <button
             type="submit"
