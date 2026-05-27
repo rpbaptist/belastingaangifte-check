@@ -78,8 +78,8 @@ function DropZone({
         dragging
           ? "border-blue-500 bg-blue-50"
           : files.length
-          ? "border-green-500 bg-green-50"
-          : "border-gray-300 hover:border-gray-400 bg-gray-50"
+            ? "border-green-500 bg-green-50"
+            : "border-gray-300 hover:border-gray-400 bg-gray-50"
       }`}
       onClick={() => inputRef.current?.click()}
       onDragOver={(e) => {
@@ -118,15 +118,7 @@ function DropZone({
 
 // ─── Report sections ──────────────────────────────────────────────────────────
 
-function SectionHeader({
-  icon,
-  title,
-  count,
-}: {
-  icon: string;
-  title: string;
-  count: number;
-}) {
+function SectionHeader({ icon, title, count }: { icon: string; title: string; count: number }) {
   return (
     <div className="flex items-center gap-2 mb-3">
       <span className="text-xl">{icon}</span>
@@ -145,10 +137,7 @@ function CoveredSection({ items }: { items: CoveredItem[] }) {
       <SectionHeader icon="✅" title="Gedekt" count={items.length} />
       <div className="space-y-2">
         {items.map((item, i) => (
-          <div
-            key={i}
-            className="bg-green-50 border border-green-200 rounded-lg px-4 py-3"
-          >
+          <div key={i} className="bg-green-50 border border-green-200 rounded-lg px-4 py-3">
             <div className="flex justify-between items-start gap-4">
               <div>
                 <p className="font-medium text-gray-800 text-sm">{item.field}</p>
@@ -172,21 +161,13 @@ function MissingStatementSection({ items }: { items: MissingStatementItem[] }) {
   if (!items.length) return null;
   return (
     <section className="mb-6">
-      <SectionHeader
-        icon="⚠️"
-        title="Jaaropgave ontbreekt"
-        count={items.length}
-      />
+      <SectionHeader icon="⚠️" title="Jaaropgave ontbreekt" count={items.length} />
       <p className="text-sm text-gray-600 mb-3">
-        Deze posten staan in je aangifte maar er is geen bijbehorende jaaropgave
-        geüpload.
+        Deze posten staan in je aangifte maar er is geen bijbehorende jaaropgave geüpload.
       </p>
       <div className="space-y-2">
         {items.map((item, i) => (
-          <div
-            key={i}
-            className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3"
-          >
+          <div key={i} className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
             <div className="flex justify-between items-start gap-4">
               <div>
                 <p className="font-medium text-gray-800 text-sm">{item.field}</p>
@@ -210,26 +191,16 @@ function NotFilledInSection({ items }: { items: NotFilledInItem[] }) {
   if (!items.length) return null;
   return (
     <section className="mb-6">
-      <SectionHeader
-        icon="📝"
-        title="Niet ingevuld in aangifte"
-        count={items.length}
-      />
+      <SectionHeader icon="📝" title="Niet ingevuld in aangifte" count={items.length} />
       <p className="text-sm text-gray-600 mb-3">
-        Deze rekeningen staan in je jaaropgaves maar lijken te ontbreken in je
-        aangifte.
+        Deze rekeningen staan in je jaaropgaves maar lijken te ontbreken in je aangifte.
       </p>
       <div className="space-y-2">
         {items.map((item, i) => (
-          <div
-            key={i}
-            className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3"
-          >
+          <div key={i} className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
             <div className="flex justify-between items-start gap-4">
               <div>
-                <p className="font-medium text-gray-800 text-sm">
-                  {item.description}
-                </p>
+                <p className="font-medium text-gray-800 text-sm">{item.description}</p>
                 <p className="text-xs text-gray-500 mt-0.5">
                   {item.institution}
                   {item.accountNumber && ` · ${item.accountNumber}`}
@@ -253,10 +224,7 @@ function AttentionPointsSection({ items }: { items: AttentionPoint[] }) {
       <SectionHeader icon="💡" title="Aandachtspunten" count={items.length} />
       <div className="space-y-3">
         {items.map((item, i) => (
-          <div
-            key={i}
-            className="bg-purple-50 border border-purple-200 rounded-lg px-4 py-3"
-          >
+          <div key={i} className="bg-purple-50 border border-purple-200 rounded-lg px-4 py-3">
             <p className="font-semibold text-gray-800 text-sm">{item.title}</p>
             <p className="text-sm text-gray-700 mt-1">{item.explanation}</p>
             {(item.institution || item.accountNumber) && (
@@ -276,8 +244,7 @@ function ExtractionErrorsSection({ errors }: { errors: ExtractionError[] }) {
   return (
     <div className="mb-6 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
       <p className="font-semibold text-red-800 text-sm mb-2">
-        Extractie mislukt voor{" "}
-        {errors.length === 1 ? "één bestand" : `${errors.length} bestanden`}
+        Extractie mislukt voor {errors.length === 1 ? "één bestand" : `${errors.length} bestanden`}
       </p>
       <ul className="space-y-1">
         {errors.map((e, i) => (
@@ -302,9 +269,7 @@ function Report({ report }: { report: AnalysisReport }) {
     <div className="mt-8">
       <div className="flex items-baseline gap-3 mb-6">
         <h2 className="text-xl font-bold text-gray-900">Resultaat</h2>
-        <span className="text-sm text-gray-500">
-          Belastingjaar {report.taxYear}
-        </span>
+        <span className="text-sm text-gray-500">Belastingjaar {report.taxYear}</span>
       </div>
 
       <ExtractionErrorsSection errors={report.extractionErrors} />
@@ -365,19 +330,13 @@ export default function Home() {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(
-          (json as { error?: string }).error ?? `Server error ${res.status}`
-        );
+        throw new Error((json as { error?: string }).error ?? `Server error ${res.status}`);
       }
 
       const data: AnalyseResponse = await res.json();
       setReport(data.report);
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Er is een onbekende fout opgetreden."
-      );
+      setError(err instanceof Error ? err.message : "Er is een onbekende fout opgetreden.");
     } finally {
       setLoading(false);
     }
@@ -389,9 +348,8 @@ export default function Home() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Aangifte Checker</h1>
           <p className="text-gray-500 mt-2">
-            Upload je belastingaangifte en jaaropgaves. De AI vergelijkt de
-            bedragen en geeft aan wat klopt, wat ontbreekt, en waar je op moet
-            letten.
+            Upload je belastingaangifte en jaaropgaves. De AI vergelijkt de bedragen en geeft aan
+            wat klopt, wat ontbreekt, en waar je op moet letten.
           </p>
         </div>
 
@@ -426,12 +384,8 @@ export default function Home() {
         {loading && (
           <div className="mt-8 text-center">
             <div className="inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-            <p className="text-gray-600 mt-3">
-              Documenten worden geanalyseerd…
-            </p>
-            <p className="text-sm text-gray-400 mt-1">
-              Dit duurt ongeveer 30–60 seconden.
-            </p>
+            <p className="text-gray-600 mt-3">Documenten worden geanalyseerd…</p>
+            <p className="text-sm text-gray-400 mt-1">Dit duurt ongeveer 30–60 seconden.</p>
           </div>
         )}
 

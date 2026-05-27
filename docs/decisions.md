@@ -31,6 +31,7 @@ Decisions made during project design, with reasoning. Reference this when resumi
 **Why:** Aangifte entries rarely name the institution explicitly. Programmatic matching rules (by institution name, by field label) are fragile. The analyst can reason about context and edge cases. Account numbers are the natural shared identifier between both document types.
 
 **Alternatives rejected:**
+
 - Match by institution name (too fragile)
 - Match by field/category type (ambiguous with multiple accounts of same type)
 - Deterministic TypeScript matching logic (can't handle edge cases)
@@ -74,6 +75,7 @@ Decisions made during project design, with reasoning. Reference this when resumi
 **Why:** Server-side orchestration is cleaner to read and reason about. A spinner with "documenten worden geanalyseerd..." is sufficient UX for a portfolio piece. Streaming adds client complexity for marginal UX gain.
 
 **Alternatives rejected:**
+
 - Two routes (`/api/extract` + `/api/analyze`) requiring two client calls
 - SSE/streaming response
 
