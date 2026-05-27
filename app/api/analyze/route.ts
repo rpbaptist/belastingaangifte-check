@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { extractAnnualStatement, extractTaxReturn } from "@/lib/extractor";
 import { analyzeDocuments } from "@/lib/analyzer";
-import type {
-  AnalyseRequest,
-  AnalyseResponse,
-  ExtractionError,
-} from "@/lib/types";
+import type { AnalyseRequest, AnalyseResponse, ExtractionError } from "@/lib/types";
 
 // Allow up to 300s — parallel extraction + analysis across many PDFs
 export const maxDuration = 300;
@@ -22,10 +18,7 @@ export async function POST(request: NextRequest) {
   const { taxReturn, taxReturnFilename, annualStatements } = body;
 
   if (!taxReturn) {
-    return NextResponse.json(
-      { error: "taxReturn is required" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "taxReturn is required" }, { status: 400 });
   }
   if (!annualStatements?.length) {
     return NextResponse.json(
@@ -43,9 +36,7 @@ export async function POST(request: NextRequest) {
   // Aangifte failure is fatal — nothing to compare against
   if (taxReturnResult.status === "rejected") {
     const message =
-      taxReturnResult.reason instanceof Error
-        ? taxReturnResult.reason.message
-        : "Unknown error";
+      taxReturnResult.reason instanceof Error ? taxReturnResult.reason.message : "Unknown error";
     return NextResponse.json(
       {
         error: `Could not extract belastingaangifte "${taxReturnFilename}": ${message}`,
@@ -61,10 +52,7 @@ export async function POST(request: NextRequest) {
       if (result.status === "rejected") {
         extractionErrors.push({
           filename: annualStatements[i].filename,
-          error:
-            result.reason instanceof Error
-              ? result.reason.message
-              : "Extraction failed",
+          error: result.reason instanceof Error ? result.reason.message : "Extraction failed",
         });
         return null;
       }
@@ -72,10 +60,7 @@ export async function POST(request: NextRequest) {
     })
     .filter((s): s is NonNullable<typeof s> => s !== null);
 
-  const reportBase = await analyzeDocuments(
-    taxReturnResult.value,
-    successfulStatements
-  );
+  const reportBase = await analyzeDocuments(taxReturnResult.value, successfulStatements);
 
   const response: AnalyseResponse = {
     report: {
