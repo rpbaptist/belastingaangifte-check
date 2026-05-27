@@ -20,6 +20,8 @@ Match aangifte entries to jaaropgave accounts primarily by accountNumber (IBAN).
 
 Amounts match when both sides equal the same full euro amount. The aangifte always contains full euros. Jaaropgave amounts may include cents — round them before comparing.
 
+For bank/broker balances (box 3): the aangifte uses the balance on 1 januari of the tax year. A jaaropgave may report this as "saldo per 1 januari [taxYear]" or as "saldo per 31 december [taxYear-1]" — these are the same date. If the jaaropgave only shows "saldo per 31 december [taxYear]", that balance belongs to the NEXT year's aangifte.
+
 ## Report categories
 
 - **covered**: aangifte entry AND matching jaaropgave account found, amounts match

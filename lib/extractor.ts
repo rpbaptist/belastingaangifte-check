@@ -33,7 +33,8 @@ Rules:
 - Use English keys for amount names
 - metadata holds any non-numeric fields relevant for tax advice (e.g. mortgageType)
 - Omit fields you cannot determine — never guess
-- Return ONLY the raw JSON object, no markdown fences, no explanation`;
+- Return ONLY the raw JSON object, no markdown fences, no explanation
+- IMPORTANT — balance date for box 3: the Belastingdienst uses the balance on 1 januari of the tax year (= 31 december of the preceding year). If the jaaropgave shows both a "saldo per 1 januari [taxYear]" and a "saldo per 31 december [taxYear]", use the 1 januari balance. If only 31 december is shown, that is the correct balance for the FOLLOWING tax year's aangifte — set balance to that value but note it is end-of-year`;
 
 const TAX_RETURN_SYSTEM = `You are a Dutch tax document analyst. Extract structured data from a belastingaangifte (income tax return) PDF issued by the Belastingdienst.
 
