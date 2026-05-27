@@ -1,65 +1,448 @@
-import Image from "next/image";
+"use client";
+
+import { useRef, useState } from "react";
+import type {
+  AnalysisReport,
+  AnalyseRequest,
+  AnalyseResponse,
+  CoveredItem,
+  MissingStatementItem,
+  NotFilledInItem,
+  AttentionPoint,
+  ExtractionError,
+} from "@/lib/types";
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      resolve(dataUrl.split(",")[1]);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function formatEuro(amount: number): string {
+  return new Intl.NumberFormat("nl-NL", {
+    style: "currency",
+    currency: "EUR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+// ─── Upload zone ──────────────────────────────────────────────────────────────
+
+function DropZone({
+  label,
+  hint,
+  accept,
+  multiple,
+  files,
+  onFiles,
+}: {
+  label: string;
+  hint: string;
+  accept: string;
+  multiple: boolean;
+  files: File[];
+  onFiles: (files: File[]) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragging(false);
+    const dropped = Array.from(e.dataTransfer.files).filter(
+      (f) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf")
+    );
+    if (!dropped.length) return;
+    onFiles(multiple ? dropped : [dropped[0]]);
+  }
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const picked = Array.from(e.target.files ?? []);
+    if (!picked.length) return;
+    onFiles(multiple ? picked : [picked[0]]);
+    e.target.value = "";
+  }
+
+  return (
+    <div
+      className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
+        dragging
+          ? "border-blue-500 bg-blue-50"
+          : files.length
+          ? "border-green-500 bg-green-50"
+          : "border-gray-300 hover:border-gray-400 bg-gray-50"
+      }`}
+      onClick={() => inputRef.current?.click()}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragging(true);
+      }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={handleDrop}
+    >
+      <input
+        ref={inputRef}
+        type="file"
+        accept={accept}
+        multiple={multiple}
+        className="hidden"
+        onChange={handleChange}
+      />
+      <p className="font-semibold text-gray-800">{label}</p>
+      <p className="text-sm text-gray-500 mt-1">{hint}</p>
+
+      {files.length > 0 && (
+        <ul className="mt-3 flex flex-wrap gap-2 justify-center">
+          {files.map((f) => (
+            <li
+              key={f.name}
+              className="text-sm text-green-700 bg-white border border-green-200 rounded px-3 py-1"
+            >
+              {f.name}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// ─── Report sections ──────────────────────────────────────────────────────────
+
+function SectionHeader({
+  icon,
+  title,
+  count,
+}: {
+  icon: string;
+  title: string;
+  count: number;
+}) {
+  return (
+    <div className="flex items-center gap-2 mb-3">
+      <span className="text-xl">{icon}</span>
+      <h2 className="font-semibold text-gray-900 text-lg">{title}</h2>
+      <span className="ml-auto text-sm text-gray-500 bg-gray-100 rounded-full px-2 py-0.5">
+        {count}
+      </span>
+    </div>
+  );
+}
+
+function CoveredSection({ items }: { items: CoveredItem[] }) {
+  if (!items.length) return null;
+  return (
+    <section className="mb-6">
+      <SectionHeader icon="✅" title="Gedekt" count={items.length} />
+      <div className="space-y-2">
+        {items.map((item, i) => (
+          <div
+            key={i}
+            className="bg-green-50 border border-green-200 rounded-lg px-4 py-3"
+          >
+            <div className="flex justify-between items-start gap-4">
+              <div>
+                <p className="font-medium text-gray-800 text-sm">{item.field}</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {item.institution}
+                  {item.accountNumber && ` · ${item.accountNumber}`}
+                </p>
+              </div>
+              <p className="text-sm font-semibold text-green-700 shrink-0">
+                {formatEuro(item.amountTaxReturn)}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function MissingStatementSection({ items }: { items: MissingStatementItem[] }) {
+  if (!items.length) return null;
+  return (
+    <section className="mb-6">
+      <SectionHeader
+        icon="⚠️"
+        title="Jaaropgave ontbreekt"
+        count={items.length}
+      />
+      <p className="text-sm text-gray-600 mb-3">
+        Deze posten staan in je aangifte maar er is geen bijbehorende jaaropgave
+        geüpload.
+      </p>
+      <div className="space-y-2">
+        {items.map((item, i) => (
+          <div
+            key={i}
+            className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3"
+          >
+            <div className="flex justify-between items-start gap-4">
+              <div>
+                <p className="font-medium text-gray-800 text-sm">{item.field}</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Box {item.box}
+                  {item.accountNumber && ` · ${item.accountNumber}`}
+                </p>
+              </div>
+              <p className="text-sm font-semibold text-amber-700 shrink-0">
+                {formatEuro(item.amount)}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function NotFilledInSection({ items }: { items: NotFilledInItem[] }) {
+  if (!items.length) return null;
+  return (
+    <section className="mb-6">
+      <SectionHeader
+        icon="📝"
+        title="Niet ingevuld in aangifte"
+        count={items.length}
+      />
+      <p className="text-sm text-gray-600 mb-3">
+        Deze rekeningen staan in je jaaropgaves maar lijken te ontbreken in je
+        aangifte.
+      </p>
+      <div className="space-y-2">
+        {items.map((item, i) => (
+          <div
+            key={i}
+            className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3"
+          >
+            <div className="flex justify-between items-start gap-4">
+              <div>
+                <p className="font-medium text-gray-800 text-sm">
+                  {item.description}
+                </p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {item.institution}
+                  {item.accountNumber && ` · ${item.accountNumber}`}
+                </p>
+              </div>
+              <p className="text-sm font-semibold text-blue-700 shrink-0">
+                {formatEuro(item.amount)}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function AttentionPointsSection({ items }: { items: AttentionPoint[] }) {
+  if (!items.length) return null;
+  return (
+    <section className="mb-6">
+      <SectionHeader icon="💡" title="Aandachtspunten" count={items.length} />
+      <div className="space-y-3">
+        {items.map((item, i) => (
+          <div
+            key={i}
+            className="bg-purple-50 border border-purple-200 rounded-lg px-4 py-3"
+          >
+            <p className="font-semibold text-gray-800 text-sm">{item.title}</p>
+            <p className="text-sm text-gray-700 mt-1">{item.explanation}</p>
+            {(item.institution || item.accountNumber) && (
+              <p className="text-xs text-gray-500 mt-1">
+                {[item.institution, item.accountNumber].filter(Boolean).join(" · ")}
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ExtractionErrorsSection({ errors }: { errors: ExtractionError[] }) {
+  if (!errors.length) return null;
+  return (
+    <div className="mb-6 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+      <p className="font-semibold text-red-800 text-sm mb-2">
+        Extractie mislukt voor{" "}
+        {errors.length === 1 ? "één bestand" : `${errors.length} bestanden`}
+      </p>
+      <ul className="space-y-1">
+        {errors.map((e, i) => (
+          <li key={i} className="text-sm text-red-700">
+            <span className="font-medium">{e.filename}</span>: {e.error}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function Report({ report }: { report: AnalysisReport }) {
+  const hasResults =
+    report.covered.length +
+      report.missingStatement.length +
+      report.notFilledIn.length +
+      report.attentionPoints.length >
+    0;
+
+  return (
+    <div className="mt-8">
+      <div className="flex items-baseline gap-3 mb-6">
+        <h2 className="text-xl font-bold text-gray-900">Resultaat</h2>
+        <span className="text-sm text-gray-500">
+          Belastingjaar {report.taxYear}
+        </span>
+      </div>
+
+      <ExtractionErrorsSection errors={report.extractionErrors} />
+
+      {hasResults ? (
+        <>
+          <CoveredSection items={report.covered} />
+          <MissingStatementSection items={report.missingStatement} />
+          <NotFilledInSection items={report.notFilledIn} />
+          <AttentionPointsSection items={report.attentionPoints} />
+        </>
+      ) : (
+        <p className="text-gray-500 text-sm">Geen resultaten gevonden.</p>
+      )}
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function Home() {
+  const [aangifte, setAangifte] = useState<File[]>([]);
+  const [jaaropgaves, setJaaropgaves] = useState<File[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [report, setReport] = useState<AnalysisReport | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const canSubmit = aangifte.length > 0 && jaaropgaves.length > 0 && !loading;
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!canSubmit) return;
+
+    setLoading(true);
+    setReport(null);
+    setError(null);
+
+    try {
+      const [taxReturnBase64, ...statementBase64s] = await Promise.all([
+        fileToBase64(aangifte[0]),
+        ...jaaropgaves.map(fileToBase64),
+      ]);
+
+      const body: AnalyseRequest = {
+        taxReturn: taxReturnBase64,
+        taxReturnFilename: aangifte[0].name,
+        annualStatements: jaaropgaves.map((f, i) => ({
+          data: statementBase64s[i],
+          filename: f.name,
+        })),
+      };
+
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(
+          (json as { error?: string }).error ?? `Server error ${res.status}`
+        );
+      }
+
+      const data: AnalyseResponse = await res.json();
+      setReport(data.report);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Er is een onbekende fout opgetreden."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <main className="min-h-screen bg-white">
+      <div className="max-w-2xl mx-auto px-4 py-12">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Aangifte Checker</h1>
+          <p className="text-gray-500 mt-2">
+            Upload je belastingaangifte en jaaropgaves. De AI vergelijkt de
+            bedragen en geeft aan wat klopt, wat ontbreekt, en waar je op moet
+            letten.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <DropZone
+            label="Belastingaangifte"
+            hint="Sleep je aangifte PDF hierheen, of klik om te bladeren"
+            accept="application/pdf"
+            multiple={false}
+            files={aangifte}
+            onFiles={setAangifte}
+          />
+
+          <DropZone
+            label="Jaaropgaves"
+            hint="Sleep één of meerdere jaaropgave PDFs hierheen (ING, Rabobank, DEGIRO, hypotheek, …)"
+            accept="application/pdf"
+            multiple={true}
+            files={jaaropgaves}
+            onFiles={(incoming) => setJaaropgaves((prev) => [...prev, ...incoming])}
+          />
+
+          <button
+            type="submit"
+            disabled={!canSubmit}
+            className="w-full py-3 px-6 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+            {loading ? "Bezig met analyseren…" : "Analyseren"}
+          </button>
+        </form>
+
+        {loading && (
+          <div className="mt-8 text-center">
+            <div className="inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <p className="text-gray-600 mt-3">
+              Documenten worden geanalyseerd…
+            </p>
+            <p className="text-sm text-gray-400 mt-1">
+              Dit duurt ongeveer 30–60 seconden.
+            </p>
+          </div>
+        )}
+
+        {error && (
+          <div className="mt-6 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+            <p className="text-sm text-red-800">{error}</p>
+          </div>
+        )}
+
+        {report && <Report report={report} />}
+      </div>
+    </main>
   );
 }
