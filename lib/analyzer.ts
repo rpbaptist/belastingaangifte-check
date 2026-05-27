@@ -86,7 +86,6 @@ export async function analyzeDocuments(
       {
         type: "text",
         text: buildSystemPrompt(rules),
-        // @ts-expect-error cache_control is supported but not yet in all SDK type definitions
         cache_control: { type: "ephemeral" },
       },
     ],
