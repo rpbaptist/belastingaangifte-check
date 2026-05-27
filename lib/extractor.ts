@@ -73,7 +73,6 @@ export async function extractAnnualStatement(
       {
         type: "text",
         text: ANNUAL_STATEMENT_SYSTEM,
-        // @ts-expect-error cache_control is supported but not yet in all SDK type definitions
         cache_control: { type: "ephemeral" },
       },
     ],
@@ -116,7 +115,6 @@ export async function extractTaxReturn(
       {
         type: "text",
         text: TAX_RETURN_SYSTEM,
-        // @ts-expect-error cache_control is supported but not yet in all SDK type definitions
         cache_control: { type: "ephemeral" },
       },
     ],
