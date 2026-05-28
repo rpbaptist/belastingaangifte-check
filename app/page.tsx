@@ -10,6 +10,8 @@ import type {
   NotFilledInItem,
   AttentionPoint,
   ExtractionError,
+  QuestionRequest,
+  QuestionResponse,
 } from "@/lib/types";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -217,22 +219,133 @@ function NotFilledInSection({ items }: { items: NotFilledInItem[] }) {
   );
 }
 
-function AttentionPointsSection({ items }: { items: AttentionPoint[] }) {
+type Message = { role: "user" | "assistant"; content: string };
+
+function AttentionPointCard({
+  item,
+  taxYear,
+}: {
+  item: AttentionPoint;
+  taxYear: number;
+}) {
+  const [open, setOpen] = useState(false);
+  const [question, setQuestion] = useState("");
+  const [history, setHistory] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!question.trim() || loading) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const body: QuestionRequest = { question, attentionPoint: item, taxYear, history };
+      const res = await fetch("/api/question", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error((json as { error?: string }).error ?? `Server error ${res.status}`);
+      }
+      const data: QuestionResponse = await res.json();
+      setHistory((prev) => [
+        ...prev,
+        { role: "user", content: question },
+        { role: "assistant", content: data.answer },
+      ]);
+      setQuestion("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Er is een fout opgetreden.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const buttonLabel = open
+    ? "Verberg gesprek"
+    : history.length > 0
+      ? "Bekijk gesprek"
+      : "Stel een vraag";
+
+  return (
+    <div className="bg-purple-50 border border-purple-200 rounded-lg px-4 py-3">
+      <p className="font-semibold text-gray-800 text-sm">{item.title}</p>
+      <p className="text-sm text-gray-700 mt-1">{item.explanation}</p>
+      {(item.institution || item.accountNumber) && (
+        <p className="text-xs text-gray-500 mt-1">
+          {[item.institution, item.accountNumber].filter(Boolean).join(" · ")}
+        </p>
+      )}
+
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="mt-3 text-xs text-purple-700 hover:text-purple-900 font-medium"
+      >
+        {buttonLabel}
+      </button>
+
+      {open && (
+        <div className="mt-3 space-y-2">
+          {history.map((msg, i) => (
+            <div
+              key={i}
+              className={`text-sm rounded-lg px-3 py-2 whitespace-pre-wrap ${
+                msg.role === "user"
+                  ? "bg-purple-100 text-gray-700"
+                  : "bg-white border border-purple-100 text-gray-800"
+              }`}
+            >
+              {msg.content}
+            </div>
+          ))}
+
+          {loading && (
+            <div className="text-xs text-gray-400 italic px-1">Bezig met antwoorden…</div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-2">
+            <textarea
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              placeholder={history.length > 0 ? "Vervolgvraag…" : "Typ je vraag…"}
+              rows={2}
+              className="w-full text-sm border border-purple-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white"
+            />
+            <button
+              type="submit"
+              disabled={!question.trim() || loading}
+              className="text-xs px-3 py-1.5 rounded-lg font-semibold text-white bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            >
+              {loading ? "Bezig…" : "Verstuur"}
+            </button>
+          </form>
+
+          {error && <p className="text-xs text-red-600">{error}</p>}
+        </div>
+      )}
+
+    </div>
+  );
+}
+
+function AttentionPointsSection({
+  items,
+  taxYear,
+}: {
+  items: AttentionPoint[];
+  taxYear: number;
+}) {
   if (!items.length) return null;
   return (
     <section className="mb-6">
       <SectionHeader icon="💡" title="Aandachtspunten" count={items.length} />
       <div className="space-y-3">
         {items.map((item, i) => (
-          <div key={i} className="bg-purple-50 border border-purple-200 rounded-lg px-4 py-3">
-            <p className="font-semibold text-gray-800 text-sm">{item.title}</p>
-            <p className="text-sm text-gray-700 mt-1">{item.explanation}</p>
-            {(item.institution || item.accountNumber) && (
-              <p className="text-xs text-gray-500 mt-1">
-                {[item.institution, item.accountNumber].filter(Boolean).join(" · ")}
-              </p>
-            )}
-          </div>
+          <AttentionPointCard key={i} item={item} taxYear={taxYear} />
         ))}
       </div>
     </section>
@@ -279,7 +392,7 @@ function Report({ report }: { report: AnalysisReport }) {
           <CoveredSection items={report.covered} />
           <MissingStatementSection items={report.missingStatement} />
           <NotFilledInSection items={report.notFilledIn} />
-          <AttentionPointsSection items={report.attentionPoints} />
+          <AttentionPointsSection items={report.attentionPoints} taxYear={report.taxYear} />
         </>
       ) : (
         <p className="text-gray-500 text-sm">Geen resultaten gevonden.</p>
