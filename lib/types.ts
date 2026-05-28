@@ -93,3 +93,14 @@ export interface AnalyseRequest {
 export interface AnalyseResponse {
   report: AnalysisReport;
 }
+
+export interface QuestionRequest {
+  question: string;
+  attentionPoint: AttentionPoint;
+  taxYear: number;
+  history: Array<{ role: "user" | "assistant"; content: string }>;
+}
+
+export interface QuestionResponse {
+  answer: string;
+}
