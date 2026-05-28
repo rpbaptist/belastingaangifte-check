@@ -18,7 +18,7 @@ function buildSystemPrompt(rules: string): string {
 
 Match aangifte entries to jaaropgave accounts primarily by accountNumber (IBAN). Where no IBAN is available, match by institution type and field context.
 
-Amounts match when they are within €1 of each other after rounding the jaaropgave amount to full euros. The Belastingdienst and financial institutions use slightly different rounding rules (one may ceil where the other floors), so a €1 difference is expected and not a real discrepancy. Treat amounts within €1 as matching.
+Amounts match when they are within €1 of each other. The Belastingdienst allows taxpayers to round amounts to whichever full euro is most favorable: deductions may be rounded up, income and assets may be rounded down. Jaaropgaves show exact cents. A difference of €1 or less between the aangifte and the jaaropgave is therefore expected and correct — treat it as matching.
 
 For bank/broker balances (box 3): the aangifte uses the balance on 1 januari of the tax year. A jaaropgave may report this as "saldo per 1 januari [taxYear]" or as "saldo per 31 december [taxYear-1]" — these are the same date. If the jaaropgave only shows "saldo per 31 december [taxYear]", that balance belongs to the NEXT year's aangifte.
 
