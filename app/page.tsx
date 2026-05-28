@@ -10,6 +10,8 @@ import type {
   NotFilledInItem,
   AttentionPoint,
   ExtractionError,
+  ExtractedData,
+  IncrementalRequest,
   QuestionRequest,
   QuestionResponse,
 } from "@/lib/types";
@@ -408,9 +410,15 @@ export default function Home() {
   const [jaaropgaves, setJaaropgaves] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState<AnalysisReport | null>(null);
+  const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [additionalJaaropgaves, setAdditionalJaaropgaves] = useState<File[]>([]);
+  const [incrementalLoading, setIncrementalLoading] = useState(false);
+  const [incrementalError, setIncrementalError] = useState<string | null>(null);
+
   const canSubmit = aangifte.length > 0 && jaaropgaves.length > 0 && !loading;
+  const canSubmitIncremental = additionalJaaropgaves.length > 0 && !incrementalLoading;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -418,6 +426,8 @@ export default function Home() {
 
     setLoading(true);
     setReport(null);
+    setExtractedData(null);
+    setAdditionalJaaropgaves([]);
     setError(null);
 
     try {
@@ -448,10 +458,53 @@ export default function Home() {
 
       const data: AnalyseResponse = await res.json();
       setReport(data.report);
+      setExtractedData(data.extractedData);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Er is een onbekende fout opgetreden.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleIncremental(e: React.FormEvent) {
+    e.preventDefault();
+    if (!canSubmitIncremental || !extractedData) return;
+
+    setIncrementalLoading(true);
+    setIncrementalError(null);
+
+    try {
+      const statementBase64s = await Promise.all(additionalJaaropgaves.map(fileToBase64));
+
+      const body: IncrementalRequest = {
+        extractedData,
+        additionalStatements: additionalJaaropgaves.map((f, i) => ({
+          data: statementBase64s[i],
+          filename: f.name,
+        })),
+      };
+
+      const res = await fetch("/api/analyze/incremental", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error((json as { error?: string }).error ?? `Server error ${res.status}`);
+      }
+
+      const data: AnalyseResponse = await res.json();
+      setReport(data.report);
+      setExtractedData(data.extractedData);
+      setAdditionalJaaropgaves([]);
+    } catch (err) {
+      setIncrementalError(
+        err instanceof Error ? err.message : "Er is een onbekende fout opgetreden."
+      );
+    } finally {
+      setIncrementalLoading(false);
     }
   }
 
@@ -511,6 +564,47 @@ export default function Home() {
         )}
 
         {report && <Report report={report} />}
+
+        {report && (
+          <div className="mt-8 border-t border-gray-200 pt-8">
+            <h2 className="font-semibold text-gray-900 mb-1">Jaaropgave vergeten?</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Upload een vergeten jaaropgave. Alleen de nieuwe bestanden worden opnieuw verwerkt.
+            </p>
+            <form onSubmit={handleIncremental} className="space-y-3">
+              <DropZone
+                label="Aanvullende jaaropgaves"
+                hint="Sleep de vergeten jaaropgave PDFs hierheen"
+                accept="application/pdf"
+                multiple={true}
+                files={additionalJaaropgaves}
+                onFiles={(incoming) =>
+                  setAdditionalJaaropgaves((prev) => [...prev, ...incoming])
+                }
+              />
+              <button
+                type="submit"
+                disabled={!canSubmitIncremental}
+                className="w-full py-3 px-6 rounded-xl font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              >
+                {incrementalLoading ? "Bezig met verwerken…" : "Analyseer aanvulling"}
+              </button>
+            </form>
+
+            {incrementalLoading && (
+              <div className="mt-6 text-center">
+                <div className="inline-block w-6 h-6 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                <p className="text-gray-600 mt-2 text-sm">Aanvullende jaaropgave wordt verwerkt…</p>
+              </div>
+            )}
+
+            {incrementalError && (
+              <div className="mt-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+                <p className="text-sm text-red-800">{incrementalError}</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </main>
   );
