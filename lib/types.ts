@@ -90,8 +90,19 @@ export interface AnalyseRequest {
   }>;
 }
 
+export interface ExtractedData {
+  taxReturn: TaxReturnData;
+  annualStatements: AnnualStatementData[];
+}
+
 export interface AnalyseResponse {
   report: AnalysisReport;
+  extractedData: ExtractedData;
+}
+
+export interface IncrementalRequest {
+  extractedData: ExtractedData;
+  additionalStatements: Array<{ data: string; filename: string }>;
 }
 
 export interface QuestionRequest {

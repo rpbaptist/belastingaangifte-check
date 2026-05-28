@@ -63,9 +63,10 @@ export async function POST(request: NextRequest) {
   const reportBase = await analyzeDocuments(taxReturnResult.value, successfulStatements);
 
   const response: AnalyseResponse = {
-    report: {
-      ...reportBase,
-      extractionErrors,
+    report: { ...reportBase, extractionErrors },
+    extractedData: {
+      taxReturn: taxReturnResult.value,
+      annualStatements: successfulStatements,
     },
   };
 
