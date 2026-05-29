@@ -59,6 +59,21 @@ Rules:
 - amount is an integer in full euros (Belastingdienst always rounds to full euros)
 - Return ONLY the raw JSON object, no markdown fences, no explanation`;
 
+async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 4): Promise<T> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (err instanceof Anthropic.RateLimitError && attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, 1500 * attempt));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error("unreachable");
+}
+
 function parseJsonResponse(text: string): unknown {
   const stripped = text
     .replace(/^```(?:json)?\s*/m, "")
@@ -68,7 +83,7 @@ function parseJsonResponse(text: string): unknown {
 }
 
 export async function extractAnnualStatement(pdfBase64: string): Promise<AnnualStatementData> {
-  const response = await client.messages.create({
+  const response = await withRetry(() => client.messages.create({
     model: MODEL,
     max_tokens: 4096,
     system: [
@@ -97,7 +112,7 @@ export async function extractAnnualStatement(pdfBase64: string): Promise<AnnualS
         ],
       },
     ],
-  });
+  }));
 
   if (response.stop_reason === "max_tokens") {
     throw new Error("Extraction output truncated — PDF may be too large or complex");
@@ -111,7 +126,7 @@ export async function extractAnnualStatement(pdfBase64: string): Promise<AnnualS
 }
 
 export async function extractTaxReturn(pdfBase64: string): Promise<TaxReturnData> {
-  const response = await client.messages.create({
+  const response = await withRetry(() => client.messages.create({
     model: MODEL,
     max_tokens: 8192,
     system: [
@@ -140,7 +155,7 @@ export async function extractTaxReturn(pdfBase64: string): Promise<TaxReturnData
         ],
       },
     ],
-  });
+  }));
 
   if (response.stop_reason === "max_tokens") {
     throw new Error("Extraction output truncated — PDF may be too large or complex");

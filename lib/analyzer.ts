@@ -26,8 +26,10 @@ For bank/broker balances (box 3): the aangifte uses the balance on 1 januari of 
 
 - **covered**: aangifte entry AND matching jaaropgave account found, amounts match
 - **missingStatement**: aangifte entry exists but no matching jaaropgave was uploaded
-- **notFilledIn**: jaaropgave account exists but missing or zero in the aangifte
+- **notFilledIn**: jaaropgave account exists with a non-zero amount but is missing or zero in the aangifte. Jaaropgave accounts whose own amount is zero must NOT be reported — zero-balance accounts don't have to be included in the aangifte.
 - **attentionPoints**: substantive flags based on document content
+
+A matched pair always belongs in **covered**, even when the underlying account had unusual lifecycle events (mortgage discharged mid-year, account opened or closed during the tax year, partial-year interest). These events are not themselves attention points when the reported amounts agree. Only escalate to **attentionPoints** when the document content reveals a substantive risk (see rules below) AND that risk is not already addressed by a correctly-reported amount.
 
 ## Aandachtspunten rules
 

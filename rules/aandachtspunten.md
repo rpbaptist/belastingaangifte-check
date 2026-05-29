@@ -28,4 +28,4 @@ If total box 3 assets (bank saldo + beleggingen) exceed the heffingsvrij vermoge
 ## Algemeen
 
 **Ontbrekende rekeningnummers**
-If a jaaropgave contains a rekeningnummer that does not appear anywhere in the aangifte (not even as €0), flag it explicitly as potentially forgotten.
+If a jaaropgave contains a rekeningnummer with a non-zero amount that does not appear in the aangifte, flag it as potentially forgotten. Do NOT flag accounts whose jaaropgave amount is zero — those don't need to be reported.
