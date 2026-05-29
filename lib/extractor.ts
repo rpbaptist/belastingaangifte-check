@@ -85,7 +85,14 @@ function parseJsonResponse(text: string): unknown {
     .replace(/^```(?:json)?\s*/m, "")
     .replace(/\s*```$/m, "")
     .trim();
-  return JSON.parse(stripped);
+  try {
+    return JSON.parse(stripped);
+  } catch {
+    // Model returned explanatory text instead of JSON (e.g. wrong document type).
+    // Surface the model's own message — it's more useful than a SyntaxError.
+    const preview = stripped.slice(0, 300).replace(/\s+/g, " ");
+    throw new Error(preview || "Model did not return structured data");
+  }
 }
 
 export async function extractAnnualStatement(pdfBase64: string): Promise<AnnualStatementData> {
