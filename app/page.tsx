@@ -606,7 +606,7 @@ export default function Home() {
             <div style={{ textAlign: "center", marginTop: 30 }}>
               <div className="spin" />
               <p style={{ fontSize: 14, fontWeight: 600, margin: "14px 0 2px" }}>Documenten worden geanalyseerd…</p>
-              <p style={{ fontSize: 13, color: "var(--ink-3)", margin: 0 }}>Dit duurt ongeveer 30–60 seconden.</p>
+              <p style={{ fontSize: 13, color: "var(--ink-3)", margin: 0 }}>Dit kan een paar minuten duren.</p>
             </div>
           )}
 
