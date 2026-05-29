@@ -11,17 +11,17 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    return NextResponse.json({ error: "Ongeldig verzoek" }, { status: 400 });
   }
 
   const { extractedData, additionalStatements } = body;
 
   if (!extractedData?.taxReturn) {
-    return NextResponse.json({ error: "extractedData is required" }, { status: 400 });
+    return NextResponse.json({ error: "Geen eerder geëxtraheerde data ontvangen" }, { status: 400 });
   }
   if (!additionalStatements?.length) {
     return NextResponse.json(
-      { error: "At least one additionalStatement is required" },
+      { error: "Minimaal één aanvullende jaaropgave is vereist" },
       { status: 400 }
     );
   }
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
         extractionErrors.push({
           filename: additionalStatements[i].filename,
           error:
-            result.reason instanceof Error ? result.reason.message : "Extraction failed",
+            result.reason instanceof Error ? result.reason.message : "Extractie mislukt",
         });
         return null;
       }
