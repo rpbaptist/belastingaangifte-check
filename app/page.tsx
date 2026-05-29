@@ -401,6 +401,26 @@ function AttentionPointCard({ item, taxYear }: { item: AttentionPoint; taxYear: 
   );
 }
 
+/* ─── Error card ──────────────────────────────────────────────────────────── */
+
+function ErrorCard({ message, style }: { message: string; style?: React.CSSProperties }) {
+  const m = message.match(/Could not extract belastingaangifte "([^"]+)": ([\s\S]*)/);
+  return (
+    <div className="errcard" style={style}>
+      <span className="ic"><Icon name="alert" size={18} /></span>
+      {m ? (
+        <div>
+          <div style={{ fontWeight: 600, fontSize: 14 }}>Aangifte kon niet worden verwerkt</div>
+          <div className="mono" style={{ fontSize: 12, color: "var(--ink-3)", margin: "3px 0 5px" }}>{m[1]}</div>
+          <div style={{ fontSize: 13, color: "var(--ink-2)" }}>{m[2]}</div>
+        </div>
+      ) : (
+        <p style={{ fontSize: 13.5, color: "var(--ink-2)", margin: 0 }}>{message}</p>
+      )}
+    </div>
+  );
+}
+
 /* ─── Extraction errors ───────────────────────────────────────────────────── */
 
 function ExtractionErrors({ errors }: { errors: ExtractionError[] }) {
@@ -414,10 +434,11 @@ function ExtractionErrors({ errors }: { errors: ExtractionError[] }) {
         <div style={{ fontWeight: 600, fontSize: 14 }}>
           Extractie mislukt voor {errors.length === 1 ? "één bestand" : `${errors.length} bestanden`}
         </div>
-        <ul style={{ margin: "4px 0 0", padding: 0, listStyle: "none" }}>
+        <ul style={{ margin: "6px 0 0", padding: 0, listStyle: "none" }}>
           {errors.map((e, i) => (
-            <li key={i} className="mono" style={{ fontSize: 12.5, color: "var(--ink-2)", marginTop: 2 }}>
-              {e.filename} — {e.error}
+            <li key={i} style={{ marginTop: i > 0 ? 8 : 0 }}>
+              <div className="mono" style={{ fontSize: 12, color: "var(--ink-3)" }}>{e.filename}</div>
+              <div style={{ fontSize: 13, color: "var(--ink-2)", marginTop: 2 }}>{e.error}</div>
             </li>
           ))}
         </ul>
@@ -538,9 +559,7 @@ export default function Home() {
           {incrementalLoading ? "Bezig met verwerken…" : "Analyseer aanvulling"} <Icon name="arrow" size={16} />
         </button>
       </form>
-      {incrementalError && (
-        <p style={{ fontSize: 12.5, color: "var(--warn)", marginTop: 10 }}>{incrementalError}</p>
-      )}
+      {incrementalError && <ErrorCard message={incrementalError} style={{ marginTop: 12 }} />}
     </div>
   );
 
@@ -591,12 +610,7 @@ export default function Home() {
             </div>
           )}
 
-          {error && (
-            <div className="errcard" style={{ marginTop: 20 }}>
-              <span className="ic"><Icon name="alert" size={18} /></span>
-              <p style={{ fontSize: 13.5, color: "var(--ink-2)", margin: 0 }}>{error}</p>
-            </div>
-          )}
+          {error && <ErrorCard message={error} style={{ marginTop: 20 }} />}
 
           <p className="disc">Alleen voor demo — controleer altijd zelf alle informatie.</p>
         </main>
