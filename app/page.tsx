@@ -114,7 +114,7 @@ function DropZone({
         type="file"
         accept={accept}
         multiple={multiple}
-        style={{ display: "none" }}
+        hidden
         onChange={handleChange}
       />
       <div className="dropic">
