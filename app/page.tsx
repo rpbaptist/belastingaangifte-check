@@ -310,7 +310,7 @@ function AttentionPointCard({ item, taxYear }: { item: AttentionPoint; taxYear: 
       });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error((json as { error?: string }).error ?? `Server error ${res.status}`);
+        throw new Error((json as { error?: string }).error ?? `Serverfout ${res.status}`);
       }
       const data: QuestionResponse = await res.json();
       setHistory((prev) => [...prev, { role: "user", content: text }, { role: "assistant", content: data.answer }]);
@@ -404,7 +404,7 @@ function AttentionPointCard({ item, taxYear }: { item: AttentionPoint; taxYear: 
 /* ─── Error card ──────────────────────────────────────────────────────────── */
 
 function ErrorCard({ message, style }: { message: string; style?: React.CSSProperties }) {
-  const m = message.match(/Could not extract belastingaangifte "([^"]+)": ([\s\S]*)/);
+  const m = message.match(/^Aangifte "([^"]+)" kon niet worden verwerkt: ([\s\S]*)/);
   return (
     <div className="errcard" style={style}>
       <span className="ic"><Icon name="alert" size={18} /></span>
@@ -489,7 +489,7 @@ export default function Home() {
       });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error((json as { error?: string }).error ?? `Server error ${res.status}`);
+        throw new Error((json as { error?: string }).error ?? `Serverfout ${res.status}`);
       }
       const data: AnalyseResponse = await res.json();
       setReport(data.report);
@@ -519,7 +519,7 @@ export default function Home() {
       });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error((json as { error?: string }).error ?? `Server error ${res.status}`);
+        throw new Error((json as { error?: string }).error ?? `Serverfout ${res.status}`);
       }
       const data: AnalyseResponse = await res.json();
       setReport(data.report);

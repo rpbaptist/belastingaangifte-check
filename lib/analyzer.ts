@@ -113,7 +113,7 @@ export async function analyzeDocuments(
 
   const textBlock = response.content.find((b) => b.type === "text");
   if (!textBlock || textBlock.type !== "text") {
-    throw new Error("No text response from LLM during analysis");
+    throw new Error("Geen reactie ontvangen tijdens de analyse");
   }
 
   const json = textBlock.text

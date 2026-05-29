@@ -90,8 +90,8 @@ function parseJsonResponse(text: string): unknown {
   } catch {
     // Model returned explanatory text instead of JSON (e.g. wrong document type).
     // Surface the model's own message — it's more useful than a SyntaxError.
-    const preview = stripped.slice(0, 300).replace(/\s+/g, " ");
-    throw new Error(preview || "Model did not return structured data");
+    const preview = stripped.replace(/\s+/g, " ").trim();
+    throw new Error(preview || "Model heeft geen gestructureerde data teruggegeven");
   }
 }
 
@@ -128,11 +128,11 @@ export async function extractAnnualStatement(pdfBase64: string): Promise<AnnualS
   }));
 
   if (response.stop_reason === "max_tokens") {
-    throw new Error("Extraction output truncated — PDF may be too large or complex");
+    throw new Error("Extractie afgebroken — het PDF is mogelijk te groot of te complex");
   }
   const textBlock = response.content.find((b) => b.type === "text");
   if (!textBlock || textBlock.type !== "text") {
-    throw new Error("No text response from LLM during annual statement extraction");
+    throw new Error("Geen reactie ontvangen bij verwerking van de jaaropgave");
   }
 
   return parseJsonResponse(textBlock.text) as AnnualStatementData;
@@ -171,11 +171,11 @@ export async function extractTaxReturn(pdfBase64: string): Promise<TaxReturnData
   }));
 
   if (response.stop_reason === "max_tokens") {
-    throw new Error("Extraction output truncated — PDF may be too large or complex");
+    throw new Error("Extractie afgebroken — het PDF is mogelijk te groot of te complex");
   }
   const textBlock = response.content.find((b) => b.type === "text");
   if (!textBlock || textBlock.type !== "text") {
-    throw new Error("No text response from LLM during tax return extraction");
+    throw new Error("Geen reactie ontvangen bij verwerking van de aangifte");
   }
 
   return parseJsonResponse(textBlock.text) as TaxReturnData;

@@ -12,17 +12,17 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    return NextResponse.json({ error: "Ongeldig verzoek" }, { status: 400 });
   }
 
   const { taxReturn, taxReturnFilename, annualStatements } = body;
 
   if (!taxReturn) {
-    return NextResponse.json({ error: "taxReturn is required" }, { status: 400 });
+    return NextResponse.json({ error: "Geen aangifte ontvangen" }, { status: 400 });
   }
   if (!annualStatements?.length) {
     return NextResponse.json(
-      { error: "At least one annualStatement is required" },
+      { error: "Minimaal één jaaropgave is vereist" },
       { status: 400 }
     );
   }
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       taxReturnResult.reason instanceof Error ? taxReturnResult.reason.message : "Unknown error";
     return NextResponse.json(
       {
-        error: `Could not extract belastingaangifte "${taxReturnFilename}": ${message}`,
+        error: `Aangifte "${taxReturnFilename}" kon niet worden verwerkt: ${message}`,
       },
       { status: 422 }
     );
