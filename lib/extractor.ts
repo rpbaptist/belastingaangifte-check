@@ -17,7 +17,7 @@ Return ONLY a JSON object with this structure:
       "description": "Human-readable label e.g. Spaarrekening",
       "amounts": {
         "bank":     { "balance": 12345, "interest": 234 },
-        "broker":   { "dividend": 500, "foreignDividend": 200, "withholdingTax": 30 },
+        "broker":   { "dividend": 500, "foreignDividend": 200, "dutchDividendTax": 75, "foreignWithholdingTax": 30 },
         "mortgage": { "interestPaid": 8400, "remainingDebt": 180000 }
       }
     }
@@ -31,6 +31,12 @@ Rules:
 - taxYear is the year the document covers (not the year it was printed)
 - All amounts are signed integers in full euros — drop cents, round if necessary. Preserve sign: a negative balance (e.g. credit-card debt "saldo -102") must be extracted as -102, not 102
 - Use English keys for amount names
+- Broker amount semantics:
+  - dividend = total gross dividend received (domestic + foreign combined)
+  - foreignDividend = portion of dividend from foreign sources (only set if the jaaropgave distinguishes)
+  - dutchDividendTax = Nederlandse dividendbelasting ingehouden by the broker on Dutch holdings — 15% domestic voorheffing, verrekenbaar als ingehouden dividendbelasting in the aangifte
+  - foreignWithholdingTax = buitenlandse bronbelasting on foreign dividends — verrekenbaar per belastingverdrag
+  - If the jaaropgave only shows one combined "ingehouden dividendbelasting" line and the holdings are clearly Dutch (e.g. ASN, Nederlandse aandelen), put it in dutchDividendTax. If clearly foreign, foreignWithholdingTax. If mixed and not separable, put it in dutchDividendTax and add metadata note
 - metadata holds any non-numeric fields relevant for tax advice (e.g. mortgageType)
 - Omit fields you cannot determine — never guess
 - Return ONLY the raw JSON object, no markdown fences, no explanation
