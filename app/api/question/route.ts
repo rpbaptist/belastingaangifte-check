@@ -22,13 +22,13 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    return NextResponse.json({ error: "Ongeldig verzoek" }, { status: 400 });
   }
 
   const { question, attentionPoint, taxYear, history } = body;
 
   if (!question?.trim()) {
-    return NextResponse.json({ error: "question is required" }, { status: 400 });
+    return NextResponse.json({ error: "Geen vraag ontvangen" }, { status: 400 });
   }
 
   const context = `## Aandachtspunt (belastingjaar ${taxYear})\n\n${JSON.stringify(attentionPoint, null, 2)}`;
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
 
   const textBlock = response.content.find((b) => b.type === "text");
   if (!textBlock || textBlock.type !== "text") {
-    return NextResponse.json({ error: "No response from advisor" }, { status: 500 });
+    return NextResponse.json({ error: "Geen antwoord ontvangen" }, { status: 500 });
   }
 
   const result: QuestionResponse = { answer: textBlock.text };
