@@ -29,7 +29,7 @@ Return ONLY a JSON object with this structure:
 
 Rules:
 - taxYear is the year the document covers (not the year it was printed)
-- All amounts are integers in full euros — drop cents, round if necessary
+- All amounts are signed integers in full euros — drop cents, round if necessary. Preserve sign: a negative balance (e.g. credit-card debt "saldo -102") must be extracted as -102, not 102
 - Use English keys for amount names
 - metadata holds any non-numeric fields relevant for tax advice (e.g. mortgageType)
 - Omit fields you cannot determine — never guess
@@ -55,8 +55,8 @@ Rules:
 - Extract every entry that has a non-zero amount
 - box is "1", "2", or "3"
 - field is the Dutch label exactly as it appears in the document
-- accountNumber is the IBAN associated with that entry, or null if none is shown
-- amount is an integer in full euros (Belastingdienst always rounds to full euros)
+- accountNumber is the IBAN associated with that entry, or null if none is shown. If the field label embeds a non-IBAN account identifier (e.g. "Bankrekening: ING Creditcardrekening 2100 3093 2649"), extract that identifier into accountNumber as-is, including any spaces — the analyzer normalises whitespace when matching
+- amount is a signed integer in full euros (Belastingdienst always rounds to full euros). Preserve sign: negative entries (e.g. a credit-card debt under "Bankrekeningen") stay negative
 - Return ONLY the raw JSON object, no markdown fences, no explanation`;
 
 async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 4): Promise<T> {

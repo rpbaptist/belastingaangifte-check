@@ -16,9 +16,13 @@ function buildSystemPrompt(rules: string): string {
 
 ## Matching
 
-Match aangifte entries to jaaropgave accounts primarily by accountNumber (IBAN). Where no IBAN is available, match by institution type and field context.
+Match aangifte entries to jaaropgave accounts primarily by accountNumber. Normalise account numbers before comparing: strip all whitespace and punctuation and compare case-insensitively, so "2100 3093 2649" matches "210030932649" and "NL12 INGB 0001 2345 67" matches "NL12INGB0001234567". This applies to credit-card numbers, broker account IDs, and any other non-IBAN identifier. Where no account number is available on either side, match by institution type and field context.
+
+Credit-card balances (negative bank saldi) are box 3 bank items just like savings — match them to the aangifte's "Bankrekening" entries by the normalised account number embedded in the field label.
 
 Amounts match when they are within €1 of each other. The Belastingdienst allows taxpayers to round amounts to whichever full euro is most favorable: deductions may be rounded up, income and assets may be rounded down. Jaaropgaves show exact cents. A difference of €1 or less between the aangifte and the jaaropgave is therefore expected and correct — treat it as matching.
+
+Signs are part of the value: -102 does not match 102. Negative balances (credit-card debt, overdraft) must be compared with their sign preserved.
 
 For bank/broker balances (box 3): the aangifte uses the balance on 1 januari of the tax year. A jaaropgave may report this as "saldo per 1 januari [taxYear]" or as "saldo per 31 december [taxYear-1]" — these are the same date. If the jaaropgave only shows "saldo per 31 december [taxYear]", that balance belongs to the NEXT year's aangifte.
 
@@ -27,7 +31,7 @@ For bank/broker balances (box 3): the aangifte uses the balance on 1 januari of 
 - **covered**: aangifte entry AND matching jaaropgave account found, amounts match
 - **missingStatement**: aangifte entry exists but no matching jaaropgave was uploaded
 - **notFilledIn**: jaaropgave account exists with a non-zero amount but is missing or zero in the aangifte. Jaaropgave accounts whose own amount is zero must NOT be reported — zero-balance accounts don't have to be included in the aangifte.
-- **attentionPoints**: substantive flags based on document content
+- **attentionPoints**: substantive flags based on document content. Only emit an attention point when there is something actionable to flag. Never emit a "non-issue" or "no action needed" attention point (e.g. "the jaaropgave shows no foreign dividend so there is no foreign withholding tax credit to claim"). If a rule's condition is not met, simply omit the attention point — silence is the correct output.
 
 A matched pair always belongs in **covered**, even when the underlying account had unusual lifecycle events (mortgage discharged mid-year, account opened or closed during the tax year, partial-year interest). These events are not themselves attention points when the reported amounts agree. Only escalate to **attentionPoints** when the document content reveals a substantive risk (see rules below) AND that risk is not already addressed by a correctly-reported amount.
 
