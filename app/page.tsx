@@ -514,7 +514,7 @@ export default function Home() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Aangifte Checker</h1>
           <p className="text-gray-500 mt-2">
-            Upload je belastingaangifte en jaaropgaves. De AI vergelijkt de bedragen en geeft aan
+            Upload je belastingaangifte en jaaropgaves. De checker vergelijkt de bedragen en geeft aan
             wat klopt, wat ontbreekt, en waar je op moet letten.
           </p>
         </div>
