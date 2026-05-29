@@ -279,6 +279,7 @@ function AttentionPointCard({
   const [history, setHistory] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resolved, setResolved] = useState(false);
 
   async function sendQuestion(text: string): Promise<boolean> {
     if (!text.trim() || loading) return false;
@@ -328,9 +329,25 @@ function AttentionPointCard({
       : "Stel een vraag";
 
   return (
-    <div className="bg-purple-50 border border-purple-200 rounded-lg px-4 py-3">
-      <p className="font-semibold text-gray-800 text-sm">{item.title}</p>
-      <p className="text-sm text-gray-700 mt-1">{item.explanation}</p>
+    <div
+      className={`rounded-lg px-4 py-3 border ${
+        resolved ? "bg-gray-50 border-gray-200 opacity-70" : "bg-purple-50 border-purple-200"
+      }`}
+    >
+      <p
+        className={`font-semibold text-sm ${
+          resolved ? "text-gray-500 line-through" : "text-gray-800"
+        }`}
+      >
+        {item.title}
+      </p>
+      <p
+        className={`text-sm mt-1 ${
+          resolved ? "text-gray-500 line-through" : "text-gray-700"
+        }`}
+      >
+        {item.explanation}
+      </p>
       {(item.institution || item.accountNumber) && (
         <p className="text-xs text-gray-500 mt-1">
           {[item.institution, item.accountNumber].filter(Boolean).join(" · ")}
@@ -355,6 +372,13 @@ function AttentionPointCard({
             {loading ? "Bezig…" : "Meer uitleg"}
           </button>
         )}
+        <button
+          type="button"
+          onClick={() => setResolved((v) => !v)}
+          className="text-xs text-purple-700 hover:text-purple-900 font-medium ml-auto"
+        >
+          {resolved ? "Markeer als open" : "Markeer als opgelost"}
+        </button>
       </div>
 
       {open && (
