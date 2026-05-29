@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { Icon } from "./Icon";
 import type {
@@ -81,7 +81,6 @@ function DropZone({
   files: File[];
   onFiles: (files: File[]) => void;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
 
   function handleDrop(e: React.DragEvent) {
@@ -102,9 +101,8 @@ function DropZone({
   }
 
   return (
-    <div
+    <label
       className={`drop${dragging ? " dragging" : ""}${files.length ? " filled" : ""}`}
-      onClick={() => inputRef.current?.click()}
       onDragOver={(e) => {
         e.preventDefault();
         setDragging(true);
@@ -113,7 +111,6 @@ function DropZone({
       onDrop={handleDrop}
     >
       <input
-        ref={inputRef}
         type="file"
         accept={accept}
         multiple={multiple}
@@ -134,7 +131,7 @@ function DropZone({
           ))}
         </ul>
       )}
-    </div>
+    </label>
   );
 }
 
