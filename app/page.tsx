@@ -280,13 +280,12 @@ function AttentionPointCard({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!question.trim() || loading) return;
+  async function sendQuestion(text: string): Promise<boolean> {
+    if (!text.trim() || loading) return false;
     setLoading(true);
     setError(null);
     try {
-      const body: QuestionRequest = { question, attentionPoint: item, taxYear, history };
+      const body: QuestionRequest = { question: text, attentionPoint: item, taxYear, history };
       const res = await fetch("/api/question", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -299,15 +298,27 @@ function AttentionPointCard({
       const data: QuestionResponse = await res.json();
       setHistory((prev) => [
         ...prev,
-        { role: "user", content: question },
+        { role: "user", content: text },
         { role: "assistant", content: data.answer },
       ]);
-      setQuestion("");
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Er is een fout opgetreden.");
+      return false;
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const ok = await sendQuestion(question);
+    if (ok) setQuestion("");
+  }
+
+  async function handleMoreDetail() {
+    setOpen(true);
+    await sendQuestion("Geef een uitgebreidere uitleg over dit aandachtspunt.");
   }
 
   const buttonLabel = open
@@ -326,13 +337,25 @@ function AttentionPointCard({
         </p>
       )}
 
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="mt-3 text-xs text-purple-700 hover:text-purple-900 font-medium"
-      >
-        {buttonLabel}
-      </button>
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="text-xs text-purple-700 hover:text-purple-900 font-medium"
+        >
+          {buttonLabel}
+        </button>
+        {history.length === 0 && (
+          <button
+            type="button"
+            onClick={handleMoreDetail}
+            disabled={loading}
+            className="text-xs text-purple-700 hover:text-purple-900 font-medium disabled:text-gray-400 disabled:cursor-not-allowed"
+          >
+            {loading ? "Bezig…" : "Meer uitleg"}
+          </button>
+        )}
+      </div>
 
       {open && (
         <div className="mt-3 space-y-2">
