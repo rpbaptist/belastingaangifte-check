@@ -202,10 +202,11 @@ function Section({
   note?: string;
   children: React.ReactNode;
 }) {
+  const [open, setOpen] = useState(true);
   if (count === 0) return null;
   return (
     <div className={`sec tone-${tone}`}>
-      <div className="sechead">
+      <div className={`sechead${open ? "" : " collapsed"}`} onClick={() => setOpen((v) => !v)}>
         <span className="chip">
           <Icon name={icon} size={16} />
         </span>
@@ -213,9 +214,20 @@ function Section({
           <div className="t">{title}</div>
           {note && <div className="note">{note}</div>}
         </div>
-        <span className="pill num">{count}</span>
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+          <span className="pill num">{count}</span>
+          <Icon
+            name="chevron"
+            size={16}
+            style={{
+              color: "var(--c)",
+              transition: "transform .18s",
+              transform: open ? "rotate(0deg)" : "rotate(-90deg)",
+            }}
+          />
+        </div>
       </div>
-      {children}
+      {open && children}
     </div>
   );
 }

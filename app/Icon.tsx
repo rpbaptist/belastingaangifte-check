@@ -14,7 +14,8 @@ export type IconName =
   | "shield"
   | "plus"
   | "message"
-  | "refresh";
+  | "refresh"
+  | "chevron";
 
 const ICONS: Record<IconName, string[]> = {
   check: ["M20 6 9 17l-5-5"],
@@ -30,6 +31,7 @@ const ICONS: Record<IconName, string[]> = {
   plus: ["M5 12h14", "M12 5v14"],
   message: ["M7.9 20A9 9 0 1 0 4 16.1L2 22z"],
   refresh: ["M3 12a9 9 0 0 1 15-6.7L21 8", "M21 3v5h-5", "M21 12a9 9 0 0 1-15 6.7L3 16", "M3 21v-5h5"],
+  chevron: ["m6 9 6 6 6-6"],
 };
 
 export function Icon({
