@@ -14,7 +14,7 @@ If a mortgage jaaropgave indicates the product is "aflossingsvrij" (interest-onl
 ## Beleggingen / DEGIRO / Broker
 
 **Buitenlands dividend**
-If a broker jaaropgave shows dividend from foreign stocks or funds, flag that the taxpayer may be entitled to a verrekening van buitenlandse bronbelasting (foreign withholding tax credit) in their aangifte.
+Only fire when the jaaropgave actually shows foreignDividend > 0 OR foreignWithholdingTax > 0. Domestic Nederlandse dividendbelasting (dutchDividendTax) does NOT trigger this rule — that is an automatic voorheffing, not a verdragsverrekening. When the rule does fire, flag that the taxpayer may be entitled to verrekening van buitenlandse bronbelasting in their aangifte.
 
 ---
 
