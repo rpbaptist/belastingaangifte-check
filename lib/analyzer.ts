@@ -20,6 +20,12 @@ Match aangifte entries to jaaropgave accounts primarily by accountNumber. Normal
 
 Credit-card balances (negative bank saldi) are box 3 bank items just like savings — match them to the aangifte's "Bankrekening" entries by the normalised account number embedded in the field label.
 
+Dividend tax mapping (broker jaaropgaves):
+- aangifte field "Ingehouden dividendbelasting" (a box 1 voorheffing) → jaaropgave's broker.dutchDividendTax for the same accountNumber. If multiple aangifte entries cover the same account, sum them when comparing.
+- aangifte field "Verrekenbare buitenlandse bronbelasting" / "Buitenlandse bronheffing" → jaaropgave's broker.foreignWithholdingTax.
+- aangifte field "Dividend" (box 2 or box 3 income line) → jaaropgave's broker.dividend.
+A correctly-reported voorheffing belongs in **covered**, not **attentionPoints**.
+
 Amounts match when they are within €1 of each other. The Belastingdienst allows taxpayers to round amounts to whichever full euro is most favorable: deductions may be rounded up, income and assets may be rounded down. Jaaropgaves show exact cents. A difference of €1 or less between the aangifte and the jaaropgave is therefore expected and correct — treat it as matching.
 
 Signs are part of the value: -102 does not match 102. Negative balances (credit-card debt, overdraft) must be compared with their sign preserved.
