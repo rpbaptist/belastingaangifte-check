@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
 import type {
   AnalysisReport,
   AnalyseRequest,
@@ -223,6 +224,49 @@ function NotFilledInSection({ items }: { items: NotFilledInItem[] }) {
 
 type Message = { role: "user" | "assistant"; content: string };
 
+const markdownComponents = {
+  p: (props: React.HTMLAttributes<HTMLParagraphElement>) => (
+    <p className="my-1 first:mt-0 last:mb-0" {...props} />
+  ),
+  ul: (props: React.HTMLAttributes<HTMLUListElement>) => (
+    <ul className="my-1 pl-5 list-disc space-y-0.5" {...props} />
+  ),
+  ol: (props: React.HTMLAttributes<HTMLOListElement>) => (
+    <ol className="my-1 pl-5 list-decimal space-y-0.5" {...props} />
+  ),
+  li: (props: React.HTMLAttributes<HTMLLIElement>) => <li className="leading-snug" {...props} />,
+  strong: (props: React.HTMLAttributes<HTMLElement>) => (
+    <strong className="font-semibold" {...props} />
+  ),
+  em: (props: React.HTMLAttributes<HTMLElement>) => <em className="italic" {...props} />,
+  a: (props: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
+    <a
+      className="underline text-purple-700 hover:text-purple-900"
+      target="_blank"
+      rel="noreferrer"
+      {...props}
+    />
+  ),
+  code: (props: React.HTMLAttributes<HTMLElement>) => (
+    <code className="bg-purple-100 text-purple-900 px-1 py-0.5 rounded text-[0.85em]" {...props} />
+  ),
+  pre: (props: React.HTMLAttributes<HTMLPreElement>) => (
+    <pre
+      className="bg-purple-50 border border-purple-100 rounded p-2 my-2 overflow-x-auto text-xs"
+      {...props}
+    />
+  ),
+  h1: (props: React.HTMLAttributes<HTMLHeadingElement>) => (
+    <h1 className="text-base font-semibold mt-2 mb-1" {...props} />
+  ),
+  h2: (props: React.HTMLAttributes<HTMLHeadingElement>) => (
+    <h2 className="text-sm font-semibold mt-2 mb-1" {...props} />
+  ),
+  h3: (props: React.HTMLAttributes<HTMLHeadingElement>) => (
+    <h3 className="text-sm font-semibold mt-2 mb-1" {...props} />
+  ),
+};
+
 function AttentionPointCard({
   item,
   taxYear,
@@ -295,13 +339,17 @@ function AttentionPointCard({
           {history.map((msg, i) => (
             <div
               key={i}
-              className={`text-sm rounded-lg px-3 py-2 whitespace-pre-wrap ${
+              className={`text-sm rounded-lg px-3 py-2 ${
                 msg.role === "user"
-                  ? "bg-purple-100 text-gray-700"
+                  ? "bg-purple-100 text-gray-700 whitespace-pre-wrap"
                   : "bg-white border border-purple-100 text-gray-800"
               }`}
             >
-              {msg.content}
+              {msg.role === "user" ? (
+                msg.content
+              ) : (
+                <ReactMarkdown components={markdownComponents}>{msg.content}</ReactMarkdown>
+              )}
             </div>
           ))}
 
@@ -313,9 +361,15 @@ function AttentionPointCard({
             <textarea
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
+              onKeyDown={(e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                  e.preventDefault();
+                  void handleSubmit(e);
+                }
+              }}
               placeholder={history.length > 0 ? "Vervolgvraag…" : "Typ je vraag…"}
               rows={2}
-              className="w-full text-sm border border-purple-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white"
+              className="w-full text-sm text-gray-900 placeholder:text-gray-400 border border-purple-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white"
             />
             <button
               type="submit"
