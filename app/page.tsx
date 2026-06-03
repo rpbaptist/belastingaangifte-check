@@ -87,7 +87,7 @@ function DropZone({
     e.preventDefault();
     setDragging(false);
     const dropped = Array.from(e.dataTransfer.files).filter(
-      (f) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"),
+      (f) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf")
     );
     if (!dropped.length) return;
     onFiles(multiple ? dropped : [dropped[0]]);
@@ -110,13 +110,7 @@ function DropZone({
       onDragLeave={() => setDragging(false)}
       onDrop={handleDrop}
     >
-      <input
-        type="file"
-        accept={accept}
-        multiple={multiple}
-        hidden
-        onChange={handleChange}
-      />
+      <input type="file" accept={accept} multiple={multiple} hidden onChange={handleChange} />
       <div className="dropic">
         <Icon name={files.length ? "check" : "upload"} size={20} />
       </div>
@@ -159,9 +153,19 @@ const markdownComponents = {
 type Tone = "pos" | "warn" | "info" | "attn";
 
 function SummaryBoxes({ report }: { report: AnalysisReport }) {
-  const items: { tone: Tone; icon: Parameters<typeof Icon>[0]["name"]; count: number; label: string }[] = [
+  const items: {
+    tone: Tone;
+    icon: Parameters<typeof Icon>[0]["name"];
+    count: number;
+    label: string;
+  }[] = [
     { tone: "pos", icon: "check", count: report.covered.length, label: "Gedekt" },
-    { tone: "warn", icon: "alert", count: report.missingStatement.length, label: "Jaaropgave ontbreekt" },
+    {
+      tone: "warn",
+      icon: "alert",
+      count: report.missingStatement.length,
+      label: "Jaaropgave ontbreekt",
+    },
     { tone: "info", icon: "file-plus", count: report.notFilledIn.length, label: "Niet ingevuld" },
     { tone: "attn", icon: "flag", count: report.attentionPoints.length, label: "Aandachtspunten" },
   ];
@@ -245,9 +249,21 @@ function Row({ f, m, a, tone }: { f: string; m: string; a: string; tone: Tone })
 
 function CoveredSection({ items }: { items: CoveredItem[] }) {
   return (
-    <Section tone="pos" icon="check" title="Gedekt" count={items.length} note="Aangifte en jaaropgave komen overeen">
+    <Section
+      tone="pos"
+      icon="check"
+      title="Gedekt"
+      count={items.length}
+      note="Aangifte en jaaropgave komen overeen"
+    >
       {items.map((c, i) => (
-        <Row key={i} tone="pos" f={c.field} m={`${c.institution}${c.accountNumber ? ` · ${c.accountNumber}` : ""}`} a={formatEuro(c.amountTaxReturn)} />
+        <Row
+          key={i}
+          tone="pos"
+          f={c.field}
+          m={`${c.institution}${c.accountNumber ? ` · ${c.accountNumber}` : ""}`}
+          a={formatEuro(c.amountTaxReturn)}
+        />
       ))}
     </Section>
   );
@@ -263,7 +279,13 @@ function MissingStatementSection({ items }: { items: MissingStatementItem[] }) {
       note="Staat in je aangifte, geen jaaropgave geüpload"
     >
       {items.map((c, i) => (
-        <Row key={i} tone="warn" f={c.field} m={`Box ${c.box}${c.accountNumber ? ` · ${c.accountNumber}` : ""}`} a={formatEuro(c.amount)} />
+        <Row
+          key={i}
+          tone="warn"
+          f={c.field}
+          m={`Box ${c.box}${c.accountNumber ? ` · ${c.accountNumber}` : ""}`}
+          a={formatEuro(c.amount)}
+        />
       ))}
     </Section>
   );
@@ -279,7 +301,13 @@ function NotFilledInSection({ items }: { items: NotFilledInItem[] }) {
       note="Staat in je jaaropgaves, ontbreekt in aangifte"
     >
       {items.map((c, i) => (
-        <Row key={i} tone="info" f={c.description} m={`${c.institution}${c.accountNumber ? ` · ${c.accountNumber}` : ""}`} a={formatEuro(c.amount)} />
+        <Row
+          key={i}
+          tone="info"
+          f={c.description}
+          m={`${c.institution}${c.accountNumber ? ` · ${c.accountNumber}` : ""}`}
+          a={formatEuro(c.amount)}
+        />
       ))}
     </Section>
   );
@@ -289,7 +317,15 @@ function NotFilledInSection({ items }: { items: NotFilledInItem[] }) {
 
 type Message = { role: "user" | "assistant"; content: string };
 
-function AttentionPointCard({ item, taxYear, apiKey }: { item: AttentionPoint; taxYear: number; apiKey: string }) {
+function AttentionPointCard({
+  item,
+  taxYear,
+  apiKey,
+}: {
+  item: AttentionPoint;
+  taxYear: number;
+  apiKey: string;
+}) {
   const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState("");
   const [history, setHistory] = useState<Message[]>([]);
@@ -313,7 +349,11 @@ function AttentionPointCard({ item, taxYear, apiKey }: { item: AttentionPoint; t
         throw new Error((json as { error?: string }).error ?? `Serverfout ${res.status}`);
       }
       const data: QuestionResponse = await res.json();
-      setHistory((prev) => [...prev, { role: "user", content: text }, { role: "assistant", content: data.answer }]);
+      setHistory((prev) => [
+        ...prev,
+        { role: "user", content: text },
+        { role: "assistant", content: data.answer },
+      ]);
       return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Er is een fout opgetreden.");
@@ -334,7 +374,11 @@ function AttentionPointCard({ item, taxYear, apiKey }: { item: AttentionPoint; t
     await sendQuestion("Geef een uitgebreidere uitleg over dit aandachtspunt.");
   }
 
-  const toggleLabel = open ? "Verberg gesprek" : history.length > 0 ? "Bekijk gesprek" : "Stel een vraag";
+  const toggleLabel = open
+    ? "Verberg gesprek"
+    : history.length > 0
+      ? "Bekijk gesprek"
+      : "Stel een vraag";
 
   return (
     <div className={`acard${resolved ? " resolved" : ""}`}>
@@ -346,7 +390,9 @@ function AttentionPointCard({ item, taxYear, apiKey }: { item: AttentionPoint; t
           <div className="t">{item.title}</div>
           <div className="x">{item.explanation}</div>
           {(item.institution || item.accountNumber) && (
-            <div className="meta">{[item.institution, item.accountNumber].filter(Boolean).join(" · ")}</div>
+            <div className="meta">
+              {[item.institution, item.accountNumber].filter(Boolean).join(" · ")}
+            </div>
           )}
         </div>
       </div>
@@ -360,7 +406,10 @@ function AttentionPointCard({ item, taxYear, apiKey }: { item: AttentionPoint; t
             {loading ? "Bezig…" : "Meer uitleg"}
           </button>
         )}
-        <button className={`gbtn mute${resolved ? " on" : ""}`} onClick={() => setResolved((v) => !v)}>
+        <button
+          className={`gbtn mute${resolved ? " on" : ""}`}
+          onClick={() => setResolved((v) => !v)}
+        >
           <Icon name="check-circle" size={14} /> {resolved ? "Opgelost" : "Markeer als opgelost"}
         </button>
       </div>
@@ -394,7 +443,9 @@ function AttentionPointCard({ item, taxYear, apiKey }: { item: AttentionPoint; t
               <Icon name="send" size={16} />
             </button>
           </form>
-          {error && <p style={{ fontSize: 12, color: "var(--warn)", margin: "4px 2px 0" }}>{error}</p>}
+          {error && (
+            <p style={{ fontSize: 12, color: "var(--warn)", margin: "4px 2px 0" }}>{error}</p>
+          )}
         </div>
       )}
     </div>
@@ -407,11 +458,18 @@ function ErrorCard({ message, style }: { message: string; style?: React.CSSPrope
   const m = message.match(/^Aangifte "([^"]+)" kon niet worden verwerkt: ([\s\S]*)/);
   return (
     <div className="errcard" style={style}>
-      <span className="ic"><Icon name="alert" size={18} /></span>
+      <span className="ic">
+        <Icon name="alert" size={18} />
+      </span>
       {m ? (
         <div>
           <div style={{ fontWeight: 600, fontSize: 14 }}>Aangifte kon niet worden verwerkt</div>
-          <div className="mono" style={{ fontSize: 12, color: "var(--ink-3)", margin: "3px 0 5px" }}>{m[1]}</div>
+          <div
+            className="mono"
+            style={{ fontSize: 12, color: "var(--ink-3)", margin: "3px 0 5px" }}
+          >
+            {m[1]}
+          </div>
           <div style={{ fontSize: 13, color: "var(--ink-2)" }}>{m[2]}</div>
         </div>
       ) : (
@@ -432,12 +490,15 @@ function ExtractionErrors({ errors }: { errors: ExtractionError[] }) {
       </span>
       <div>
         <div style={{ fontWeight: 600, fontSize: 14 }}>
-          Extractie mislukt voor {errors.length === 1 ? "één bestand" : `${errors.length} bestanden`}
+          Extractie mislukt voor{" "}
+          {errors.length === 1 ? "één bestand" : `${errors.length} bestanden`}
         </div>
         <ul style={{ margin: "6px 0 0", padding: 0, listStyle: "none" }}>
           {errors.map((e, i) => (
             <li key={i} style={{ marginTop: i > 0 ? 8 : 0 }}>
-              <div className="mono" style={{ fontSize: 12, color: "var(--ink-3)" }}>{e.filename}</div>
+              <div className="mono" style={{ fontSize: 12, color: "var(--ink-3)" }}>
+                {e.filename}
+              </div>
               <div style={{ fontSize: 13, color: "var(--ink-2)", marginTop: 2 }}>{e.error}</div>
             </li>
           ))}
@@ -463,11 +524,14 @@ export default function Home() {
 
   const isEnvKey = !!process.env.NEXT_PUBLIC_DEV_API_KEY;
   const [apiKey, setApiKey] = useState<string>(
-    () => (typeof window !== "undefined" ? sessionStorage.getItem("apiKey") : null)
-      ?? process.env.NEXT_PUBLIC_DEV_API_KEY
-      ?? ""
+    () =>
+      (typeof window !== "undefined" ? sessionStorage.getItem("apiKey") : null) ??
+      process.env.NEXT_PUBLIC_DEV_API_KEY ??
+      ""
   );
-  useEffect(() => { sessionStorage.setItem("apiKey", apiKey); }, [apiKey]);
+  useEffect(() => {
+    sessionStorage.setItem("apiKey", apiKey);
+  }, [apiKey]);
   const [editingKey, setEditingKey] = useState(false);
 
   const canSubmit = aangifte.length > 0 && jaaropgaves.length > 0 && apiKey.length > 0 && !loading;
@@ -489,7 +553,10 @@ export default function Home() {
       const body: AnalyseRequest = {
         taxReturn: taxReturnBase64,
         taxReturnFilename: aangifte[0].name,
-        annualStatements: jaaropgaves.map((f, i) => ({ data: statementBase64s[i], filename: f.name })),
+        annualStatements: jaaropgaves.map((f, i) => ({
+          data: statementBase64s[i],
+          filename: f.name,
+        })),
       };
       const res = await fetch("/api/analyze", {
         method: "POST",
@@ -519,7 +586,10 @@ export default function Home() {
       const statementBase64s = await Promise.all(additionalJaaropgaves.map(fileToBase64));
       const body: IncrementalRequest = {
         extractedData,
-        additionalStatements: additionalJaaropgaves.map((f, i) => ({ data: statementBase64s[i], filename: f.name })),
+        additionalStatements: additionalJaaropgaves.map((f, i) => ({
+          data: statementBase64s[i],
+          filename: f.name,
+        })),
       };
       const res = await fetch("/api/analyze/incremental", {
         method: "POST",
@@ -535,7 +605,9 @@ export default function Home() {
       setExtractedData(data.extractedData);
       setAdditionalJaaropgaves([]);
     } catch (err) {
-      setIncrementalError(err instanceof Error ? err.message : "Er is een onbekende fout opgetreden.");
+      setIncrementalError(
+        err instanceof Error ? err.message : "Er is een onbekende fout opgetreden."
+      );
     } finally {
       setIncrementalLoading(false);
     }
@@ -564,8 +636,14 @@ export default function Home() {
           files={additionalJaaropgaves}
           onFiles={(incoming) => setAdditionalJaaropgaves((prev) => [...prev, ...incoming])}
         />
-        <button className="btn alt" type="submit" disabled={!canSubmitIncremental} style={{ marginTop: 14 }}>
-          {incrementalLoading ? "Bezig met verwerken…" : "Analyseer aanvulling"} <Icon name="arrow" size={16} />
+        <button
+          className="btn alt"
+          type="submit"
+          disabled={!canSubmitIncremental}
+          style={{ marginTop: 14 }}
+        >
+          {incrementalLoading ? "Bezig met verwerken…" : "Analyseer aanvulling"}{" "}
+          <Icon name="arrow" size={16} />
         </button>
       </form>
       {incrementalError && <ErrorCard message={incrementalError} style={{ marginTop: 12 }} />}
@@ -578,31 +656,76 @@ export default function Home() {
       <>
         <TopBar />
         <main className="page">
-          <h1 className="h1" style={{ marginTop: 14 }}>Klopt je aangifte?</h1>
+          <h1 className="h1" style={{ marginTop: 14 }}>
+            Klopt je aangifte?
+          </h1>
           <p className="intro">
-            Upload je belastingaangifte en jaaropgaves. We vergelijken de bedragen en laten rustig zien wat
-            klopt, wat ontbreekt en waar je op moet letten.
+            Upload je belastingaangifte en jaaropgaves. We vergelijken de bedragen en laten rustig
+            zien wat klopt, wat ontbreekt en waar je op moet letten.
           </p>
 
           <form onSubmit={handleSubmit}>
             <div className="icard" style={{ padding: 16, marginTop: 26 }}>
-              {!isEnvKey && (
-                apiKey && !editingKey ? (
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, padding: "8px 12px", background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 10 }}>
+              {!isEnvKey &&
+                (apiKey && !editingKey ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      marginBottom: 16,
+                      padding: "8px 12px",
+                      background: "var(--paper)",
+                      border: "1px solid var(--line)",
+                      borderRadius: 10,
+                    }}
+                  >
                     <Icon name="shield" size={14} style={{ color: "var(--pos)", flexShrink: 0 }} />
-                    <span style={{ fontSize: 12.5, color: "var(--ink-3)", flex: 1 }}>API-sleutel ingesteld</span>
-                    <button type="button" onClick={() => setEditingKey(true)} style={{ fontSize: 12, fontWeight: 600, color: "var(--bronze)", background: "none", border: 0, cursor: "pointer", padding: 0 }}>
+                    <span style={{ fontSize: 12.5, color: "var(--ink-3)", flex: 1 }}>
+                      API-sleutel ingesteld
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setEditingKey(true)}
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: "var(--bronze)",
+                        background: "none",
+                        border: 0,
+                        cursor: "pointer",
+                        padding: 0,
+                      }}
+                    >
                       Wijzigen
                     </button>
                   </div>
                 ) : (
                   <div style={{ marginBottom: 16 }}>
-                    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 6 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "baseline",
+                        justifyContent: "space-between",
+                        marginBottom: 6,
+                      }}
+                    >
                       <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-2)" }}>
                         Jouw Anthropic API-sleutel
                       </label>
                       {editingKey && (
-                        <button type="button" onClick={() => setEditingKey(false)} style={{ fontSize: 12, color: "var(--ink-3)", background: "none", border: 0, cursor: "pointer", padding: 0 }}>
+                        <button
+                          type="button"
+                          onClick={() => setEditingKey(false)}
+                          style={{
+                            fontSize: 12,
+                            color: "var(--ink-3)",
+                            background: "none",
+                            border: 0,
+                            cursor: "pointer",
+                            padding: 0,
+                          }}
+                        >
                           Annuleren
                         </button>
                       )}
@@ -613,7 +736,6 @@ export default function Home() {
                       onChange={(e) => setApiKey(e.target.value)}
                       placeholder="sk-ant-…"
                       autoComplete="off"
-                      // eslint-disable-next-line jsx-a11y/no-autofocus
                       autoFocus={editingKey}
                       style={{
                         width: "100%",
@@ -628,12 +750,16 @@ export default function Home() {
                         boxSizing: "border-box",
                         transition: "border-color .12s",
                       }}
-                      onFocus={(e) => { e.currentTarget.style.borderColor = "var(--bronze)"; }}
-                      onBlur={(e) => { e.currentTarget.style.borderColor = "var(--line-2)"; if (apiKey) setEditingKey(false); }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = "var(--bronze)";
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = "var(--line-2)";
+                        if (apiKey) setEditingKey(false);
+                      }}
                     />
                   </div>
-                )
-              )}
+                ))}
               <div style={{ display: "grid", gap: 12 }}>
                 <DropZone
                   label="Belastingaangifte"
@@ -662,8 +788,12 @@ export default function Home() {
           {loading && (
             <div style={{ textAlign: "center", marginTop: 30 }}>
               <div className="spin" />
-              <p style={{ fontSize: 14, fontWeight: 600, margin: "14px 0 2px" }}>Documenten worden geanalyseerd…</p>
-              <p style={{ fontSize: 13, color: "var(--ink-3)", margin: 0 }}>Dit kan een paar minuten duren.</p>
+              <p style={{ fontSize: 14, fontWeight: 600, margin: "14px 0 2px" }}>
+                Documenten worden geanalyseerd…
+              </p>
+              <p style={{ fontSize: 13, color: "var(--ink-3)", margin: 0 }}>
+                Dit kan een paar minuten duren.
+              </p>
             </div>
           )}
 
@@ -707,8 +837,8 @@ export default function Home() {
           <div className="eyebrow">Resultaat</div>
           <h1 className="h-res">Je controle is klaar</h1>
           <p className="h-sub">
-            {statementCount} {statementCount === 1 ? "jaaropgave" : "jaaropgaves"} vergeleken met je aangifte
-            over {report.taxYear}.
+            {statementCount} {statementCount === 1 ? "jaaropgave" : "jaaropgaves"} vergeleken met je
+            aangifte over {report.taxYear}.
           </p>
         </div>
 
