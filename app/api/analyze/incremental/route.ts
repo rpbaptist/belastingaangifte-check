@@ -18,7 +18,10 @@ export async function POST(request: NextRequest) {
   const { extractedData, additionalStatements } = body;
 
   if (!extractedData?.taxReturn) {
-    return NextResponse.json({ error: "Geen eerder geëxtraheerde data ontvangen" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Geen eerder geëxtraheerde data ontvangen" },
+      { status: 400 }
+    );
   }
   if (!additionalStatements?.length) {
     return NextResponse.json(
@@ -27,7 +30,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { results: newStatements, errors: extractionErrors } = await extractStatements(additionalStatements, apiKey);
+  const { results: newStatements, errors: extractionErrors } = await extractStatements(
+    additionalStatements,
+    apiKey
+  );
 
   const mergedStatements = [...extractedData.annualStatements, ...newStatements];
 
