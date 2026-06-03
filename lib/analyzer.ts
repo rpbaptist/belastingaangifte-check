@@ -33,6 +33,8 @@ Signs are part of the value: -102 does not match 102. Negative balances (credit-
 
 For bank/broker balances (box 3): the aangifte uses the balance on 1 januari of the tax year. A jaaropgave may report this as "saldo per 1 januari [taxYear]" or as "saldo per 31 december [taxYear-1]" — these are the same date. If the jaaropgave only shows "saldo per 31 december [taxYear]", that balance belongs to the NEXT year's aangifte.
 
+Broker accounts with a geldrekening component: some broker jaaropgaves (e.g. ASN Themabeleggen) carry both a geldrekening (cash, in amounts.bank.balance) and a beleggingsrekening (portfolio, in amounts.broker.balance). The aangifte lists these separately in box 3 under the same accountNumber. When matching, compare the aangifte's geldrekening entry against amounts.bank.balance and the aangifte's beleggingen entry against amounts.broker.balance — not against the sum. Both matching correctly is **covered**.
+
 Dividend tax mapping (broker jaaropgaves):
 - aangifte field "Ingehouden dividendbelasting" (a box 1 voorheffing) → jaaropgave's broker.dutchDividendTax for the same accountNumber. If multiple aangifte entries cover the same account, sum them when comparing.
 - aangifte field "Verrekenbare buitenlandse bronbelasting" / "Buitenlandse bronheffing" → jaaropgave's broker.foreignWithholdingTax.

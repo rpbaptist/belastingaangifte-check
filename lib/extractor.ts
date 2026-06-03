@@ -43,7 +43,8 @@ Rules:
 - metadata holds any non-numeric fields relevant for tax advice (e.g. mortgageType)
 - Omit fields you cannot determine — never guess
 - Return ONLY the raw JSON object, no markdown fences, no explanation
-- IMPORTANT — balance date for box 3: the Belastingdienst uses the balance on 1 januari of the tax year (= 31 december of the preceding year). If the jaaropgave shows both a "saldo per 1 januari [taxYear]" and a "saldo per 31 december [taxYear]", use the 1 januari balance. If only 31 december is shown, that is the correct balance for the FOLLOWING tax year's aangifte — set balance to that value but note it is end-of-year`;
+- IMPORTANT — balance date for box 3: the Belastingdienst uses the balance on 1 januari of the tax year (= 31 december of the preceding year). If the jaaropgave shows both a "saldo per 1 januari [taxYear]" and a "saldo per 31 december [taxYear]", use the 1 januari balance. If only 31 december is shown, that is the correct balance for the FOLLOWING tax year's aangifte — set balance to that value but note it is end-of-year
+- Broker accounts with a geldrekening component: many broker jaaropgaves (e.g. ASN) show two separate balances per 1 januari — a geldrekening (cash) and a beleggingsrekening/positieoverzicht (portfolio). The aangifte lists these separately in box 3. When both are present, put them in the SAME account entry using BOTH amount keys: { "bank": { "balance": <geldrekening per 1 jan> }, "broker": { "balance": <portfolio per 1 jan>, "dividend": ... } }. Do NOT combine them into a single number.`;
 
 const TAX_RETURN_SYSTEM = `You are a Dutch tax document analyst. Extract structured data from a belastingaangifte (income tax return) PDF issued by the Belastingdienst.
 
