@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { AnnualStatementData, TaxReturnData } from "./types";
 import { readCache, writeCache } from "./extraction-cache";
+import { parseLlmJson } from "./parse-llm-json";
 
 const client = new Anthropic();
 const MODEL = "claude-haiku-4-5-20251001";
@@ -82,20 +83,6 @@ async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 4): Promise<T> {
   throw new Error("unreachable");
 }
 
-function parseJsonResponse(text: string): unknown {
-  const stripped = text
-    .replace(/^```(?:json)?\s*/m, "")
-    .replace(/\s*```$/m, "")
-    .trim();
-  try {
-    return JSON.parse(stripped);
-  } catch {
-    // Model returned explanatory text instead of JSON (e.g. wrong document type).
-    // Surface the model's own message — it's more useful than a SyntaxError.
-    const preview = stripped.replace(/\s+/g, " ").trim();
-    throw new Error(preview || "Model heeft geen gestructureerde data teruggegeven");
-  }
-}
 
 export async function extractAnnualStatement(pdfBase64: string): Promise<AnnualStatementData> {
   const cached = readCache<AnnualStatementData>(pdfBase64);
@@ -140,7 +127,7 @@ export async function extractAnnualStatement(pdfBase64: string): Promise<AnnualS
     throw new Error("Geen reactie ontvangen bij verwerking van de jaaropgave");
   }
 
-  const result = parseJsonResponse(textBlock.text) as AnnualStatementData;
+  const result = parseLlmJson(textBlock.text) as AnnualStatementData;
   writeCache(pdfBase64, result);
   return result;
 }
@@ -188,7 +175,7 @@ export async function extractTaxReturn(pdfBase64: string): Promise<TaxReturnData
     throw new Error("Geen reactie ontvangen bij verwerking van de aangifte");
   }
 
-  const result = parseJsonResponse(textBlock.text) as TaxReturnData;
+  const result = parseLlmJson(textBlock.text) as TaxReturnData;
   writeCache(pdfBase64, result);
   return result;
 }
