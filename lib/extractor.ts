@@ -3,7 +3,6 @@ import type { AnnualStatementData, TaxReturnData } from "./types";
 import { readCache, writeCache } from "./extraction-cache";
 import { parseLlmJson } from "./parse-llm-json";
 
-const client = new Anthropic();
 const MODEL = "claude-haiku-4-5-20251001";
 
 const ANNUAL_STATEMENT_SYSTEM = `You are a Dutch tax document analyst. Extract structured data from a jaaropgave (annual statement) PDF.
@@ -90,10 +89,11 @@ type ExtractOpts = {
   noResponseError: string;
 };
 
-async function extract<T>(pdfBase64: string, opts: ExtractOpts): Promise<T> {
+async function extract<T>(pdfBase64: string, opts: ExtractOpts, apiKey?: string): Promise<T> {
   const cached = readCache<T>(pdfBase64);
   if (cached) return cached;
 
+  const client = new Anthropic(apiKey ? { apiKey } : {});
   const response = await withRetry(() =>
     client.messages.create({
       model: MODEL,
@@ -127,20 +127,20 @@ async function extract<T>(pdfBase64: string, opts: ExtractOpts): Promise<T> {
   return result;
 }
 
-export function extractAnnualStatement(pdfBase64: string): Promise<AnnualStatementData> {
+export function extractAnnualStatement(pdfBase64: string, apiKey?: string): Promise<AnnualStatementData> {
   return extract<AnnualStatementData>(pdfBase64, {
     systemPrompt: ANNUAL_STATEMENT_SYSTEM,
     maxTokens: 4096,
     userPrompt: "Extract the structured data from this jaaropgave.",
     noResponseError: "Geen reactie ontvangen bij verwerking van de jaaropgave",
-  });
+  }, apiKey);
 }
 
-export function extractTaxReturn(pdfBase64: string): Promise<TaxReturnData> {
+export function extractTaxReturn(pdfBase64: string, apiKey?: string): Promise<TaxReturnData> {
   return extract<TaxReturnData>(pdfBase64, {
     systemPrompt: TAX_RETURN_SYSTEM,
     maxTokens: 8192,
     userPrompt: "Extract all non-zero entries from this belastingaangifte.",
     noResponseError: "Geen reactie ontvangen bij verwerking van de aangifte",
-  });
+  }, apiKey);
 }

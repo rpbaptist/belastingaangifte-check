@@ -9,11 +9,12 @@ export type ExtractionSessionResult =
 
 export async function runExtractionSession(
   taxReturnPdf: string,
-  statements: StatementInput[]
+  statements: StatementInput[],
+  apiKey?: string
 ): Promise<ExtractionSessionResult> {
   const [taxReturnResult, ...statementResults] = await Promise.allSettled([
-    extractTaxReturn(taxReturnPdf),
-    ...statements.map((s) => extractAnnualStatement(s.data)),
+    extractTaxReturn(taxReturnPdf, apiKey),
+    ...statements.map((s) => extractAnnualStatement(s.data, apiKey)),
   ]);
 
   if (taxReturnResult.status === "rejected") {
@@ -41,10 +42,11 @@ export async function runExtractionSession(
 }
 
 export async function extractStatements(
-  statements: StatementInput[]
+  statements: StatementInput[],
+  apiKey?: string
 ): Promise<{ results: AnnualStatementData[]; errors: ExtractionError[] }> {
   const settled = await Promise.allSettled(
-    statements.map((s) => extractAnnualStatement(s.data))
+    statements.map((s) => extractAnnualStatement(s.data, apiKey))
   );
 
   const errors: ExtractionError[] = [];

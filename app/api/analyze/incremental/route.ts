@@ -14,6 +14,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Ongeldig verzoek" }, { status: 400 });
   }
 
+  const apiKey = request.headers.get("x-api-key") ?? undefined;
   const { extractedData, additionalStatements } = body;
 
   if (!extractedData?.taxReturn) {
@@ -26,11 +27,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { results: newStatements, errors: extractionErrors } = await extractStatements(additionalStatements);
+  const { results: newStatements, errors: extractionErrors } = await extractStatements(additionalStatements, apiKey);
 
   const mergedStatements = [...extractedData.annualStatements, ...newStatements];
 
-  const reportBase = await analyzeDocuments(extractedData.taxReturn, mergedStatements);
+  const reportBase = await analyzeDocuments(extractedData.taxReturn, mergedStatements, apiKey);
 
   const response: AnalyseResponse = {
     report: { ...reportBase, extractionErrors },
