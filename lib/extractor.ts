@@ -69,7 +69,7 @@ Rules:
 - amount is a signed number in euros. Preserve sign: negative entries (e.g. a credit-card debt under "Bankrekeningen") stay negative
 - Return ONLY the raw JSON object, no markdown fences, no explanation`;
 
-async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 4): Promise<T> {
+export async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 4): Promise<T> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       return await fn();
