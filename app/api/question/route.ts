@@ -5,7 +5,7 @@ import type { QuestionRequest, QuestionResponse } from "@/lib/types";
 export const maxDuration = 60;
 
 const client = new Anthropic();
-const MODEL = "claude-sonnet-4-6";
+const MODEL = "claude-haiku-4-5-20251001";
 
 const SYSTEM = `Je bent een Nederlandse belastingadviseur. Je beantwoordt vragen over aandachtspunten die zijn gevonden in een belastingaangifte-analyse.
 
