@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { extractAnnualStatement } from "@/lib/extractor";
+import { extractStatements } from "@/lib/extraction-session";
 import { analyzeDocuments } from "@/lib/analyzer";
-import type { AnalyseResponse, ExtractionError, IncrementalRequest } from "@/lib/types";
+import type { AnalyseResponse, IncrementalRequest } from "@/lib/types";
 
 export const maxDuration = 300;
 
@@ -26,24 +26,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const results = await Promise.allSettled(
-    additionalStatements.map((s) => extractAnnualStatement(s.data))
-  );
-
-  const extractionErrors: ExtractionError[] = [];
-  const newStatements = results
-    .map((result, i) => {
-      if (result.status === "rejected") {
-        extractionErrors.push({
-          filename: additionalStatements[i].filename,
-          error:
-            result.reason instanceof Error ? result.reason.message : "Extractie mislukt",
-        });
-        return null;
-      }
-      return result.value;
-    })
-    .filter((s): s is NonNullable<typeof s> => s !== null);
+  const { results: newStatements, errors: extractionErrors } = await extractStatements(additionalStatements);
 
   const mergedStatements = [...extractedData.annualStatements, ...newStatements];
 
