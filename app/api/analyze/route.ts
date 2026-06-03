@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { extractAnnualStatement, extractTaxReturn } from "@/lib/extractor";
+import { runExtractionSession } from "@/lib/extraction-session";
 import { analyzeDocuments } from "@/lib/analyzer";
-import type { AnalyseRequest, AnalyseResponse, ExtractionError } from "@/lib/types";
+import type { AnalyseRequest, AnalyseResponse } from "@/lib/types";
 
 // Allow up to 300s — parallel extraction + analysis across many PDFs
 export const maxDuration = 300;
@@ -27,46 +27,22 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Extract aangifte and all jaaropgaves in parallel
-  const [taxReturnResult, ...statementResults] = await Promise.allSettled([
-    extractTaxReturn(taxReturn),
-    ...annualStatements.map((s) => extractAnnualStatement(s.data)),
-  ]);
+  const session = await runExtractionSession(taxReturn, annualStatements);
 
-  // Aangifte failure is fatal — nothing to compare against
-  if (taxReturnResult.status === "rejected") {
-    const message =
-      taxReturnResult.reason instanceof Error ? taxReturnResult.reason.message : "Unknown error";
+  if (!session.ok) {
     return NextResponse.json(
-      {
-        error: `Aangifte "${taxReturnFilename}" kon niet worden verwerkt: ${message}`,
-      },
+      { error: `Aangifte "${taxReturnFilename}" kon niet worden verwerkt: ${session.message}` },
       { status: 422 }
     );
   }
 
-  // Collect partial failures for jaaropgaves — keep going with what succeeded
-  const extractionErrors: ExtractionError[] = [];
-  const successfulStatements = statementResults
-    .map((result, i) => {
-      if (result.status === "rejected") {
-        extractionErrors.push({
-          filename: annualStatements[i].filename,
-          error: result.reason instanceof Error ? result.reason.message : "Extraction failed",
-        });
-        return null;
-      }
-      return result.value;
-    })
-    .filter((s): s is NonNullable<typeof s> => s !== null);
-
-  const reportBase = await analyzeDocuments(taxReturnResult.value, successfulStatements);
+  const reportBase = await analyzeDocuments(session.taxReturn, session.annualStatements);
 
   const response: AnalyseResponse = {
-    report: { ...reportBase, extractionErrors },
+    report: { ...reportBase, extractionErrors: session.errors },
     extractedData: {
-      taxReturn: taxReturnResult.value,
-      annualStatements: successfulStatements,
+      taxReturn: session.taxReturn,
+      annualStatements: session.annualStatements,
     },
   };
 
