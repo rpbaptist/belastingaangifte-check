@@ -53,11 +53,12 @@ export default function Home() {
     process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY ?? ""
   );
   useEffect(() => {
+    if (isEnvKey) return;
     const stored = sessionStorage.getItem("apiKey");
     if (stored) setApiKey(stored);
   }, []);
   useEffect(() => {
-    sessionStorage.setItem("apiKey", apiKey);
+    if (!isEnvKey) sessionStorage.setItem("apiKey", apiKey);
   }, [apiKey]);
 
   const canSubmit = aangifte.length > 0 && jaaropgaves.length > 0 && apiKey.length > 0 && !loading;
