@@ -59,8 +59,8 @@ export interface AnalysisReport {
 
 export interface CoveredItem {
   field: string;
-  accountNumber: string | null;
-  institution: string | null;
+  accountNumber: string;
+  institution: string;
   amountTaxReturn: number;
   amountStatement: number;
 }
@@ -73,8 +73,8 @@ export interface MissingStatementItem {
 }
 
 export interface NotFilledInItem {
-  accountNumber: string | null;
-  institution: string | null;
+  accountNumber: string;
+  institution: string;
   description: string;
   amount: number;
 }

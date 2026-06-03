@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 const n = () => z.number().transform(Math.round);
+// LLM string fields: coerce null → "" so a missing value never crashes the parser
+const s = () => z.string().nullable().catch(null).transform(v => v ?? "");
 
 const AccountAmountsSchema = z.union([
   z.object({ bank: z.object({ balance: n(), interest: n().optional() }) }),
@@ -42,32 +44,32 @@ export const TaxReturnSchema = z.object({
 });
 
 const CoveredItemSchema = z.object({
-  field: z.string(),
-  accountNumber: z.string().nullable(),
-  institution: z.string().nullable(),
-  amountTaxReturn: z.number().transform(Math.round),
-  amountStatement: z.number().transform(Math.round),
+  field: s(),
+  accountNumber: s(),
+  institution: s(),
+  amountTaxReturn: n(),
+  amountStatement: n(),
 });
 
 const MissingStatementItemSchema = z.object({
-  field: z.string(),
-  accountNumber: z.string().nullable(),
-  amount: z.number().transform(Math.round),
+  field: s(),
+  accountNumber: s(),
+  amount: n(),
   box: z.enum(["1", "2", "3"]),
 });
 
 const NotFilledInItemSchema = z.object({
-  accountNumber: z.string().nullable(),
-  institution: z.string().nullable(),
-  description: z.string(),
-  amount: z.number().transform(Math.round),
+  accountNumber: s(),
+  institution: s(),
+  description: s(),
+  amount: n(),
 });
 
 const AttentionPointSchema = z.object({
-  title: z.string(),
-  explanation: z.string(),
-  institution: z.string().optional(),
-  accountNumber: z.string().nullable().optional(),
+  title: s(),
+  explanation: s(),
+  institution: s().optional(),
+  accountNumber: s().optional(),
 });
 
 export const AnalysisReportSchema = z.object({
