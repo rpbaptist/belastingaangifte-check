@@ -1,8 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { AnnualStatementData, TaxReturnData } from "./types";
+import { readCache, writeCache } from "./extraction-cache";
 
 const client = new Anthropic();
-const MODEL = "claude-sonnet-4-6";
+const MODEL = "claude-haiku-4-5-20251001";
 
 const ANNUAL_STATEMENT_SYSTEM = `You are a Dutch tax document analyst. Extract structured data from a jaaropgave (annual statement) PDF.
 
@@ -96,6 +97,9 @@ function parseJsonResponse(text: string): unknown {
 }
 
 export async function extractAnnualStatement(pdfBase64: string): Promise<AnnualStatementData> {
+  const cached = readCache<AnnualStatementData>(pdfBase64);
+  if (cached) return cached;
+
   const response = await withRetry(() => client.messages.create({
     model: MODEL,
     max_tokens: 4096,
@@ -135,10 +139,15 @@ export async function extractAnnualStatement(pdfBase64: string): Promise<AnnualS
     throw new Error("Geen reactie ontvangen bij verwerking van de jaaropgave");
   }
 
-  return parseJsonResponse(textBlock.text) as AnnualStatementData;
+  const result = parseJsonResponse(textBlock.text) as AnnualStatementData;
+  writeCache(pdfBase64, result);
+  return result;
 }
 
 export async function extractTaxReturn(pdfBase64: string): Promise<TaxReturnData> {
+  const cached = readCache<TaxReturnData>(pdfBase64);
+  if (cached) return cached;
+
   const response = await withRetry(() => client.messages.create({
     model: MODEL,
     max_tokens: 8192,
@@ -178,5 +187,7 @@ export async function extractTaxReturn(pdfBase64: string): Promise<TaxReturnData
     throw new Error("Geen reactie ontvangen bij verwerking van de aangifte");
   }
 
-  return parseJsonResponse(textBlock.text) as TaxReturnData;
+  const result = parseJsonResponse(textBlock.text) as TaxReturnData;
+  writeCache(pdfBase64, result);
+  return result;
 }
