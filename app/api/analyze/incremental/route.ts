@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { extractStatements } from "@/lib/extraction-session";
 import { analyzeDocuments } from "@/lib/analyzer";
+import { handleAnthropicError } from "@/lib/anthropic-error";
 import type { AnalyseResponse, IncrementalRequest } from "@/lib/types";
 
 export const maxDuration = 300;
@@ -30,22 +31,26 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { results: newStatements, errors: extractionErrors } = await extractStatements(
-    additionalStatements,
-    apiKey
-  );
+  try {
+    const { results: newStatements, errors: extractionErrors } = await extractStatements(
+      additionalStatements,
+      apiKey
+    );
 
-  const mergedStatements = [...extractedData.annualStatements, ...newStatements];
+    const mergedStatements = [...extractedData.annualStatements, ...newStatements];
 
-  const reportBase = await analyzeDocuments(extractedData.taxReturn, mergedStatements, apiKey);
+    const reportBase = await analyzeDocuments(extractedData.taxReturn, mergedStatements, apiKey);
 
-  const response: AnalyseResponse = {
-    report: { ...reportBase, extractionErrors },
-    extractedData: {
-      taxReturn: extractedData.taxReturn,
-      annualStatements: mergedStatements,
-    },
-  };
+    const response: AnalyseResponse = {
+      report: { ...reportBase, extractionErrors },
+      extractedData: {
+        taxReturn: extractedData.taxReturn,
+        annualStatements: mergedStatements,
+      },
+    };
 
-  return NextResponse.json(response);
+    return NextResponse.json(response);
+  } catch (err) {
+    return handleAnthropicError(err);
+  }
 }

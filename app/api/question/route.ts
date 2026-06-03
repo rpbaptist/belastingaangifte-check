@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
+import { handleAnthropicError } from "@/lib/anthropic-error";
 import type { QuestionRequest, QuestionResponse } from "@/lib/types";
 
 export const maxDuration = 60;
@@ -42,18 +43,22 @@ export async function POST(request: NextRequest) {
       ]
     : [{ role: "user", content: `${context}\n\n## Vraag\n\n${question}` }];
 
-  const response = await client.messages.create({
-    model: MODEL,
-    max_tokens: 1024,
-    system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
-    messages,
-  });
+  try {
+    const response = await client.messages.create({
+      model: MODEL,
+      max_tokens: 1024,
+      system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
+      messages,
+    });
 
-  const textBlock = response.content.find((b) => b.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
-    return NextResponse.json({ error: "Geen antwoord ontvangen" }, { status: 500 });
+    const textBlock = response.content.find((b) => b.type === "text");
+    if (!textBlock || textBlock.type !== "text") {
+      return NextResponse.json({ error: "Geen antwoord ontvangen" }, { status: 500 });
+    }
+
+    const result: QuestionResponse = { answer: textBlock.text };
+    return NextResponse.json(result);
+  } catch (err) {
+    return handleAnthropicError(err);
   }
-
-  const result: QuestionResponse = { answer: textBlock.text };
-  return NextResponse.json(result);
 }
