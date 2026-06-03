@@ -6,6 +6,7 @@ import { Icon } from "./Icon";
 import type {
   AnalysisReport,
   AnalyseRequest,
+  ChatMessage,
   CoveredItem,
   MissingStatementItem,
   NotFilledInItem,
@@ -22,7 +23,13 @@ import { AnalyseResponseSchema, QuestionResponseSchema, ApiErrorSchema } from "@
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve((reader.result as string).split(",")[1]);
+    reader.onload = () => {
+      if (typeof reader.result !== "string") {
+        reject(new Error("Bestand kon niet worden gelezen"));
+        return;
+      }
+      resolve(reader.result.split(",")[1]);
+    };
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
@@ -255,9 +262,9 @@ function CoveredSection({ items }: { items: CoveredItem[] }) {
       count={items.length}
       note="Aangifte en jaaropgave komen overeen"
     >
-      {items.map((c, i) => (
+      {items.map((c) => (
         <Row
-          key={i}
+          key={c.accountNumber + c.field}
           tone="pos"
           f={c.field}
           m={`${c.institution}${c.accountNumber ? ` · ${c.accountNumber}` : ""}`}
@@ -277,9 +284,9 @@ function MissingStatementSection({ items }: { items: MissingStatementItem[] }) {
       count={items.length}
       note="Staat in je aangifte, geen jaaropgave geüpload"
     >
-      {items.map((c, i) => (
+      {items.map((c) => (
         <Row
-          key={i}
+          key={(c.accountNumber ?? "") + c.field}
           tone="warn"
           f={c.field}
           m={`Box ${c.box}${c.accountNumber ? ` · ${c.accountNumber}` : ""}`}
@@ -299,9 +306,9 @@ function NotFilledInSection({ items }: { items: NotFilledInItem[] }) {
       count={items.length}
       note="Staat in je jaaropgaves, ontbreekt in aangifte"
     >
-      {items.map((c, i) => (
+      {items.map((c) => (
         <Row
-          key={i}
+          key={c.accountNumber}
           tone="info"
           f={c.description}
           m={`${c.institution}${c.accountNumber ? ` · ${c.accountNumber}` : ""}`}
@@ -314,8 +321,6 @@ function NotFilledInSection({ items }: { items: NotFilledInItem[] }) {
 
 /* ─── Aandachtspunt card (logic preserved, restyled) ──────────────────────── */
 
-type Message = { role: "user" | "assistant"; content: string };
-
 function AttentionPointCard({
   item,
   taxYear,
@@ -327,7 +332,7 @@ function AttentionPointCard({
 }) {
   const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState("");
-  const [history, setHistory] = useState<Message[]>([]);
+  const [history, setHistory] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resolved, setResolved] = useState(false);
@@ -416,7 +421,7 @@ function AttentionPointCard({
       {open && (
         <div className="thread">
           {history.map((msg, i) => (
-            <div key={i} className={`bubble ${msg.role === "user" ? "u" : "a"}`}>
+            <div key={`${msg.role}-${i}`} className={`bubble ${msg.role === "user" ? "u" : "a"}`}>
               {msg.role === "user" ? (
                 msg.content
               ) : (
@@ -494,7 +499,7 @@ function ExtractionErrors({ errors }: { errors: ExtractionError[] }) {
         </div>
         <ul style={{ margin: "6px 0 0", padding: 0, listStyle: "none" }}>
           {errors.map((e, i) => (
-            <li key={i} style={{ marginTop: i > 0 ? 8 : 0 }}>
+            <li key={e.filename} style={{ marginTop: i > 0 ? 8 : 0 }}>
               <div className="mono" style={{ fontSize: 12, color: "var(--ink-3)" }}>
                 {e.filename}
               </div>
@@ -868,7 +873,12 @@ export default function Home() {
                 </div>
                 <div className="stack" style={{ marginTop: 14 }}>
                   {report.attentionPoints.map((p, i) => (
-                    <AttentionPointCard key={i} item={p} taxYear={report.taxYear} apiKey={apiKey} />
+                    <AttentionPointCard
+                      key={p.title}
+                      item={p}
+                      taxYear={report.taxYear}
+                      apiKey={apiKey}
+                    />
                   ))}
                 </div>
               </div>
