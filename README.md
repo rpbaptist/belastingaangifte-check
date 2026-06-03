@@ -1,63 +1,46 @@
 # Belastingaangifte Checker
 
-A tool that helps Dutch taxpayers verify their tax return is complete and correct by cross-referencing their tax return (_belastingaangifte_) against annual statements (_jaaropgaves_) from banks, brokers, and mortgage providers.
+> Cross-reference your Dutch tax return against your bank, broker, and mortgage statements in seconds.
 
-> **Portfolio project.** Built to demonstrate fullstack AI product engineering with TypeScript, Next.js, and the Anthropic API.
+**[→ Live demo at aangiftecheck.nl](https://www.aangiftecheck.nl)** — bring your own Anthropic API key.
 
-**Live demo: [aangiftecheck.nl](https://www.aangiftecheck.nl)** — bring your own Anthropic API key.
+---
 
-## What it does
+Upload your tax return (_belastingaangifte_) and annual statements (_jaaropgaves_). Claude reads all the PDFs, extracts the numbers, and tells you what matches, what's missing, and what deserves a closer look.
 
-1. Upload your tax return PDF (the _belastingaangifte_ from Belastingdienst)
-2. Upload one or more annual statements (_jaaropgaves_) — ING, ASN, DEGIRO, mortgage provider, etc.
-3. Claude extracts structured data from all documents
-4. The tool compares them and produces a report
+## Report
 
-### Report categories
+| | Category | Meaning |
+|---|---|---|
+| ✅ | **Gedekt** | In both tax return and annual statement — amounts match |
+| ⚠️ | **Jaaropgave ontbreekt** | In tax return but no annual statement uploaded |
+| 📝 | **Niet ingevuld in aangifte** | Annual statement present but missing or zero in tax return |
+| 💡 | **Aandachtspunten** | Substantive flags — interest-only mortgage, foreign dividend withholding, etc. |
 
-|     | Category                      | Meaning                                                                       |
-| --- | ----------------------------- | ----------------------------------------------------------------------------- |
-| ✅  | **Gedekt**                    | Item in both tax return and annual statement, amounts match                   |
-| ⚠️  | **Jaaropgave ontbreekt**      | Item in tax return but no matching annual statement uploaded                  |
-| 📝  | **Niet ingevuld in aangifte** | Annual statement uploaded but item missing or zero in tax return              |
-| 💡  | **Aandachtspunten**           | Substantive flags — e.g. interest-only mortgage, foreign dividend withholding |
+After the initial report you can add more statements incrementally and ask follow-up questions about any flag.
 
-You can also add annual statements after the initial analysis and ask follow-up questions about any flag.
+## How it works
 
-## Tech stack
+Three steps:
 
-- **Next.js 16** (App Router)
-- **TypeScript**, **Zod**
-- **Anthropic API** — `claude-haiku-4-5` for PDF extraction, `claude-sonnet-4-6` for analysis
-- **Tailwind CSS**
+```
+PDFs → [Extraction] → [Matching] → [Analysis] → Report
+            ↑               ↑            ↑
+       Claude Haiku      TypeScript  Claude Sonnet
+       (parallel)        (tested)
+```
 
-## How the AI works
+**Extraction** — Each PDF is sent as a native document block to Claude Haiku, which returns structured JSON (institution type, account numbers, amounts). Runs in parallel across all uploaded files with prompt caching.
 
-Three steps, the first two in parallel:
+**Matching** — Account numbers from the tax return and annual statements are paired in TypeScript using a normalisation function that strips whitespace, punctuation, and Dutch label prefixes. Deterministic, no LLM.
 
-1. **Extraction** — Each PDF is sent as a native document block to Claude Haiku. Claude identifies the institution type (bank, broker, mortgage), extracts account numbers and relevant amounts, and returns structured JSON validated against a Zod schema. Parallel calls with prompt caching minimise latency and cost.
-
-2. **Matching** — Account numbers from the tax return and annual statements are matched in code using a normalisation function that strips whitespace, punctuation, and Dutch label prefixes (e.g. `Nummer`). No LLM involved — it's deterministic and tested.
-
-3. **Analysis** — Claude Sonnet receives the pre-matched pairs and produces the four-category report. Flags (_aandachtspunten_) are generated from a [seeded rule set](rules/aandachtspunten.md) plus open-ended LLM judgment.
+**Analysis** — Claude Sonnet receives the pre-matched pairs and produces the report. Flags are generated from a [seeded rule set](rules/aandachtspunten.md) plus open-ended LLM judgment.
 
 ## API key
 
-This tool calls the Anthropic API directly from your browser using your own API key — no backend stores your key or your documents.
+Your key never touches the server. The app calls `api.anthropic.com` directly from your browser and stores the key in `sessionStorage` for the duration of the session.
 
-**When using the hosted version:** enter your Anthropic API key in the field at the top of the page. It is kept in `sessionStorage` for the duration of your browser session and never sent anywhere except directly to `api.anthropic.com`.
-
-**When running locally:** set `NEXT_PUBLIC_DEV_API_KEY` to skip entering the key in the UI on every reload:
-
-```bash
-# with mise (recommended)
-mise set NEXT_PUBLIC_DEV_API_KEY=sk-ant-...
-
-# or with a .env.local file
-echo "NEXT_PUBLIC_DEV_API_KEY=sk-ant-..." > .env.local
-```
-
-Get an API key at [console.anthropic.com](https://console.anthropic.com/).
+Get a key at [console.anthropic.com](https://console.anthropic.com/).
 
 ## Running locally
 
@@ -66,40 +49,46 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000), enter your API key, and upload your documents.
+Open [localhost:3000](http://localhost:3000) and enter your API key when prompted.
+
+To skip the key prompt on every reload, set `NEXT_PUBLIC_DEV_API_KEY`:
+
+```bash
+mise set NEXT_PUBLIC_DEV_API_KEY=sk-ant-...   # or add to .env.local
+```
 
 ## Extending the tax flag rules
 
-Tax flags are stored in plain Markdown — no code change needed:
+Flags are defined in plain Markdown — no code change or redeploy needed:
 
 ```
 rules/aandachtspunten.md
 ```
 
-Add a new rule section describing the condition and its tax implication. It will be included in the analyst prompt on the next request.
+Add a rule section with the condition and its tax implication. It is injected into the analyst prompt on the next request.
+
+## Stack
+
+[Next.js 16](https://nextjs.org) · [TypeScript](https://typescriptlang.org) · [Zod](https://zod.dev) · [Tailwind CSS](https://tailwindcss.com) · [Anthropic API](https://anthropic.com)
 
 ## Project structure
 
 ```
 app/
-  page.tsx                        — upload UI and report view
-  api/
-    analyze/route.ts              — full analysis: PDFs in, report out
-    analyze/incremental/route.ts  — add annual statements to an existing analysis
-    question/route.ts             — follow-up Q&A on flagged items
+  page.tsx                        UI — upload, report, Q&A
+  api/analyze/route.ts            full analysis endpoint
+  api/analyze/incremental/        add statements to existing analysis
+  api/question/                   follow-up Q&A on flagged items
 lib/
-  types.ts                        — shared TypeScript types
-  schemas.ts                      — Zod schemas for LLM output validation
-  extractor.ts                    — PDF extraction via Claude Haiku
-  extraction-session.ts           — parallel extraction orchestration
-  extraction-cache.ts             — dev-only disk cache (keyed by PDF hash)
-  account-normalizer.ts           — account number normalisation
-  account-matcher.ts              — JS-side tax return ↔ annual statement matching
-  analyzer.ts                     — comparison report via Claude Sonnet
-  parse-llm-json.ts               — shared JSON parser with Dutch error messages
+  extractor.ts                    PDF → JSON via Claude Haiku
+  extraction-session.ts           parallel orchestration
+  extraction-cache.ts             dev-only cache (SHA-256 keyed)
+  account-normalizer.ts           strip whitespace / prefixes from account numbers
+  account-matcher.ts              tax return ↔ annual statement matching
+  analyzer.ts                     comparison report via Claude Sonnet
+  schemas.ts                      Zod schemas for all LLM output
+  parse-llm-json.ts               shared JSON parser
 rules/
-  aandachtspunten.md              — editable tax flag rules
-docs/
-  adr/                            — architectural decision records
-  agents/                         — agent tooling config (issue tracker, labels)
+  aandachtspunten.md              editable tax flag rules
+docs/adr/                         architectural decision records
 ```
