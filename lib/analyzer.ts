@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import type { AnalysisReport, AnnualStatementData, TaxReturnData } from "./types";
 import { parseLlmJson } from "./parse-llm-json";
+import { matchEntries } from "./account-matcher";
 
 const client = new Anthropic();
 const MODEL = "claude-sonnet-4-6";
@@ -13,19 +14,11 @@ function loadRules(): string {
 }
 
 function buildSystemPrompt(rules: string): string {
-  return `You are a Dutch tax analyst. You receive extracted data from a belastingaangifte and one or more jaaropgaves, and produce a structured comparison report.
+  return `You are a Dutch tax analyst. You receive pre-matched data from a belastingaangifte and one or more jaaropgaves, and produce a structured comparison report.
 
-## Matching
+Account number matching has already been done in code — do not re-match. Work only with the pre-matched structure provided.
 
-Match aangifte entries to jaaropgave accounts primarily by accountNumber. Normalise account numbers before comparing: strip all whitespace and punctuation and compare case-insensitively, so "2100 3093 2649" matches "210030932649" and "NL12 INGB 0001 2345 67" matches "NL12INGB0001234567". This applies to credit-card numbers, broker account IDs, and any other non-IBAN identifier. Additionally, strip any leading Dutch label prefix ("Nummer", "Nr") from the account string before comparing — these are artifacts of how the belastingaangifte embeds account references in field labels (e.g. "Nummer192658069" normalises to "192658069" and matches jaaropgave account "1926.58.069"). Where no account number is available on either side, match by institution type and field context.
-
-Credit-card balances (negative bank saldi) are box 3 bank items just like savings — match them to the aangifte's "Bankrekening" entries by the normalised account number embedded in the field label.
-
-Dividend tax mapping (broker jaaropgaves):
-- aangifte field "Ingehouden dividendbelasting" (a box 1 voorheffing) → jaaropgave's broker.dutchDividendTax for the same accountNumber. If multiple aangifte entries cover the same account, sum them when comparing.
-- aangifte field "Verrekenbare buitenlandse bronbelasting" / "Buitenlandse bronheffing" → jaaropgave's broker.foreignWithholdingTax.
-- aangifte field "Dividend" (box 2 or box 3 income line) → jaaropgave's broker.dividend.
-A correctly-reported voorheffing belongs in **covered**, not **attentionPoints**.
+## Amount comparison
 
 Amounts match when they are within €1 of each other. The Belastingdienst allows taxpayers to round amounts to whichever full euro is most favorable: deductions may be rounded up, income and assets may be rounded down. Jaaropgaves show exact cents. A difference of €1 or less between the aangifte and the jaaropgave is therefore expected and correct — treat it as matching.
 
@@ -33,14 +26,20 @@ Signs are part of the value: -102 does not match 102. Negative balances (credit-
 
 For bank/broker balances (box 3): the aangifte uses the balance on 1 januari of the tax year. A jaaropgave may report this as "saldo per 1 januari [taxYear]" or as "saldo per 31 december [taxYear-1]" — these are the same date. If the jaaropgave only shows "saldo per 31 december [taxYear]", that balance belongs to the NEXT year's aangifte.
 
+Dividend tax mapping (broker jaaropgaves):
+- aangifte field "Ingehouden dividendbelasting" (a box 1 voorheffing) → jaaropgave's broker.dutchDividendTax for the same accountNumber. If multiple aangifte entries cover the same account, sum them when comparing.
+- aangifte field "Verrekenbare buitenlandse bronbelasting" / "Buitenlandse bronheffing" → jaaropgave's broker.foreignWithholdingTax.
+- aangifte field "Dividend" (box 2 or box 3 income line) → jaaropgave's broker.dividend.
+A correctly-reported voorheffing belongs in **covered**, not **attentionPoints**.
+
 ## Report categories
 
-- **covered**: aangifte entry AND matching jaaropgave account found, amounts match
-- **missingStatement**: aangifte entry exists but no matching jaaropgave was uploaded
-- **notFilledIn**: jaaropgave account exists with a non-zero amount but is missing or zero in the aangifte. Jaaropgave accounts whose own amount is zero must NOT be reported — zero-balance accounts don't have to be included in the aangifte.
-- **attentionPoints**: substantive flags based on document content. Only emit an attention point when there is something actionable to flag. Never emit a "non-issue" or "no action needed" attention point (e.g. "the jaaropgave shows no foreign dividend so there is no foreign withholding tax credit to claim"). If a rule's condition is not met, simply omit the attention point — silence is the correct output.
+- **covered**: matched pair where amounts agree (within €1)
+- **missingStatement**: aangifte entry from the unmatched aangifte list — jaaropgave was not uploaded
+- **notFilledIn**: jaaropgave account from the unmatched jaaropgave list with a non-zero amount but absent or zero in the aangifte. Zero-balance accounts must NOT be reported.
+- **attentionPoints**: substantive flags based on document content. Only emit an attention point when there is something actionable to flag. Never emit a "non-issue" attention point. If a rule's condition is not met, simply omit the attention point.
 
-A matched pair always belongs in **covered**, even when the underlying account had unusual lifecycle events (mortgage discharged mid-year, account opened or closed during the tax year, partial-year interest). These events are not themselves attention points when the reported amounts agree. Only escalate to **attentionPoints** when the document content reveals a substantive risk (see rules below) AND that risk is not already addressed by a correctly-reported amount.
+A matched pair always belongs in **covered**, even when the underlying account had unusual lifecycle events (mortgage discharged mid-year, account opened or closed during the tax year, partial-year interest). Only escalate to **attentionPoints** when the document content reveals a substantive risk AND that risk is not already addressed by a correctly-reported amount.
 
 ## Aandachtspunten rules
 
@@ -93,6 +92,23 @@ export async function analyzeDocuments(
   annualStatements: AnnualStatementData[]
 ): Promise<Omit<AnalysisReport, "extractionErrors">> {
   const rules = loadRules();
+  const { matched, onlyInAangifte, onlyInJaaropgave } = matchEntries(taxReturn, annualStatements);
+
+  const userMessage = [
+    "## Matched pairs (account numbers resolved by code)",
+    "",
+    JSON.stringify(matched, null, 2),
+    "",
+    `## Aangifte entries without matching jaaropgave (${onlyInAangifte.length})`,
+    "",
+    JSON.stringify(onlyInAangifte, null, 2),
+    "",
+    `## Jaaropgave accounts without matching aangifte entry (${onlyInJaaropgave.length})`,
+    "",
+    JSON.stringify(onlyInJaaropgave, null, 2),
+    "",
+    "Produce the analysis report. Respond with the raw JSON object only — start your response with `{`.",
+  ].join("\n");
 
   const response = await client.messages.create({
     model: MODEL,
@@ -104,12 +120,7 @@ export async function analyzeDocuments(
         cache_control: { type: "ephemeral" },
       },
     ],
-    messages: [
-      {
-        role: "user",
-        content: `## Belastingaangifte\n\n${JSON.stringify(taxReturn, null, 2)}\n\n## Jaaropgaves (${annualStatements.length})\n\n${JSON.stringify(annualStatements, null, 2)}\n\nProduce the analysis report. Respond with the raw JSON object only — start your response with \`{\`.`,
-      },
-    ],
+    messages: [{ role: "user", content: userMessage }],
   });
 
   const textBlock = response.content.find((b) => b.type === "text");
