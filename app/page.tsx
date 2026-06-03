@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
+import rehypeSanitize from "rehype-sanitize";
 import { Icon } from "./Icon";
 import type {
   AnalysisReport,
@@ -425,7 +426,9 @@ function AttentionPointCard({
               {msg.role === "user" ? (
                 msg.content
               ) : (
-                <ReactMarkdown components={markdownComponents}>{msg.content}</ReactMarkdown>
+                <ReactMarkdown components={markdownComponents} rehypePlugins={[rehypeSanitize]}>
+                  {msg.content}
+                </ReactMarkdown>
               )}
             </div>
           ))}
@@ -461,7 +464,7 @@ function AttentionPointCard({
 function ErrorCard({ message, style }: { message: string; style?: React.CSSProperties }) {
   const m = message.match(/^Aangifte "([^"]+)" kon niet worden verwerkt: ([\s\S]*)/);
   return (
-    <div className="errcard" style={style}>
+    <div className="errcard" role="alert" style={style}>
       <span className="ic">
         <Icon name="alert" size={18} />
       </span>
@@ -664,8 +667,8 @@ export default function Home() {
             Klopt je aangifte?
           </h1>
           <p className="intro">
-            Upload je belastingaangifte en jaaropgaves. We vergelijken de bedragen en laten rustig
-            zien wat klopt, wat ontbreekt en waar je op moet letten.
+            Upload je belastingaangifte en jaaropgaves. De de bedragen en laten zien wat klopt, wat
+            ontbreekt en waar je op moet letten.
           </p>
 
           <form onSubmit={handleSubmit}>
@@ -790,7 +793,11 @@ export default function Home() {
           </form>
 
           {loading && (
-            <div style={{ textAlign: "center", marginTop: 30 }}>
+            <div
+              role="status"
+              aria-label="Bezig met analyseren"
+              style={{ textAlign: "center", marginTop: 30 }}
+            >
               <div className="spin" />
               <p style={{ fontSize: 14, fontWeight: 600, margin: "14px 0 2px" }}>
                 Documenten worden geanalyseerd…

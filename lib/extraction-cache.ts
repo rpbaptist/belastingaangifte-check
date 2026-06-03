@@ -2,6 +2,9 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 
+// Development-only cache: stores extracted financial data (PII) as plain JSON on disk.
+// Active only when NODE_ENV === "development". The .extracted/ directory is gitignored
+// and must never be committed, shared, or deployed.
 const CACHE_DIR = path.join(process.cwd(), ".extracted");
 
 function cacheKey(pdfBase64: string): string {
