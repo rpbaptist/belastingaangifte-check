@@ -188,8 +188,25 @@ export default function Home() {
             klopt, wat ontbreekt en waar je op moet letten.
           </p>
 
+          <div style={{
+            marginTop: 20,
+            padding: "12px 14px",
+            background: "var(--paper)",
+            border: "1px solid var(--line)",
+            borderRadius: 10,
+            fontSize: 12.5,
+            color: "var(--ink-3)",
+            lineHeight: 1.6,
+          }}>
+            <strong style={{ color: "var(--ink-2)" }}>Let op — demo, geen privacygarantie.</strong>{" "}
+            De inhoud van je PDF&#39;s — inclusief je BSN, IBANs en financiële gegevens — wordt
+            verstuurd naar de <a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener noreferrer" style={{ color: "var(--bronze)" }}>Anthropic API</a> voor verwerking.
+            Anthropic bewaart API-data standaard tot 30 dagen. Gebruik dit hulpmiddel uitsluitend voor
+            eigen testdoeleinden en deel geen gegevens van anderen.
+          </div>
+
           <form onSubmit={handleSubmit}>
-            <div className="icard" style={{ padding: 16, marginTop: 26 }}>
+            <div className="icard" style={{ padding: 16, marginTop: 16 }}>
               <ApiKeyInput value={apiKey} onChange={setApiKey} isEnvKey={isEnvKey} />
               <div style={{ display: "grid", gap: 12 }}>
                 <DropZone
@@ -234,7 +251,7 @@ export default function Home() {
 
           {error && <ErrorCard message={error} style={{ marginTop: 20 }} />}
 
-          <p className="disc">Alleen voor demo — controleer altijd zelf alle informatie.</p>
+          <p className="disc">Alleen voor demo — geen privacygarantie. Controleer altijd zelf alle informatie.</p>
         </main>
       </>
     );
