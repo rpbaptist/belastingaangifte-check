@@ -43,8 +43,8 @@ export const TaxReturnSchema = z.object({
 
 const CoveredItemSchema = z.object({
   field: z.string(),
-  accountNumber: z.string(),
-  institution: z.string(),
+  accountNumber: z.string().nullable(),
+  institution: z.string().nullable(),
   amountTaxReturn: z.number().transform(Math.round),
   amountStatement: z.number().transform(Math.round),
 });
@@ -57,8 +57,8 @@ const MissingStatementItemSchema = z.object({
 });
 
 const NotFilledInItemSchema = z.object({
-  accountNumber: z.string(),
-  institution: z.string(),
+  accountNumber: z.string().nullable(),
+  institution: z.string().nullable(),
   description: z.string(),
   amount: z.number().transform(Math.round),
 });
