@@ -1,25 +1,25 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import ReactMarkdown from "react-markdown";
-import rehypeSanitize from "rehype-sanitize";
+import { TopBar } from "./components/TopBar";
+import { DropZone } from "./components/DropZone";
+import { ApiKeyInput } from "./components/ApiKeyInput";
+import { ErrorCard, ExtractionErrors } from "./components/ErrorCard";
+import { AttentionPointCard } from "./components/AttentionPointCard";
+import {
+  SummaryBoxes,
+  CoveredSection,
+  MissingStatementSection,
+  NotFilledInSection,
+} from "./components/ReportSections";
 import { Icon } from "./Icon";
 import type {
   AnalysisReport,
   AnalyseRequest,
-  ChatMessage,
-  CoveredItem,
-  MissingStatementItem,
-  NotFilledInItem,
-  AttentionPoint,
-  ExtractionError,
   ExtractedData,
   IncrementalRequest,
-  QuestionRequest,
 } from "@/lib/types";
-import { AnalyseResponseSchema, QuestionResponseSchema, ApiErrorSchema } from "@/lib/schemas";
-
-/* ─── Helpers (unchanged) ─────────────────────────────────────────────────── */
+import { AnalyseResponseSchema, ApiErrorSchema } from "@/lib/schemas";
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -35,487 +35,6 @@ function fileToBase64(file: File): Promise<string> {
     reader.readAsDataURL(file);
   });
 }
-
-function formatEuro(amount: number): string {
-  return new Intl.NumberFormat("nl-NL", {
-    style: "currency",
-    currency: "EUR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
-
-/* ─── Brand / app bar ─────────────────────────────────────────────────────── */
-
-function TopBar({ taxYear, onReset }: { taxYear?: number; onReset?: () => void }) {
-  return (
-    <header className="topbar">
-      <div className="topbar-inner">
-        <div className="brand">
-          <div className="logo">
-            <Icon name="shield" size={19} />
-          </div>
-          <div>
-            <div className="wm">Aangifte Checker</div>
-            {taxYear && <div className="sub">Belastingjaar {taxYear}</div>}
-          </div>
-        </div>
-        <div className="spacer" />
-        {onReset && (
-          <button className="ghostbtn" onClick={onReset}>
-            <Icon name="refresh" size={15} /> Opnieuw analyseren
-          </button>
-        )}
-      </div>
-    </header>
-  );
-}
-
-/* ─── Upload zone (restyled; same drag/drop behavior) ─────────────────────── */
-
-function DropZone({
-  label,
-  hint,
-  accept,
-  multiple,
-  files,
-  onFiles,
-}: {
-  label: string;
-  hint: string;
-  accept: string;
-  multiple: boolean;
-  files: File[];
-  onFiles: (files: File[]) => void;
-}) {
-  const [dragging, setDragging] = useState(false);
-
-  function handleDrop(e: React.DragEvent) {
-    e.preventDefault();
-    setDragging(false);
-    const dropped = Array.from(e.dataTransfer.files).filter(
-      (f) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf")
-    );
-    if (!dropped.length) return;
-    onFiles(multiple ? dropped : [dropped[0]]);
-  }
-
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const picked = Array.from(e.target.files ?? []);
-    if (!picked.length) return;
-    onFiles(multiple ? picked : [picked[0]]);
-    e.target.value = "";
-  }
-
-  return (
-    <label
-      className={`drop${dragging ? " dragging" : ""}${files.length ? " filled" : ""}`}
-      onDragOver={(e) => {
-        e.preventDefault();
-        setDragging(true);
-      }}
-      onDragLeave={() => setDragging(false)}
-      onDrop={handleDrop}
-    >
-      <input type="file" accept={accept} multiple={multiple} hidden onChange={handleChange} />
-      <div className="dropic">
-        <Icon name={files.length ? "check" : "upload"} size={20} />
-      </div>
-      <div className="dl">{label}</div>
-      <div className="dh">{hint}</div>
-      {files.length > 0 && (
-        <ul>
-          {files.map((f) => (
-            <li key={f.name} className="fchip ok">
-              <Icon name="file" size={13} /> {f.name}
-            </li>
-          ))}
-        </ul>
-      )}
-    </label>
-  );
-}
-
-/* ─── Markdown styling for assistant answers ──────────────────────────────── */
-
-const markdownComponents = {
-  p: (props: React.HTMLAttributes<HTMLParagraphElement>) => (
-    <p style={{ margin: "0.25em 0" }} {...props} />
-  ),
-  ul: (props: React.HTMLAttributes<HTMLUListElement>) => (
-    <ul style={{ margin: "0.25em 0", paddingLeft: "1.2em" }} {...props} />
-  ),
-  ol: (props: React.HTMLAttributes<HTMLOListElement>) => (
-    <ol style={{ margin: "0.25em 0", paddingLeft: "1.2em" }} {...props} />
-  ),
-  strong: (props: React.HTMLAttributes<HTMLElement>) => <strong {...props} />,
-  a: (props: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
-    <a target="_blank" rel="noreferrer" {...props} />
-  ),
-  code: (props: React.HTMLAttributes<HTMLElement>) => <code {...props} />,
-};
-
-/* ─── Summary boxes ───────────────────────────────────────────────────────── */
-
-type Tone = "pos" | "warn" | "info" | "attn";
-
-function SummaryBoxes({ report }: { report: AnalysisReport }) {
-  const items: {
-    tone: Tone;
-    icon: Parameters<typeof Icon>[0]["name"];
-    count: number;
-    label: string;
-  }[] = [
-    { tone: "pos", icon: "check", count: report.covered.length, label: "Gedekt" },
-    {
-      tone: "warn",
-      icon: "alert",
-      count: report.missingStatement.length,
-      label: "Jaaropgave ontbreekt",
-    },
-    { tone: "info", icon: "file-plus", count: report.notFilledIn.length, label: "Niet ingevuld" },
-    { tone: "attn", icon: "flag", count: report.attentionPoints.length, label: "Aandachtspunten" },
-  ];
-  return (
-    <div className="statrow" style={{ marginTop: 18 }}>
-      {items.map((s) => (
-        <div key={s.label} className={`stat tone-${s.tone}`}>
-          <div className="stat-top">
-            <span className="chip">
-              <Icon name={s.icon} size={17} />
-            </span>
-            <div className="n num">{s.count}</div>
-          </div>
-          <div className="l">{s.label}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/* ─── Comparison sections ─────────────────────────────────────────────────── */
-
-function Section({
-  tone,
-  icon,
-  title,
-  count,
-  note,
-  children,
-}: {
-  tone: Tone;
-  icon: Parameters<typeof Icon>[0]["name"];
-  title: string;
-  count: number;
-  note?: string;
-  children: React.ReactNode;
-}) {
-  const [open, setOpen] = useState(true);
-  if (count === 0) return null;
-  return (
-    <div className={`sec tone-${tone}`}>
-      <div className={`sechead${open ? "" : " collapsed"}`} onClick={() => setOpen((v) => !v)}>
-        <span className="chip">
-          <Icon name={icon} size={16} />
-        </span>
-        <div>
-          <div className="t">{title}</div>
-          {note && <div className="note">{note}</div>}
-        </div>
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-          <span className="pill num">{count}</span>
-          <Icon
-            name="chevron"
-            size={16}
-            style={{
-              color: "var(--c)",
-              transition: "transform .18s",
-              transform: open ? "rotate(0deg)" : "rotate(-90deg)",
-            }}
-          />
-        </div>
-      </div>
-      {open && children}
-    </div>
-  );
-}
-
-function Row({ f, m, a, tone }: { f: string; m: string; a: string; tone: Tone }) {
-  return (
-    <div className="irow">
-      <div style={{ minWidth: 0 }}>
-        <div className="f">{f}</div>
-        <div className="m">{m}</div>
-      </div>
-      <div className="a num" style={{ color: `var(--${tone})` }}>
-        {a}
-      </div>
-    </div>
-  );
-}
-
-function CoveredSection({ items }: { items: CoveredItem[] }) {
-  return (
-    <Section
-      tone="pos"
-      icon="check"
-      title="Gedekt"
-      count={items.length}
-      note="Aangifte en jaaropgave komen overeen"
-    >
-      {items.map((c) => (
-        <Row
-          key={c.accountNumber + c.field}
-          tone="pos"
-          f={c.field}
-          m={`${c.institution}${c.accountNumber ? ` · ${c.accountNumber}` : ""}`}
-          a={formatEuro(c.amountTaxReturn)}
-        />
-      ))}
-    </Section>
-  );
-}
-
-function MissingStatementSection({ items }: { items: MissingStatementItem[] }) {
-  return (
-    <Section
-      tone="warn"
-      icon="alert"
-      title="Jaaropgave ontbreekt"
-      count={items.length}
-      note="Staat in je aangifte, geen jaaropgave geüpload"
-    >
-      {items.map((c) => (
-        <Row
-          key={(c.accountNumber ?? "") + c.field}
-          tone="warn"
-          f={c.field}
-          m={`Box ${c.box}${c.accountNumber ? ` · ${c.accountNumber}` : ""}`}
-          a={formatEuro(c.amount)}
-        />
-      ))}
-    </Section>
-  );
-}
-
-function NotFilledInSection({ items }: { items: NotFilledInItem[] }) {
-  return (
-    <Section
-      tone="info"
-      icon="file-plus"
-      title="Niet ingevuld in aangifte"
-      count={items.length}
-      note="Staat in je jaaropgaves, ontbreekt in aangifte"
-    >
-      {items.map((c) => (
-        <Row
-          key={c.accountNumber}
-          tone="info"
-          f={c.description}
-          m={`${c.institution}${c.accountNumber ? ` · ${c.accountNumber}` : ""}`}
-          a={formatEuro(c.amount)}
-        />
-      ))}
-    </Section>
-  );
-}
-
-/* ─── Aandachtspunt card (logic preserved, restyled) ──────────────────────── */
-
-function AttentionPointCard({
-  item,
-  taxYear,
-  apiKey,
-}: {
-  item: AttentionPoint;
-  taxYear: number;
-  apiKey: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const [question, setQuestion] = useState("");
-  const [history, setHistory] = useState<ChatMessage[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [resolved, setResolved] = useState(false);
-
-  async function sendQuestion(text: string): Promise<boolean> {
-    if (!text.trim() || loading) return false;
-    setLoading(true);
-    setError(null);
-    try {
-      const body: QuestionRequest = { question: text, attentionPoint: item, taxYear, history };
-      const res = await fetch("/api/question", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...(apiKey ? { "x-api-key": apiKey } : {}) },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const { error } = ApiErrorSchema.parse(await res.json().catch(() => ({})));
-        throw new Error(error ?? `Serverfout ${res.status}`);
-      }
-      const data = QuestionResponseSchema.parse(await res.json());
-      setHistory((prev) => [
-        ...prev,
-        { role: "user", content: text },
-        { role: "assistant", content: data.answer },
-      ]);
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Er is een fout opgetreden.");
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const ok = await sendQuestion(question);
-    if (ok) setQuestion("");
-  }
-
-  async function handleMoreDetail() {
-    setOpen(true);
-    await sendQuestion("Geef een uitgebreidere uitleg over dit aandachtspunt.");
-  }
-
-  const toggleLabel = open
-    ? "Verberg gesprek"
-    : history.length > 0
-      ? "Bekijk gesprek"
-      : "Stel een vraag";
-
-  return (
-    <div className={`acard${resolved ? " resolved" : ""}`}>
-      <div className="head">
-        <span className="chip">
-          <Icon name={resolved ? "check" : "flag"} size={16} />
-        </span>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="t">{item.title}</div>
-          <div className="x">{item.explanation}</div>
-          {(item.institution || item.accountNumber) && (
-            <div className="meta">
-              {[item.institution, item.accountNumber].filter(Boolean).join(" · ")}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="actions">
-        <button className="gbtn" onClick={() => setOpen((v) => !v)}>
-          <Icon name="message" size={14} /> {toggleLabel}
-        </button>
-        {history.length === 0 && (
-          <button className="gbtn" onClick={handleMoreDetail} disabled={loading}>
-            {loading ? "Bezig…" : "Meer uitleg"}
-          </button>
-        )}
-        <button
-          className={`gbtn mute${resolved ? " on" : ""}`}
-          onClick={() => setResolved((v) => !v)}
-        >
-          <Icon name="check-circle" size={14} /> {resolved ? "Opgelost" : "Markeer als opgelost"}
-        </button>
-      </div>
-
-      {open && (
-        <div className="thread">
-          {history.map((msg, i) => (
-            <div key={`${msg.role}-${i}`} className={`bubble ${msg.role === "user" ? "u" : "a"}`}>
-              {msg.role === "user" ? (
-                msg.content
-              ) : (
-                <ReactMarkdown components={markdownComponents} rehypePlugins={[rehypeSanitize]}>
-                  {msg.content}
-                </ReactMarkdown>
-              )}
-            </div>
-          ))}
-          {loading && <div className="typing">Bezig met antwoorden…</div>}
-          <form className="chatin" onSubmit={handleSubmit}>
-            <textarea
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              onKeyDown={(e) => {
-                if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-                  e.preventDefault();
-                  void handleSubmit(e);
-                }
-              }}
-              placeholder={history.length > 0 ? "Vervolgvraag…" : "Typ je vraag…"}
-              rows={1}
-            />
-            <button type="submit" disabled={!question.trim() || loading} aria-label="Verstuur">
-              <Icon name="send" size={16} />
-            </button>
-          </form>
-          {error && (
-            <p style={{ fontSize: 12, color: "var(--warn)", margin: "4px 2px 0" }}>{error}</p>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ─── Error card ──────────────────────────────────────────────────────────── */
-
-function ErrorCard({ message, style }: { message: string; style?: React.CSSProperties }) {
-  const m = message.match(/^Aangifte "([^"]+)" kon niet worden verwerkt: ([\s\S]*)/);
-  return (
-    <div className="errcard" role="alert" style={style}>
-      <span className="ic">
-        <Icon name="alert" size={18} />
-      </span>
-      {m ? (
-        <div>
-          <div style={{ fontWeight: 600, fontSize: 14 }}>Aangifte kon niet worden verwerkt</div>
-          <div
-            className="mono"
-            style={{ fontSize: 12, color: "var(--ink-3)", margin: "3px 0 5px" }}
-          >
-            {m[1]}
-          </div>
-          <div style={{ fontSize: 13, color: "var(--ink-2)" }}>{m[2]}</div>
-        </div>
-      ) : (
-        <p style={{ fontSize: 13.5, color: "var(--ink-2)", margin: 0 }}>{message}</p>
-      )}
-    </div>
-  );
-}
-
-/* ─── Extraction errors ───────────────────────────────────────────────────── */
-
-function ExtractionErrors({ errors }: { errors: ExtractionError[] }) {
-  if (!errors.length) return null;
-  return (
-    <div className="errcard" style={{ marginBottom: 18 }}>
-      <span className="ic">
-        <Icon name="alert" size={18} />
-      </span>
-      <div>
-        <div style={{ fontWeight: 600, fontSize: 14 }}>
-          Extractie mislukt voor{" "}
-          {errors.length === 1 ? "één bestand" : `${errors.length} bestanden`}
-        </div>
-        <ul style={{ margin: "6px 0 0", padding: 0, listStyle: "none" }}>
-          {errors.map((e, i) => (
-            <li key={e.filename} style={{ marginTop: i > 0 ? 8 : 0 }}>
-              <div className="mono" style={{ fontSize: 12, color: "var(--ink-3)" }}>
-                {e.filename}
-              </div>
-              <div style={{ fontSize: 13, color: "var(--ink-2)", marginTop: 2 }}>{e.error}</div>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Page ────────────────────────────────────────────────────────────────── */
 
 export default function Home() {
   const [aangifte, setAangifte] = useState<File[]>([]);
@@ -539,7 +58,6 @@ export default function Home() {
   useEffect(() => {
     sessionStorage.setItem("apiKey", apiKey);
   }, [apiKey]);
-  const [editingKey, setEditingKey] = useState(false);
 
   const canSubmit = aangifte.length > 0 && jaaropgaves.length > 0 && apiKey.length > 0 && !loading;
   const canSubmitIncremental = additionalJaaropgaves.length > 0 && !incrementalLoading;
@@ -626,8 +144,6 @@ export default function Home() {
     setError(null);
   }
 
-  const hasAttn = !!report && report.attentionPoints.length > 0;
-
   const IncrementalCard = (
     <div className="icard">
       <h2 style={{ fontSize: 15.5, fontWeight: 600, margin: "0 0 3px" }}>Jaaropgave vergeten?</h2>
@@ -657,7 +173,6 @@ export default function Home() {
     </div>
   );
 
-  /* ── Upload view (no report yet) ── */
   if (!report) {
     return (
       <>
@@ -667,106 +182,13 @@ export default function Home() {
             Klopt je aangifte?
           </h1>
           <p className="intro">
-            Upload je belastingaangifte en jaaropgaves. De de bedragen en laten zien wat klopt, wat
-            ontbreekt en waar je op moet letten.
+            Upload je belastingaangifte en jaaropgaves. We vergelijken de bedragen en laten zien wat
+            klopt, wat ontbreekt en waar je op moet letten.
           </p>
 
           <form onSubmit={handleSubmit}>
             <div className="icard" style={{ padding: 16, marginTop: 26 }}>
-              {!isEnvKey &&
-                (apiKey && !editingKey ? (
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      marginBottom: 16,
-                      padding: "8px 12px",
-                      background: "var(--paper)",
-                      border: "1px solid var(--line)",
-                      borderRadius: 10,
-                    }}
-                  >
-                    <Icon name="shield" size={14} style={{ color: "var(--pos)", flexShrink: 0 }} />
-                    <span style={{ fontSize: 12.5, color: "var(--ink-3)", flex: 1 }}>
-                      API-sleutel ingesteld
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setEditingKey(true)}
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: "var(--bronze)",
-                        background: "none",
-                        border: 0,
-                        cursor: "pointer",
-                        padding: 0,
-                      }}
-                    >
-                      Wijzigen
-                    </button>
-                  </div>
-                ) : (
-                  <div style={{ marginBottom: 16 }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "baseline",
-                        justifyContent: "space-between",
-                        marginBottom: 6,
-                      }}
-                    >
-                      <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-2)" }}>
-                        Jouw Anthropic API-sleutel
-                      </label>
-                      {editingKey && (
-                        <button
-                          type="button"
-                          onClick={() => setEditingKey(false)}
-                          style={{
-                            fontSize: 12,
-                            color: "var(--ink-3)",
-                            background: "none",
-                            border: 0,
-                            cursor: "pointer",
-                            padding: 0,
-                          }}
-                        >
-                          Annuleren
-                        </button>
-                      )}
-                    </div>
-                    <input
-                      type="password"
-                      value={apiKey}
-                      onChange={(e) => setApiKey(e.target.value)}
-                      placeholder="sk-ant-…"
-                      autoComplete="off"
-                      autoFocus={editingKey}
-                      style={{
-                        width: "100%",
-                        padding: "9px 12px",
-                        fontSize: 13,
-                        fontFamily: "var(--font-geist-mono), monospace",
-                        border: "1.5px solid var(--line-2)",
-                        borderRadius: 10,
-                        background: "var(--paper)",
-                        color: "var(--ink)",
-                        outline: "none",
-                        boxSizing: "border-box",
-                        transition: "border-color .12s",
-                      }}
-                      onFocus={(e) => {
-                        e.currentTarget.style.borderColor = "var(--bronze)";
-                      }}
-                      onBlur={(e) => {
-                        e.currentTarget.style.borderColor = "var(--line-2)";
-                        if (apiKey) setEditingKey(false);
-                      }}
-                    />
-                  </div>
-                ))}
+              <ApiKeyInput value={apiKey} onChange={setApiKey} isEnvKey={isEnvKey} />
               <div style={{ display: "grid", gap: 12 }}>
                 <DropZone
                   label="Belastingaangifte"
@@ -816,13 +238,13 @@ export default function Home() {
     );
   }
 
-  /* ── Results view (report present) ── */
   const statementCount = extractedData?.annualStatements.length ?? jaaropgaves.length;
+  const hasAttn = report.attentionPoints.length > 0;
+
   return (
     <>
       <TopBar taxYear={report.taxYear} onReset={handleReset} />
       <main className="page">
-        {/* uploaded files strip */}
         <div className="files">
           <div className="grp">
             <span className="lab">Aangifte</span>
@@ -843,7 +265,6 @@ export default function Home() {
           </button>
         </div>
 
-        {/* results header */}
         <div style={{ marginTop: 30 }}>
           <div className="eyebrow">Resultaat</div>
           <h1 className="h-res">Je controle is klaar</h1>
@@ -857,7 +278,6 @@ export default function Home() {
 
         <SummaryBoxes report={report} />
 
-        {/* report body */}
         <div className={`body${hasAttn ? "" : " single"}`} style={{ marginTop: 24 }}>
           <div className="col-main">
             <div className="stack">
@@ -879,7 +299,7 @@ export default function Home() {
                   <span className="pill num">{report.attentionPoints.length}</span>
                 </div>
                 <div className="stack" style={{ marginTop: 14 }}>
-                  {report.attentionPoints.map((p, i) => (
+                  {report.attentionPoints.map((p) => (
                     <AttentionPointCard
                       key={p.title}
                       item={p}

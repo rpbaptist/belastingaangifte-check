@@ -1,13 +1,13 @@
 # Belastingaangifte Checker
 
-A tool that helps Dutch taxpayers verify their tax return is complete and correct by cross-referencing their tax return (*belastingaangifte*) against annual statements (*jaaropgaves*) from banks, brokers, and mortgage providers.
+A tool that helps Dutch taxpayers verify their tax return is complete and correct by cross-referencing their tax return (_belastingaangifte_) against annual statements (_jaaropgaves_) from banks, brokers, and mortgage providers.
 
 > **Portfolio project.** Built to demonstrate fullstack AI product engineering with TypeScript, Next.js, and the Anthropic API.
 
 ## What it does
 
-1. Upload your tax return PDF (the *belastingaangifte* from Belastingdienst)
-2. Upload one or more annual statements (*jaaropgaves*) — ING, ASN, DEGIRO, mortgage provider, etc.
+1. Upload your tax return PDF (the _belastingaangifte_ from Belastingdienst)
+2. Upload one or more annual statements (_jaaropgaves_) — ING, ASN, DEGIRO, mortgage provider, etc.
 3. Claude extracts structured data from all documents
 4. The tool compares them and produces a report
 
@@ -37,7 +37,7 @@ Three steps, the first two in parallel:
 
 2. **Matching** — Account numbers from the tax return and annual statements are matched in code using a normalisation function that strips whitespace, punctuation, and Dutch label prefixes (e.g. `Nummer`). No LLM involved — it's deterministic and tested.
 
-3. **Analysis** — Claude Sonnet receives the pre-matched pairs and produces the four-category report. Flags (*aandachtspunten*) are generated from a [seeded rule set](rules/aandachtspunten.md) plus open-ended LLM judgment.
+3. **Analysis** — Claude Sonnet receives the pre-matched pairs and produces the four-category report. Flags (_aandachtspunten_) are generated from a [seeded rule set](rules/aandachtspunten.md) plus open-ended LLM judgment.
 
 ## API key
 
