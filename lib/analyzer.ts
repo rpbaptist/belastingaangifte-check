@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import fs from "fs";
 import path from "path";
 import type { AnalysisReport, AnnualStatementData, TaxReturnData } from "./types";
+import { parseLlmJson } from "./parse-llm-json";
 
 const client = new Anthropic();
 const MODEL = "claude-sonnet-4-6";
@@ -16,7 +17,7 @@ function buildSystemPrompt(rules: string): string {
 
 ## Matching
 
-Match aangifte entries to jaaropgave accounts primarily by accountNumber. Normalise account numbers before comparing: strip all whitespace and punctuation and compare case-insensitively, so "2100 3093 2649" matches "210030932649" and "NL12 INGB 0001 2345 67" matches "NL12INGB0001234567". This applies to credit-card numbers, broker account IDs, and any other non-IBAN identifier. Additionally, strip any leading Dutch label prefix (`Nummer`, `Nr`, `nummer`, `nr`) from the account string before comparing — these are artifacts of how the belastingaangifte embeds account references in field labels (e.g. "Nummer192658069" normalises to "192658069" and matches jaaropgave account "1926.58.069"). Where no account number is available on either side, match by institution type and field context.
+Match aangifte entries to jaaropgave accounts primarily by accountNumber. Normalise account numbers before comparing: strip all whitespace and punctuation and compare case-insensitively, so "2100 3093 2649" matches "210030932649" and "NL12 INGB 0001 2345 67" matches "NL12INGB0001234567". This applies to credit-card numbers, broker account IDs, and any other non-IBAN identifier. Additionally, strip any leading Dutch label prefix ("Nummer", "Nr") from the account string before comparing — these are artifacts of how the belastingaangifte embeds account references in field labels (e.g. "Nummer192658069" normalises to "192658069" and matches jaaropgave account "1926.58.069"). Where no account number is available on either side, match by institution type and field context.
 
 Credit-card balances (negative bank saldi) are box 3 bank items just like savings — match them to the aangifte's "Bankrekening" entries by the normalised account number embedded in the field label.
 
@@ -116,10 +117,5 @@ export async function analyzeDocuments(
     throw new Error("Geen reactie ontvangen tijdens de analyse");
   }
 
-  const json = textBlock.text
-    .replace(/^```(?:json)?\s*/m, "")
-    .replace(/\s*```$/m, "")
-    .trim();
-
-  return JSON.parse(json) as Omit<AnalysisReport, "extractionErrors">;
+  return parseLlmJson(textBlock.text) as Omit<AnalysisReport, "extractionErrors">;
 }
