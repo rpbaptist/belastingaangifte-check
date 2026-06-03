@@ -62,3 +62,30 @@ export const AnalysisReportSchema = z.object({
   notFilledIn: z.array(NotFilledInItemSchema),
   attentionPoints: z.array(AttentionPointSchema),
 });
+
+const ExtractionErrorSchema = z.object({
+  filename: z.string(),
+  error: z.string(),
+});
+
+const FullAnalysisReportSchema = AnalysisReportSchema.extend({
+  extractionErrors: z.array(ExtractionErrorSchema),
+});
+
+const ExtractedDataSchema = z.object({
+  taxReturn: TaxReturnSchema,
+  annualStatements: z.array(AnnualStatementSchema),
+});
+
+export const AnalyseResponseSchema = z.object({
+  report: FullAnalysisReportSchema,
+  extractedData: ExtractedDataSchema,
+});
+
+export const QuestionResponseSchema = z.object({
+  answer: z.string(),
+});
+
+export const ApiErrorSchema = z
+  .object({ error: z.string().optional() })
+  .catch({ error: undefined });
