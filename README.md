@@ -53,10 +53,10 @@ npm run dev
 
 Open [localhost:3000](http://localhost:3000) and enter your API key when prompted.
 
-To skip the key prompt on every reload, set `ANTHROPIC_PUBLIC_API_KEY`:
+To skip the key prompt on every reload, set `NEXT_PUBLIC_ANTHROPIC_API_KEY`:
 
 ```bash
-mise set ANTHROPIC_PUBLIC_API_KEY=sk-ant-...   # or add to .env.local
+mise set NEXT_PUBLIC_ANTHROPIC_API_KEY=sk-ant-...   # or add to .env.local
 ```
 
 ## Extending the tax flag rules
