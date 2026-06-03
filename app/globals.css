@@ -638,9 +638,9 @@ body {
   margin: 12px 0 0;
   padding: 0;
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: center;
   gap: 6px;
-  justify-content: center;
 }
 
 /* buttons: base = ink (primary), .alt = bronze (secondary) */
@@ -680,6 +680,10 @@ body {
 .btn.alt:hover {
   background: var(--bronze-d);
 }
+.btn.alt:disabled {
+  background: var(--bronze-bg);
+  color: var(--ink-4);
+}
 
 /* ── upload (pre-analysis) view ─────────────────────────────────────────── */
 .h1 {
@@ -688,13 +692,15 @@ body {
   letter-spacing: -0.02em;
   margin: 0;
   line-height: 1.1;
+  text-align: center;
 }
 .intro {
   font-size: 14.5px;
   line-height: 1.6;
   color: var(--ink-2);
-  margin: 12px 0 0;
+  margin: 12px auto 0;
   max-width: 48ch;
+  text-align: center;
 }
 
 /* ── loading + error ────────────────────────────────────────────────────── */
@@ -772,6 +778,8 @@ body {
     margin-top: 0;
     position: sticky;
     top: 84px;
+    max-height: calc(100vh - 84px);
+    overflow-y: auto;
   }
 }
 
