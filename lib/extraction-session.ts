@@ -4,7 +4,12 @@ import type { AnnualStatementData, ExtractionError, TaxReturnData } from "./type
 type StatementInput = { data: string; filename: string };
 
 export type ExtractionSessionResult =
-  | { ok: true; taxReturn: TaxReturnData; annualStatements: AnnualStatementData[]; errors: ExtractionError[] }
+  | {
+      ok: true;
+      taxReturn: TaxReturnData;
+      annualStatements: AnnualStatementData[];
+      errors: ExtractionError[];
+    }
   | { ok: false; message: string };
 
 export async function runExtractionSession(
@@ -18,9 +23,8 @@ export async function runExtractionSession(
   ]);
 
   if (taxReturnResult.status === "rejected") {
-    const message = taxReturnResult.reason instanceof Error
-      ? taxReturnResult.reason.message
-      : "Onbekende fout";
+    const message =
+      taxReturnResult.reason instanceof Error ? taxReturnResult.reason.message : "Onbekende fout";
     return { ok: false, message };
   }
 
