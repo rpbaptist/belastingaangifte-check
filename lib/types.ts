@@ -13,7 +13,7 @@ export interface AnnualStatementData {
 export interface AccountData {
   accountNumber: string;
   description: string; // e.g. "Savings account", "Investment account"
-  amounts: Record<string, number>; // e.g. { balance: 12345, interest: 234 }
+  amounts: Record<string, Record<string, number>>; // e.g. { bank: { balance: 12345, interest: 234 } }
 }
 
 export interface TaxReturnData {
@@ -71,7 +71,7 @@ export interface AttentionPoint {
   title: string;
   explanation: string;
   institution?: string;
-  accountNumber?: string;
+  accountNumber?: string | null;
 }
 
 export interface ExtractionError {
