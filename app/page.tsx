@@ -48,9 +48,9 @@ export default function Home() {
   const [incrementalLoading, setIncrementalLoading] = useState(false);
   const [incrementalError, setIncrementalError] = useState<string | null>(null);
 
-  const isEnvKey = !!process.env.NEXT_PUBLIC_DEV_API_KEY;
+  const isEnvKey = !!process.env.ANTHROPIC_PUBLIC_API_KEY;
   const [apiKey, setApiKey] = useState<string>(
-    process.env.NEXT_PUBLIC_DEV_API_KEY ?? ""
+    process.env.ANTHROPIC_PUBLIC_API_KEY ?? ""
   );
   useEffect(() => {
     const stored = sessionStorage.getItem("apiKey");
