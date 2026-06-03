@@ -11,8 +11,14 @@ const MODEL = "claude-sonnet-4-6";
 
 function loadRules(): string {
   const rulesPath = path.join(process.cwd(), "rules", "aandachtspunten.md");
-  return fs.readFileSync(rulesPath, "utf-8");
+  try {
+    return fs.readFileSync(rulesPath, "utf-8");
+  } catch {
+    throw new Error(`Kon aandachtspunten-regels niet laden: ${rulesPath}`);
+  }
 }
+
+const RULES = loadRules();
 
 function buildSystemPrompt(rules: string): string {
   return `You are a Dutch tax analyst. You receive pre-matched data from a belastingaangifte and one or more jaaropgaves, and produce a structured comparison report.
@@ -94,7 +100,6 @@ export async function analyzeDocuments(
   apiKey?: string
 ): Promise<Omit<AnalysisReport, "extractionErrors">> {
   const client = new Anthropic(apiKey ? { apiKey } : {});
-  const rules = loadRules();
   const { matched, onlyInAangifte, onlyInJaaropgave } = matchEntries(taxReturn, annualStatements);
 
   const userMessage = [
@@ -119,7 +124,7 @@ export async function analyzeDocuments(
     system: [
       {
         type: "text",
-        text: buildSystemPrompt(rules),
+        text: buildSystemPrompt(RULES),
         cache_control: { type: "ephemeral" },
       },
     ],
