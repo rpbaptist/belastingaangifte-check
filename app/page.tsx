@@ -184,8 +184,7 @@ export default function Home() {
             Klopt je aangifte?
           </h1>
           <p className="intro">
-            Upload je belastingaangifte en jaaropgaves. We vergelijken de bedragen en laten zien wat
-            klopt, wat ontbreekt en waar je op moet letten.
+            Upload je belastingaangifte en jaaropgaves. De ingevulde belastinggegvens worden vergelijken met je jaaropgaves. Je ziet direct, wat klopt, wat ontbreekt en waar je op moet letten.
           </p>
 
           <div style={{
@@ -198,8 +197,8 @@ export default function Home() {
             color: "var(--ink-3)",
             lineHeight: 1.6,
           }}>
-            <strong style={{ color: "var(--ink-2)" }}>Let op — demo, geen privacygarantie.</strong>{" "}
-            De inhoud van je PDF&#39;s — inclusief je BSN, IBANs en financiële gegevens — wordt
+            <strong style={{ color: "var(--ink-2)" }}>Let op: demo, geen privacygarantie.</strong>{" "}
+            De inhoud van je PDF&#39;s, inclusief je BSN, IBANs en financiële gegevens, wordt
             verstuurd naar de <a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener noreferrer" style={{ color: "var(--bronze)" }}>Anthropic API</a> voor verwerking.
             Anthropic bewaart API-data standaard tot 30 dagen. Gebruik dit hulpmiddel uitsluitend voor
             eigen testdoeleinden en deel geen gegevens van anderen.
