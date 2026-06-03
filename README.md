@@ -2,6 +2,8 @@
 
 > Cross-reference your Dutch tax return against your bank, broker, and mortgage statements in seconds.
 
+[![Vercel](https://img.shields.io/github/deployments/rpbaptist/belastingaangifte-check/Production?logo=vercel&label=Vercel)](https://www.aangiftecheck.nl)
+
 **[→ Live demo at aangiftecheck.nl](https://www.aangiftecheck.nl)** — bring your own Anthropic API key.
 
 ---
@@ -51,10 +53,10 @@ npm run dev
 
 Open [localhost:3000](http://localhost:3000) and enter your API key when prompted.
 
-To skip the key prompt on every reload, set `NEXT_PUBLIC_DEV_API_KEY`:
+To skip the key prompt on every reload, set `ANTHROPIC_PUBLIC_API_KEY`:
 
 ```bash
-mise set NEXT_PUBLIC_DEV_API_KEY=sk-ant-...   # or add to .env.local
+mise set ANTHROPIC_PUBLIC_API_KEY=sk-ant-...   # or add to .env.local
 ```
 
 ## Extending the tax flag rules
