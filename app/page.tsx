@@ -50,11 +50,12 @@ export default function Home() {
 
   const isEnvKey = !!process.env.NEXT_PUBLIC_DEV_API_KEY;
   const [apiKey, setApiKey] = useState<string>(
-    () =>
-      (typeof window !== "undefined" ? sessionStorage.getItem("apiKey") : null) ??
-      process.env.NEXT_PUBLIC_DEV_API_KEY ??
-      ""
+    process.env.NEXT_PUBLIC_DEV_API_KEY ?? ""
   );
+  useEffect(() => {
+    const stored = sessionStorage.getItem("apiKey");
+    if (stored) setApiKey(stored);
+  }, []);
   useEffect(() => {
     sessionStorage.setItem("apiKey", apiKey);
   }, [apiKey]);
