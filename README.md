@@ -4,6 +4,8 @@ A tool that helps Dutch taxpayers verify their tax return is complete and correc
 
 > **Portfolio project.** Built to demonstrate fullstack AI product engineering with TypeScript, Next.js, and the Anthropic API.
 
+**Live demo: [aangiftecheck.nl](https://www.aangiftecheck.nl)** — bring your own Anthropic API key.
+
 ## What it does
 
 1. Upload your tax return PDF (the _belastingaangifte_ from Belastingdienst)
