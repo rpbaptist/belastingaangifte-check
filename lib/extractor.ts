@@ -98,7 +98,13 @@ type ExtractOpts<T> = {
 
 async function extract<T>(pdfBase64: string, opts: ExtractOpts<T>, apiKey?: string): Promise<T> {
   const cached = readCache<T>(pdfBase64);
-  if (cached) return cached;
+  if (cached) {
+    try {
+      return opts.schema.parse(cached);
+    } catch {
+      // cache predates current schema — fall through to re-extract
+    }
+  }
 
   const client = new Anthropic(apiKey ? { apiKey } : {});
   const response = await withRetry(() =>
