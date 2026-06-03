@@ -2,8 +2,10 @@ import Anthropic from "@anthropic-ai/sdk";
 import fs from "fs";
 import path from "path";
 import type { AnalysisReport, AnnualStatementData, TaxReturnData } from "./types";
+import { z } from "zod";
 import { parseLlmJson } from "./parse-llm-json";
 import { matchEntries } from "./account-matcher";
+import { AnalysisReportSchema } from "./schemas";
 
 const MODEL = "claude-sonnet-4-6";
 
@@ -129,5 +131,11 @@ export async function analyzeDocuments(
     throw new Error("Geen reactie ontvangen tijdens de analyse");
   }
 
-  return parseLlmJson(textBlock.text) as Omit<AnalysisReport, "extractionErrors">;
+  const raw = parseLlmJson(textBlock.text);
+  try {
+    return AnalysisReportSchema.parse(raw);
+  } catch (err) {
+    const msg = err instanceof z.ZodError ? err.issues[0]?.message : "onverwacht formaat";
+    throw new Error(`Analyse mislukt: ${msg}`);
+  }
 }
