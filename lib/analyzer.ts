@@ -5,7 +5,6 @@ import type { AnalysisReport, AnnualStatementData, TaxReturnData } from "./types
 import { parseLlmJson } from "./parse-llm-json";
 import { matchEntries } from "./account-matcher";
 
-const client = new Anthropic();
 const MODEL = "claude-sonnet-4-6";
 
 function loadRules(): string {
@@ -89,8 +88,10 @@ Your response must be a single raw JSON object — nothing before the opening br
 
 export async function analyzeDocuments(
   taxReturn: TaxReturnData,
-  annualStatements: AnnualStatementData[]
+  annualStatements: AnnualStatementData[],
+  apiKey?: string
 ): Promise<Omit<AnalysisReport, "extractionErrors">> {
+  const client = new Anthropic(apiKey ? { apiKey } : {});
   const rules = loadRules();
   const { matched, onlyInAangifte, onlyInJaaropgave } = matchEntries(taxReturn, annualStatements);
 
