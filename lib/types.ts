@@ -10,10 +10,22 @@ export interface AnnualStatementData {
   metadata: Record<string, string>; // e.g. { mortgageType: "interest-only" }
 }
 
+export type AccountAmounts =
+  | { bank: { balance: number; interest?: number } }
+  | {
+      broker: {
+        dividend?: number;
+        foreignDividend?: number;
+        dutchDividendTax?: number;
+        foreignWithholdingTax?: number;
+      };
+    }
+  | { mortgage: { interestPaid: number; remainingDebt: number } };
+
 export interface AccountData {
   accountNumber: string;
-  description: string; // e.g. "Savings account", "Investment account"
-  amounts: Record<string, Record<string, number>>; // e.g. { bank: { balance: 12345, interest: 234 } }
+  description: string;
+  amounts: AccountAmounts;
 }
 
 export interface TaxReturnData {
@@ -115,3 +127,5 @@ export interface QuestionRequest {
 export interface QuestionResponse {
   answer: string;
 }
+
+export type ChatMessage = { role: "user" | "assistant"; content: string };

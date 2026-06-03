@@ -28,7 +28,7 @@ function statement(...accountNumbers: string[]): AnnualStatementData {
 }
 
 function account(accountNumber: string): AccountData {
-  return { accountNumber, description: "Test", amounts: {} };
+  return { accountNumber, description: "Test", amounts: { bank: { balance: 0 } } };
 }
 
 // ─── Tests ─────────────────────────────────────────────────────────────────
