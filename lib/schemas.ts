@@ -8,7 +8,7 @@ export const AccountDataSchema = z.object({
 
 export const AnnualStatementSchema = z.object({
   institution: z.string(),
-  institutionType: z.enum(["bank", "broker", "mortgage", "other"]),
+  institutionType: z.enum(["bank", "broker", "mortgage", "other"]).catch("other"),
   taxYear: z.number().int(),
   accounts: z.array(AccountDataSchema),
   metadata: z.record(z.string(), z.string()).default({}),

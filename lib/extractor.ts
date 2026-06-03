@@ -12,7 +12,7 @@ const ANNUAL_STATEMENT_SYSTEM = `You are a Dutch tax document analyst. Extract s
 Return ONLY a JSON object with this structure:
 {
   "institution": "Name of the financial institution",
-  "institutionType": "bank" | "broker" | "mortgage" | "other",
+  "institutionType": "bank" | "broker" | "mortgage" | "other",  // unrecognised values default to "other"
   "taxYear": 2023,
   "accounts": [
     {
