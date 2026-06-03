@@ -32,9 +32,15 @@ describe("AnnualStatementSchema", () => {
     expect(() => AnnualStatementSchema.parse(bad)).toThrow();
   });
 
-  it("throws on invalid institutionType", () => {
-    const bad = { ...validStatement, institutionType: "pension" };
-    expect(() => AnnualStatementSchema.parse(bad)).toThrow();
+  it("coerces unknown institutionType to 'other'", () => {
+    const result = AnnualStatementSchema.parse({ ...validStatement, institutionType: "pension" });
+    expect(result.institutionType).toBe("other");
+  });
+
+  it("coerces missing institutionType to 'other'", () => {
+    const { institutionType: _, ...rest } = validStatement;
+    const result = AnnualStatementSchema.parse(rest);
+    expect(result.institutionType).toBe("other");
   });
 });
 
