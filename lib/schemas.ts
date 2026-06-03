@@ -1,9 +1,24 @@
 import { z } from "zod";
 
+const n = () => z.number().transform(Math.round);
+
+const AccountAmountsSchema = z.union([
+  z.object({ bank: z.object({ balance: n(), interest: n().optional() }) }),
+  z.object({
+    broker: z.object({
+      dividend: n().optional(),
+      foreignDividend: n().optional(),
+      dutchDividendTax: n().optional(),
+      foreignWithholdingTax: n().optional(),
+    }),
+  }),
+  z.object({ mortgage: z.object({ interestPaid: n(), remainingDebt: n() }) }),
+]);
+
 export const AccountDataSchema = z.object({
   accountNumber: z.string(),
   description: z.string(),
-  amounts: z.record(z.string(), z.record(z.string(), z.number().transform(Math.round))),
+  amounts: AccountAmountsSchema,
 });
 
 export const AnnualStatementSchema = z.object({

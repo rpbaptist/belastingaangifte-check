@@ -17,9 +17,7 @@ const validStatement = {
 
 const validTaxReturn = {
   taxYear: 2025,
-  entries: [
-    { box: "3", field: "Saldo bank", accountNumber: "NL00INGB0000000001", amount: 3080 },
-  ],
+  entries: [{ box: "3", field: "Saldo bank", accountNumber: "NL00INGB0000000001", amount: 3080 }],
 };
 
 describe("AnnualStatementSchema", () => {
@@ -80,6 +78,7 @@ describe("AnnualStatementSchema — amount coercion", () => {
       ...validStatement,
       accounts: [{ ...validStatement.accounts[0], amounts: { bank: { balance: 3080.21 } } }],
     });
-    expect(result.accounts[0].amounts["bank"]?.["balance"]).toBe(3080);
+    const amounts = result.accounts[0].amounts as { bank: { balance: number } };
+    expect(amounts.bank.balance).toBe(3080);
   });
 });

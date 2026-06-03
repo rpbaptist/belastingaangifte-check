@@ -74,8 +74,12 @@ async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 4): Promise<T> {
     try {
       return await fn();
     } catch (err) {
-      if (err instanceof Anthropic.RateLimitError && attempt < maxAttempts) {
-        await new Promise((r) => setTimeout(r, 1500 * attempt));
+      const retryable =
+        err instanceof Anthropic.RateLimitError ||
+        (err instanceof Anthropic.APIError && err.status >= 500);
+      if (retryable && attempt < maxAttempts) {
+        const jitter = Math.random() * 500;
+        await new Promise((r) => setTimeout(r, 1500 * attempt + jitter));
         continue;
       }
       throw err;
