@@ -4,18 +4,9 @@ const n = () => z.number().transform(Math.round);
 // LLM string fields: coerce null → "" so a missing value never crashes the parser
 const s = () => z.string().nullable().catch(null).transform(v => v ?? "");
 
-const AccountAmountsSchema = z.union([
-  z.object({ bank: z.object({ balance: n(), interest: n().optional() }) }),
-  z.object({
-    broker: z.object({
-      dividend: n().optional(),
-      foreignDividend: n().optional(),
-      dutchDividendTax: n().optional(),
-      foreignWithholdingTax: n().optional(),
-    }),
-  }),
-  z.object({ mortgage: z.object({ interestPaid: n(), remainingDebt: n() }) }),
-]);
+// Flexible nested record: handles bank/broker/mortgage and any other institution type.
+// Numbers are rounded to full euros; the LLM interprets the structure semantically.
+const AccountAmountsSchema = z.record(z.string(), z.record(z.string(), n()));
 
 export const AccountDataSchema = z.object({
   accountNumber: z.string(),
@@ -28,7 +19,9 @@ export const AnnualStatementSchema = z.object({
   institutionType: z.enum(["bank", "broker", "mortgage", "other"]).catch("other"),
   taxYear: z.number().int(),
   accounts: z.array(AccountDataSchema),
-  metadata: z.record(z.string(), z.string()).default({}),
+  metadata: z.record(z.string(), z.unknown())
+    .transform(obj => Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, String(v)])))
+    .default({}),
 });
 
 export const TaxReturnEntrySchema = z.object({
