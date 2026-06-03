@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { Icon } from "./Icon";
 import type {
@@ -289,7 +289,7 @@ function NotFilledInSection({ items }: { items: NotFilledInItem[] }) {
 
 type Message = { role: "user" | "assistant"; content: string };
 
-function AttentionPointCard({ item, taxYear }: { item: AttentionPoint; taxYear: number }) {
+function AttentionPointCard({ item, taxYear, apiKey }: { item: AttentionPoint; taxYear: number; apiKey: string }) {
   const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState("");
   const [history, setHistory] = useState<Message[]>([]);
@@ -305,7 +305,7 @@ function AttentionPointCard({ item, taxYear }: { item: AttentionPoint; taxYear: 
       const body: QuestionRequest = { question: text, attentionPoint: item, taxYear, history };
       const res = await fetch("/api/question", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(apiKey ? { "x-api-key": apiKey } : {}) },
         body: JSON.stringify(body),
       });
       if (!res.ok) {
@@ -461,7 +461,16 @@ export default function Home() {
   const [incrementalLoading, setIncrementalLoading] = useState(false);
   const [incrementalError, setIncrementalError] = useState<string | null>(null);
 
-  const canSubmit = aangifte.length > 0 && jaaropgaves.length > 0 && !loading;
+  const isEnvKey = !!process.env.NEXT_PUBLIC_DEV_API_KEY;
+  const [apiKey, setApiKey] = useState<string>(
+    () => (typeof window !== "undefined" ? sessionStorage.getItem("apiKey") : null)
+      ?? process.env.NEXT_PUBLIC_DEV_API_KEY
+      ?? ""
+  );
+  useEffect(() => { sessionStorage.setItem("apiKey", apiKey); }, [apiKey]);
+  const [editingKey, setEditingKey] = useState(false);
+
+  const canSubmit = aangifte.length > 0 && jaaropgaves.length > 0 && apiKey.length > 0 && !loading;
   const canSubmitIncremental = additionalJaaropgaves.length > 0 && !incrementalLoading;
 
   async function handleSubmit(e: React.FormEvent) {
@@ -484,7 +493,7 @@ export default function Home() {
       };
       const res = await fetch("/api/analyze", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(apiKey ? { "x-api-key": apiKey } : {}) },
         body: JSON.stringify(body),
       });
       if (!res.ok) {
@@ -514,7 +523,7 @@ export default function Home() {
       };
       const res = await fetch("/api/analyze/incremental", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(apiKey ? { "x-api-key": apiKey } : {}) },
         body: JSON.stringify(body),
       });
       if (!res.ok) {
@@ -577,6 +586,54 @@ export default function Home() {
 
           <form onSubmit={handleSubmit}>
             <div className="icard" style={{ padding: 16, marginTop: 26 }}>
+              {!isEnvKey && (
+                apiKey && !editingKey ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, padding: "8px 12px", background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 10 }}>
+                    <Icon name="shield" size={14} style={{ color: "var(--pos)", flexShrink: 0 }} />
+                    <span style={{ fontSize: 12.5, color: "var(--ink-3)", flex: 1 }}>API-sleutel ingesteld</span>
+                    <button type="button" onClick={() => setEditingKey(true)} style={{ fontSize: 12, fontWeight: 600, color: "var(--bronze)", background: "none", border: 0, cursor: "pointer", padding: 0 }}>
+                      Wijzigen
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 6 }}>
+                      <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-2)" }}>
+                        Jouw Anthropic API-sleutel
+                      </label>
+                      {editingKey && (
+                        <button type="button" onClick={() => setEditingKey(false)} style={{ fontSize: 12, color: "var(--ink-3)", background: "none", border: 0, cursor: "pointer", padding: 0 }}>
+                          Annuleren
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      type="password"
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      placeholder="sk-ant-…"
+                      autoComplete="off"
+                      // eslint-disable-next-line jsx-a11y/no-autofocus
+                      autoFocus={editingKey}
+                      style={{
+                        width: "100%",
+                        padding: "9px 12px",
+                        fontSize: 13,
+                        fontFamily: "var(--font-geist-mono), monospace",
+                        border: "1.5px solid var(--line-2)",
+                        borderRadius: 10,
+                        background: "var(--paper)",
+                        color: "var(--ink)",
+                        outline: "none",
+                        boxSizing: "border-box",
+                        transition: "border-color .12s",
+                      }}
+                      onFocus={(e) => { e.currentTarget.style.borderColor = "var(--bronze)"; }}
+                      onBlur={(e) => { e.currentTarget.style.borderColor = "var(--line-2)"; if (apiKey) setEditingKey(false); }}
+                    />
+                  </div>
+                )
+              )}
               <div style={{ display: "grid", gap: 12 }}>
                 <DropZone
                   label="Belastingaangifte"
@@ -682,7 +739,7 @@ export default function Home() {
                 </div>
                 <div className="stack" style={{ marginTop: 14 }}>
                   {report.attentionPoints.map((p, i) => (
-                    <AttentionPointCard key={i} item={p} taxYear={report.taxYear} />
+                    <AttentionPointCard key={i} item={p} taxYear={report.taxYear} apiKey={apiKey} />
                   ))}
                 </div>
               </div>

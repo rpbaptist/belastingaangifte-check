@@ -42,7 +42,7 @@ Two LLM passes:
 npm install
 
 # Add your Anthropic API key
-echo "ANTHROPIC_API_KEY=sk-ant-..." > .env.local
+echo "NEXT_PUBLIC_DEV_API_KEY=sk-ant-..." > .env.local
 
 # Start the dev server
 npm run dev

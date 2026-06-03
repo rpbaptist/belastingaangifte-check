@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Ongeldig verzoek" }, { status: 400 });
   }
 
+  const apiKey = request.headers.get("x-api-key") ?? undefined;
   const { taxReturn, taxReturnFilename, annualStatements } = body;
 
   if (!taxReturn) {
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const session = await runExtractionSession(taxReturn, annualStatements);
+  const session = await runExtractionSession(taxReturn, annualStatements, apiKey);
 
   if (!session.ok) {
     return NextResponse.json(
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const reportBase = await analyzeDocuments(session.taxReturn, session.annualStatements);
+  const reportBase = await analyzeDocuments(session.taxReturn, session.annualStatements, apiKey);
 
   const response: AnalyseResponse = {
     report: { ...reportBase, extractionErrors: session.errors },
