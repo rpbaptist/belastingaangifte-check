@@ -3,7 +3,7 @@ import { z } from "zod";
 export const AccountDataSchema = z.object({
   accountNumber: z.string(),
   description: z.string(),
-  amounts: z.record(z.string(), z.record(z.string(), z.number())),
+  amounts: z.record(z.string(), z.record(z.string(), z.number().transform(Math.round))),
 });
 
 export const AnnualStatementSchema = z.object({
@@ -18,7 +18,7 @@ export const TaxReturnEntrySchema = z.object({
   box: z.enum(["1", "2", "3"]),
   field: z.string(),
   accountNumber: z.string().nullable(),
-  amount: z.number(),
+  amount: z.number().transform(Math.round),
 });
 
 export const TaxReturnSchema = z.object({
@@ -30,14 +30,14 @@ const CoveredItemSchema = z.object({
   field: z.string(),
   accountNumber: z.string(),
   institution: z.string(),
-  amountTaxReturn: z.number(),
-  amountStatement: z.number(),
+  amountTaxReturn: z.number().transform(Math.round),
+  amountStatement: z.number().transform(Math.round),
 });
 
 const MissingStatementItemSchema = z.object({
   field: z.string(),
   accountNumber: z.string().nullable(),
-  amount: z.number(),
+  amount: z.number().transform(Math.round),
   box: z.enum(["1", "2", "3"]),
 });
 
@@ -45,7 +45,7 @@ const NotFilledInItemSchema = z.object({
   accountNumber: z.string(),
   institution: z.string(),
   description: z.string(),
-  amount: z.number(),
+  amount: z.number().transform(Math.round),
 });
 
 const AttentionPointSchema = z.object({

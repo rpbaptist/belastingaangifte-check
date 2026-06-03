@@ -50,4 +50,30 @@ describe("TaxReturnSchema", () => {
     };
     expect(() => TaxReturnSchema.parse(bad)).toThrow();
   });
+
+  it("rounds entry amount with cents to nearest integer", () => {
+    const result = TaxReturnSchema.parse({
+      ...validTaxReturn,
+      entries: [{ ...validTaxReturn.entries[0], amount: 3080.67 }],
+    });
+    expect(result.entries[0].amount).toBe(3081);
+  });
+
+  it("rounds negative float amounts", () => {
+    const result = TaxReturnSchema.parse({
+      ...validTaxReturn,
+      entries: [{ ...validTaxReturn.entries[0], amount: -102.4 }],
+    });
+    expect(result.entries[0].amount).toBe(-102);
+  });
+});
+
+describe("AnnualStatementSchema — amount coercion", () => {
+  it("rounds nested account amounts to integers", () => {
+    const result = AnnualStatementSchema.parse({
+      ...validStatement,
+      accounts: [{ ...validStatement.accounts[0], amounts: { bank: { balance: 3080.21 } } }],
+    });
+    expect(result.accounts[0].amounts["bank"]?.["balance"]).toBe(3080);
+  });
 });
