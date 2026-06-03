@@ -35,39 +35,31 @@ function account(accountNumber: string): AccountData {
 
 describe("matchEntries", () => {
   it("matches despite formatting differences", () => {
-    const result = matchEntries(
-      taxReturn([entry("Nummer 1926.58.069")]),
-      [statement("1926.58.069")]
-    );
+    const result = matchEntries(taxReturn([entry("Nummer 1926.58.069")]), [
+      statement("1926.58.069"),
+    ]);
     expect(result.matched).toHaveLength(1);
     expect(result.onlyInAangifte).toHaveLength(0);
     expect(result.onlyInJaaropgave).toHaveLength(0);
   });
 
   it("places aangifte entry with null accountNumber in onlyInAangifte", () => {
-    const result = matchEntries(
-      taxReturn([entry(null)]),
-      [statement("NL00INGB0000000001")]
-    );
+    const result = matchEntries(taxReturn([entry(null)]), [statement("NL00INGB0000000001")]);
     expect(result.matched).toHaveLength(0);
     expect(result.onlyInAangifte).toHaveLength(1);
     expect(result.onlyInJaaropgave).toHaveLength(1);
   });
 
   it("places unmatched aangifte entry in onlyInAangifte", () => {
-    const result = matchEntries(
-      taxReturn([entry("NL99TEST0000000000")]),
-      [statement("NL00INGB0000000001")]
-    );
+    const result = matchEntries(taxReturn([entry("NL99TEST0000000000")]), [
+      statement("NL00INGB0000000001"),
+    ]);
     expect(result.onlyInAangifte).toHaveLength(1);
     expect(result.onlyInJaaropgave).toHaveLength(1);
   });
 
   it("places unmatched jaaropgave account in onlyInJaaropgave", () => {
-    const result = matchEntries(
-      taxReturn([]),
-      [statement("NL00INGB0000000001")]
-    );
+    const result = matchEntries(taxReturn([]), [statement("NL00INGB0000000001")]);
     expect(result.onlyInJaaropgave).toHaveLength(1);
     expect(result.onlyInJaaropgave[0].account.accountNumber).toBe("NL00INGB0000000001");
   });
@@ -87,10 +79,9 @@ describe("matchEntries", () => {
   });
 
   it("matches aangifte entry to jaaropgave account by account number", () => {
-    const result = matchEntries(
-      taxReturn([entry("NL00INGB0000000001", 3080)]),
-      [statement("NL00INGB0000000001")]
-    );
+    const result = matchEntries(taxReturn([entry("NL00INGB0000000001", 3080)]), [
+      statement("NL00INGB0000000001"),
+    ]);
 
     expect(result.matched).toHaveLength(1);
     expect(result.matched[0].aangifte.accountNumber).toBe("NL00INGB0000000001");

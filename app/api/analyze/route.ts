@@ -22,10 +22,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Geen aangifte ontvangen" }, { status: 400 });
   }
   if (!annualStatements?.length) {
-    return NextResponse.json(
-      { error: "Minimaal één jaaropgave is vereist" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Minimaal één jaaropgave is vereist" }, { status: 400 });
   }
 
   const session = await runExtractionSession(taxReturn, annualStatements, apiKey);
