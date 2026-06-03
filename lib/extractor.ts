@@ -32,7 +32,7 @@ Return ONLY a JSON object with this structure:
 
 Rules:
 - taxYear is the year the document covers (not the year it was printed)
-- All amounts are signed integers in full euros — drop cents, round if necessary. Preserve sign: a negative balance (e.g. credit-card debt "saldo -102") must be extracted as -102, not 102
+- All amounts are numbers in euros. Preserve sign: a negative balance (e.g. credit-card debt "saldo -102") must be extracted as -102, not 102
 - Use English keys for amount names
 - Broker amount semantics:
   - dividend = total gross dividend received (domestic + foreign combined)
@@ -66,7 +66,7 @@ Rules:
 - field is the Dutch label exactly as it appears in the document
 - Box 3 investments: the aangifte lists each investment account in a table with columns "Naam", "Nummer", and "Waarde op 01-01-20XX". Extract each row as a separate entry — the field is the investment name (e.g. "ASN Themabeleggen"), the accountNumber is the IBAN or account identifier from the "Nummer" column, and the amount is the "Waarde" (balance). These balance entries are distinct from the dividend sub-entries ("Brutodividend op aandelen of rente op obligaties") that appear below them — extract both separately. For DEGIRO, the account identifier may span multiple columns (e.g. "johndoe / flatexDEGIRO Bank AG / 0532013000") — concatenate these into a single accountNumber string
 - accountNumber is the IBAN associated with that entry, or null if none is shown. Dutch IBANs are always 18 characters (NL + 2 digits + 4-letter bank code + 10 digits = NL##BBBB##########). IBANs are sometimes split across two lines in the PDF — the amount for that entry will appear on the continuation line, after the final digits of the IBAN. Reconstruct the full 18-character IBAN and associate the amount from the continuation line with it (e.g. "ING Betaalrekening NL22 INGB 0673 / 3457 85   € 3.080" → accountNumber "NL22 INGB 0673 3457 85", amount 3080). If the field label embeds a non-IBAN account identifier (e.g. "Bankrekening: ING Creditcardrekening 2100 3093 2649"), extract that identifier into accountNumber as-is, including any spaces — the analyzer normalises whitespace when matching. Mortgage entries may use a "Nummer" prefix instead of the standard "Aftrekbare rente van schuld" pattern — for example "Nummer 1926.58.069 / Betaalde rente in 2025: €105" must be extracted as a box 1 entry with accountNumber "Nummer1926.58.069" and amount -105 (negative, as it is a deduction)
-- amount is a signed integer in full euros (Belastingdienst always rounds to full euros). Preserve sign: negative entries (e.g. a credit-card debt under "Bankrekeningen") stay negative
+- amount is a signed number in euros. Preserve sign: negative entries (e.g. a credit-card debt under "Bankrekeningen") stay negative
 - Return ONLY the raw JSON object, no markdown fences, no explanation`;
 
 async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 4): Promise<T> {
