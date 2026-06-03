@@ -6,7 +6,6 @@ import { Icon } from "./Icon";
 import type {
   AnalysisReport,
   AnalyseRequest,
-  AnalyseResponse,
   CoveredItem,
   MissingStatementItem,
   NotFilledInItem,
@@ -15,8 +14,8 @@ import type {
   ExtractedData,
   IncrementalRequest,
   QuestionRequest,
-  QuestionResponse,
 } from "@/lib/types";
+import { AnalyseResponseSchema, QuestionResponseSchema, ApiErrorSchema } from "@/lib/schemas";
 
 /* ─── Helpers (unchanged) ─────────────────────────────────────────────────── */
 
@@ -345,10 +344,10 @@ function AttentionPointCard({
         body: JSON.stringify(body),
       });
       if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error((json as { error?: string }).error ?? `Serverfout ${res.status}`);
+        const { error } = ApiErrorSchema.parse(await res.json().catch(() => ({})));
+        throw new Error(error ?? `Serverfout ${res.status}`);
       }
-      const data: QuestionResponse = await res.json();
+      const data = QuestionResponseSchema.parse(await res.json());
       setHistory((prev) => [
         ...prev,
         { role: "user", content: text },
@@ -564,10 +563,10 @@ export default function Home() {
         body: JSON.stringify(body),
       });
       if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error((json as { error?: string }).error ?? `Serverfout ${res.status}`);
+        const { error } = ApiErrorSchema.parse(await res.json().catch(() => ({})));
+        throw new Error(error ?? `Serverfout ${res.status}`);
       }
-      const data: AnalyseResponse = await res.json();
+      const data = AnalyseResponseSchema.parse(await res.json());
       setReport(data.report);
       setExtractedData(data.extractedData);
     } catch (err) {
@@ -597,10 +596,10 @@ export default function Home() {
         body: JSON.stringify(body),
       });
       if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error((json as { error?: string }).error ?? `Serverfout ${res.status}`);
+        const { error } = ApiErrorSchema.parse(await res.json().catch(() => ({})));
+        throw new Error(error ?? `Serverfout ${res.status}`);
       }
-      const data: AnalyseResponse = await res.json();
+      const data = AnalyseResponseSchema.parse(await res.json());
       setReport(data.report);
       setExtractedData(data.extractedData);
       setAdditionalJaaropgaves([]);
