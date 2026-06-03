@@ -10,17 +10,7 @@ export interface AnnualStatementData {
   metadata: Record<string, string>; // e.g. { mortgageType: "interest-only" }
 }
 
-export type AccountAmounts =
-  | { bank: { balance: number; interest?: number } }
-  | {
-      broker: {
-        dividend?: number;
-        foreignDividend?: number;
-        dutchDividendTax?: number;
-        foreignWithholdingTax?: number;
-      };
-    }
-  | { mortgage: { interestPaid: number; remainingDebt: number } };
+export type AccountAmounts = Record<string, Record<string, number>>;
 
 export interface AccountData {
   accountNumber: string;
