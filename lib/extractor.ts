@@ -83,99 +83,64 @@ async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 4): Promise<T> {
   throw new Error("unreachable");
 }
 
+type ExtractOpts = {
+  systemPrompt: string;
+  maxTokens: number;
+  userPrompt: string;
+  noResponseError: string;
+};
 
-export async function extractAnnualStatement(pdfBase64: string): Promise<AnnualStatementData> {
-  const cached = readCache<AnnualStatementData>(pdfBase64);
+async function extract<T>(pdfBase64: string, opts: ExtractOpts): Promise<T> {
+  const cached = readCache<T>(pdfBase64);
   if (cached) return cached;
 
-  const response = await withRetry(() => client.messages.create({
-    model: MODEL,
-    max_tokens: 4096,
-    system: [
-      {
-        type: "text",
-        text: ANNUAL_STATEMENT_SYSTEM,
-        cache_control: { type: "ephemeral" },
-      },
-    ],
-    messages: [
-      {
-        role: "user",
-        content: [
-          {
-            type: "document",
-            source: {
-              type: "base64",
-              media_type: "application/pdf",
-              data: pdfBase64,
-            },
-          } as Anthropic.DocumentBlockParam,
-          {
-            type: "text",
-            text: "Extract the structured data from this jaaropgave.",
-          },
-        ],
-      },
-    ],
-  }));
+  const response = await withRetry(() =>
+    client.messages.create({
+      model: MODEL,
+      max_tokens: opts.maxTokens,
+      system: [{ type: "text", text: opts.systemPrompt, cache_control: { type: "ephemeral" } }],
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "document",
+              source: { type: "base64", media_type: "application/pdf", data: pdfBase64 },
+            } as Anthropic.DocumentBlockParam,
+            { type: "text", text: opts.userPrompt },
+          ],
+        },
+      ],
+    })
+  );
 
   if (response.stop_reason === "max_tokens") {
     throw new Error("Extractie afgebroken — het PDF is mogelijk te groot of te complex");
   }
   const textBlock = response.content.find((b) => b.type === "text");
   if (!textBlock || textBlock.type !== "text") {
-    throw new Error("Geen reactie ontvangen bij verwerking van de jaaropgave");
+    throw new Error(opts.noResponseError);
   }
 
-  const result = parseLlmJson(textBlock.text) as AnnualStatementData;
+  const result = parseLlmJson(textBlock.text) as T;
   writeCache(pdfBase64, result);
   return result;
 }
 
-export async function extractTaxReturn(pdfBase64: string): Promise<TaxReturnData> {
-  const cached = readCache<TaxReturnData>(pdfBase64);
-  if (cached) return cached;
+export function extractAnnualStatement(pdfBase64: string): Promise<AnnualStatementData> {
+  return extract<AnnualStatementData>(pdfBase64, {
+    systemPrompt: ANNUAL_STATEMENT_SYSTEM,
+    maxTokens: 4096,
+    userPrompt: "Extract the structured data from this jaaropgave.",
+    noResponseError: "Geen reactie ontvangen bij verwerking van de jaaropgave",
+  });
+}
 
-  const response = await withRetry(() => client.messages.create({
-    model: MODEL,
-    max_tokens: 8192,
-    system: [
-      {
-        type: "text",
-        text: TAX_RETURN_SYSTEM,
-        cache_control: { type: "ephemeral" },
-      },
-    ],
-    messages: [
-      {
-        role: "user",
-        content: [
-          {
-            type: "document",
-            source: {
-              type: "base64",
-              media_type: "application/pdf",
-              data: pdfBase64,
-            },
-          } as Anthropic.DocumentBlockParam,
-          {
-            type: "text",
-            text: "Extract all non-zero entries from this belastingaangifte.",
-          },
-        ],
-      },
-    ],
-  }));
-
-  if (response.stop_reason === "max_tokens") {
-    throw new Error("Extractie afgebroken — het PDF is mogelijk te groot of te complex");
-  }
-  const textBlock = response.content.find((b) => b.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
-    throw new Error("Geen reactie ontvangen bij verwerking van de aangifte");
-  }
-
-  const result = parseLlmJson(textBlock.text) as TaxReturnData;
-  writeCache(pdfBase64, result);
-  return result;
+export function extractTaxReturn(pdfBase64: string): Promise<TaxReturnData> {
+  return extract<TaxReturnData>(pdfBase64, {
+    systemPrompt: TAX_RETURN_SYSTEM,
+    maxTokens: 8192,
+    userPrompt: "Extract all non-zero entries from this belastingaangifte.",
+    noResponseError: "Geen reactie ontvangen bij verwerking van de aangifte",
+  });
 }
