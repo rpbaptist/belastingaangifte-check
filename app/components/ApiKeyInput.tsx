@@ -86,7 +86,7 @@ export function ApiKeyInput({
       <input
         type="password"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => onChange(e.target.value.trim())}
         placeholder="sk-ant-…"
         autoComplete="off"
         autoFocus={editing}
