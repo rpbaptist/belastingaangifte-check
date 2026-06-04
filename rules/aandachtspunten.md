@@ -12,6 +12,8 @@ If a mortgage jaaropgave indicates the product is "aflossingsvrij" (interest-onl
 **Afgesloten hypotheek — geen aandachtspunt**
 If a mortgage jaaropgave shows a remaining debt of €0 at year-end (account closed during the year), and the jaaropgave shows interestPaid > 0, do NOT flag this as missing from the aangifte. A closed mortgage with paid interest will have a matching "Betaalde rente in [year]" entry in the aangifte under the same account number. The absence of a year-end balance is expected and correct.
 
+If a mortgage jaaropgave is unmatched and shows interestPaid > 0 with a non-zero remainingDebt, consider whether the mortgage was discharged mid-year. A strong indicator: interestPaid is very small relative to the remainingDebt (e.g. €104 interest on €89,956 debt ≈ 0.1% — consistent with only a few weeks of interest before payoff). In that case, do NOT generate an attention point about missing interest deduction. The "Betaalde rente" entry exists in the aangifte; a matching failure at the account-number level does not mean the taxpayer omitted the deduction.
+
 ---
 
 ## Beleggingen / DEGIRO / Broker
