@@ -58,6 +58,14 @@ describe("applyExceptions", () => {
     expect(onlyInAangifte).toHaveLength(0);
   });
 
+  it("secondary-matches a Loon entry even when accountNumber is not null", () => {
+    const loon = aangifte("Loon in Nederland", 100932, "135689600"); // loonheffingsnummer
+    const wage = statement({ wage: { taxableWage: 100932 } });
+    const { matched, onlyInAangifte } = applyExceptions([], [loon], [wage]);
+    expect(matched).toHaveLength(1);
+    expect(onlyInAangifte).toHaveLength(0);
+  });
+
   it("does NOT match when amounts differ by more than €1", () => {
     const loon = aangifte("Loon in Nederland", 100932, null);
     const wage = statement({ wage: { taxableWage: 100000 } }); // €932 off

@@ -39,6 +39,9 @@ The DEGIRO cash account (geldrekening, flatexDEGIRO Bank AG) often appears in th
 
 ## Loon / Werkgever
 
+**Loon in aangifte — geen aandachtspunt**
+If a wage jaaropgave (institutionType "other", amounts.wage.taxableWage > 0) is unmatched AND there is a "Loon" entry in the unmatched aangifte list whose amount matches taxableWage within €1, do NOT generate an aandachtspunt about missing wage income. The wage is reported in the aangifte; the account-number matching failed because wage entries have no IBAN. Treat this as correctly reported.
+
 **Datum in werkgeversjaaropgave is begindatum, niet einddatum**
 A date shown in an employer jaaropgave (e.g. "01-01-2020" or "11-10-2021") is the **start date** of the employment relationship (begindatum dienstverband), not the end date. Do NOT flag a jaaropgave for the current tax year as suspicious merely because it shows a date from a prior year — that date indicates when employment began, which can be years in the past. Only flag an employment relationship as unusual if there is explicit evidence of an end date (einddatum) that predates the tax year covered by the jaaropgave.
 
