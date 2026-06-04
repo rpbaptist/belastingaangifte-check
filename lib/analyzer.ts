@@ -122,7 +122,7 @@ export async function analyzeDocuments(
 
   const response = await client.messages.create({
     model: MODEL,
-    max_tokens: 4096,
+    max_tokens: 8192,
     system: [
       {
         type: "text",
@@ -132,6 +132,10 @@ export async function analyzeDocuments(
     ],
     messages: [{ role: "user", content: userMessage }],
   });
+
+  if (response.stop_reason === "max_tokens") {
+    throw new Error("Analyse afgebroken — te veel posten om te verwerken. Probeer met minder jaaropgaves tegelijk.");
+  }
 
   const textBlock = response.content.find((b) => b.type === "text");
   if (!textBlock || textBlock.type !== "text") {
