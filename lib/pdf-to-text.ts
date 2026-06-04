@@ -22,11 +22,30 @@ export async function pdfToText(file: File): Promise<string> {
   return scrubbedText(pages.join("\n"));
 }
 
+// Dutch IBAN: NL + 2 check digits + 4-letter bank code + 10 digits, with optional spaces
+const IBAN_RE = /\bNL\d{2}\s?[A-Z]{4}\s?\d{4}\s?\d{4}\s?\d{2}\b/gi;
+
+function normalizeIban(raw: string): string {
+  return raw.replace(/\s/g, "").toUpperCase();
+}
+
+function ibanPseudonym(normalized: string): string {
+  // FNV-1a 32-bit hash — deterministic, so same IBAN → same pseudonym across documents
+  let h = 2166136261;
+  for (let i = 0; i < normalized.length; i++) {
+    h ^= normalized.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return `NL-${h.toString(36).toUpperCase().padStart(7, "0").slice(-7)}`;
+}
+
 function scrubbedText(text: string): string {
-  // Only remove 9-digit numbers that immediately follow a BSN label —
-  // avoids stripping other 9-digit identifiers (loonheffingsnummer etc.)
-  return text.replace(
-    /(BSN|Burgerservicenummer)\s*:?\s*\d{9}/gi,
-    (match, label) => match.replace(/\d{9}/, "[verwijderd]")
-  );
+  return text
+    // Replace standard Dutch IBANs with a deterministic pseudonym
+    .replace(IBAN_RE, (match) => ibanPseudonym(normalizeIban(match)))
+    // Remove BSN only when it follows a label — avoids stripping other 9-digit identifiers
+    .replace(
+      /(BSN|Burgerservicenummer)\s*:?\s*\d{9}/gi,
+      (match) => match.replace(/\d{9}/, "[verwijderd]")
+    );
 }
