@@ -1,14 +1,6 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { extractAnnualStatement, extractTaxReturn } from "./extractor";
 import type { AnnualStatementData, ExtractionError, TaxReturnData } from "./types";
-
-function isUserFacingError(err: unknown): boolean {
-  return (
-    err instanceof Anthropic.AuthenticationError ||
-    err instanceof Anthropic.PermissionDeniedError ||
-    err instanceof Anthropic.RateLimitError
-  );
-}
+import { isUserFacingError } from "./anthropic-error";
 
 type StatementInput = { data: string; filename: string };
 
