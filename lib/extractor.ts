@@ -7,7 +7,7 @@ import { AnnualStatementSchema, TaxReturnSchema } from "./schemas";
 
 const MODEL = "claude-haiku-4-5-20251001";
 
-const ANNUAL_STATEMENT_SYSTEM = `You are a Dutch tax document analyst. Extract structured data from a jaaropgave (annual statement) PDF.
+const ANNUAL_STATEMENT_SYSTEM = `You are a Dutch tax document analyst. Extract structured data from the text content of a jaaropgave (annual statement).
 
 Return ONLY a JSON object with this structure:
 {
@@ -47,7 +47,7 @@ Rules:
 - IMPORTANT — balance date for box 3: the Belastingdienst uses the balance on 1 januari of the tax year (= 31 december of the preceding year). If the jaaropgave shows both a "saldo per 1 januari [taxYear]" and a "saldo per 31 december [taxYear]", use the 1 januari balance. If only 31 december is shown, that is the correct balance for the FOLLOWING tax year's aangifte — set balance to that value but note it is end-of-year
 - Broker accounts with a geldrekening/cash component: many broker jaaropgaves show two separate components per 1 januari — a cash balance and a portfolio (beleggingen) value. The aangifte lists these separately in box 3. When both are present, put them in the SAME account entry: { "bank": { "balance": <cash per 1 jan> }, "broker": { "balance": <portfolio per 1 jan, EXCLUDING cash>, "dividend": ... } }. Do NOT combine them into a single number. For DEGIRO specifically: the "Totale portefeuillewaarde" includes the CASH & CASH FUND — the broker.balance should be the total MINUS the CASH & CASH FUND amount, and bank.balance should be the CASH & CASH FUND amount.`;
 
-const TAX_RETURN_SYSTEM = `You are a Dutch tax document analyst. Extract structured data from a belastingaangifte (income tax return) PDF issued by the Belastingdienst.
+const TAX_RETURN_SYSTEM = `You are a Dutch tax document analyst. Extract structured data from the text content of a belastingaangifte (income tax return) issued by the Belastingdienst.
 
 Return ONLY a JSON object with this structure:
 {
@@ -98,8 +98,8 @@ type ExtractOpts<T> = {
   schema: z.ZodType<T>;
 };
 
-async function extract<T>(pdfBase64: string, opts: ExtractOpts<T>, apiKey?: string): Promise<T> {
-  const cached = readCache<T>(pdfBase64);
+async function extract<T>(pdfText: string, opts: ExtractOpts<T>, apiKey?: string): Promise<T> {
+  const cached = readCache<T>(pdfText);
   if (cached) {
     try {
       return opts.schema.parse(cached);
@@ -117,20 +117,14 @@ async function extract<T>(pdfBase64: string, opts: ExtractOpts<T>, apiKey?: stri
       messages: [
         {
           role: "user",
-          content: [
-            {
-              type: "document",
-              source: { type: "base64", media_type: "application/pdf", data: pdfBase64 },
-            } as Anthropic.DocumentBlockParam,
-            { type: "text", text: opts.userPrompt },
-          ],
+          content: `${opts.userPrompt}\n\nDocument text:\n\n${pdfText}`,
         },
       ],
     })
   );
 
   if (response.stop_reason === "max_tokens") {
-    throw new Error("Extractie afgebroken — het PDF is mogelijk te groot of te complex");
+    throw new Error("Extractie afgebroken — het document is mogelijk te groot of te complex");
   }
   const textBlock = response.content.find((b) => b.type === "text");
   if (!textBlock || textBlock.type !== "text") {
@@ -140,7 +134,7 @@ async function extract<T>(pdfBase64: string, opts: ExtractOpts<T>, apiKey?: stri
   const raw = parseLlmJson(textBlock.text);
   try {
     const result = opts.schema.parse(raw);
-    writeCache(pdfBase64, result);
+    writeCache(pdfText, result);
     return result;
   } catch (err) {
     const msg = err instanceof z.ZodError ? err.issues[0]?.message : "onverwacht formaat";
@@ -149,11 +143,11 @@ async function extract<T>(pdfBase64: string, opts: ExtractOpts<T>, apiKey?: stri
 }
 
 export function extractAnnualStatement(
-  pdfBase64: string,
+  pdfText: string,
   apiKey?: string
 ): Promise<AnnualStatementData> {
   return extract(
-    pdfBase64,
+    pdfText,
     {
       systemPrompt: ANNUAL_STATEMENT_SYSTEM,
       maxTokens: 4096,
@@ -165,9 +159,9 @@ export function extractAnnualStatement(
   );
 }
 
-export function extractTaxReturn(pdfBase64: string, apiKey?: string): Promise<TaxReturnData> {
+export function extractTaxReturn(pdfText: string, apiKey?: string): Promise<TaxReturnData> {
   return extract(
-    pdfBase64,
+    pdfText,
     {
       systemPrompt: TAX_RETURN_SYSTEM,
       maxTokens: 8192,

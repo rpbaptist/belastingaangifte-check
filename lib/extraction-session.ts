@@ -10,7 +10,7 @@ function isUserFacingError(err: unknown): boolean {
   );
 }
 
-type StatementInput = { data: string; filename: string };
+type StatementInput = { text: string; filename: string };
 
 export type ExtractionSessionResult =
   | {
@@ -28,7 +28,7 @@ export async function runExtractionSession(
 ): Promise<ExtractionSessionResult> {
   const [taxReturnResult, ...statementResults] = await Promise.allSettled([
     extractTaxReturn(taxReturnPdf, apiKey),
-    ...statements.map((s) => extractAnnualStatement(s.data, apiKey)),
+    ...statements.map((s) => extractAnnualStatement(s.text, apiKey)),
   ]);
 
   if (taxReturnResult.status === "rejected") {
@@ -61,7 +61,7 @@ export async function extractStatements(
   apiKey?: string
 ): Promise<{ results: AnnualStatementData[]; errors: ExtractionError[] }> {
   const settled = await Promise.allSettled(
-    statements.map((s) => extractAnnualStatement(s.data, apiKey))
+    statements.map((s) => extractAnnualStatement(s.text, apiKey))
   );
 
   const errors: ExtractionError[] = [];

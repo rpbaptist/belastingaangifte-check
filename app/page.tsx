@@ -20,21 +20,7 @@ import type {
   IncrementalRequest,
 } from "@/lib/types";
 import { AnalyseResponseSchema, ApiErrorSchema } from "@/lib/schemas";
-
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result !== "string") {
-        reject(new Error("Bestand kon niet worden gelezen"));
-        return;
-      }
-      resolve(reader.result.split(",")[1]);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
+import { pdfToText } from "@/lib/pdf-to-text";
 
 export default function Home() {
   const [aangifte, setAangifte] = useState<File[]>([]);
@@ -73,15 +59,15 @@ export default function Home() {
     setAdditionalJaaropgaves([]);
     setError(null);
     try {
-      const [taxReturnBase64, ...statementBase64s] = await Promise.all([
-        fileToBase64(aangifte[0]),
-        ...jaaropgaves.map(fileToBase64),
+      const [taxReturnText, ...statementTexts] = await Promise.all([
+        pdfToText(aangifte[0]),
+        ...jaaropgaves.map(pdfToText),
       ]);
       const body: AnalyseRequest = {
-        taxReturn: taxReturnBase64,
+        taxReturn: taxReturnText,
         taxReturnFilename: aangifte[0].name,
         annualStatements: jaaropgaves.map((f, i) => ({
-          data: statementBase64s[i],
+          data: statementTexts[i],
           filename: f.name,
         })),
       };
@@ -110,11 +96,11 @@ export default function Home() {
     setIncrementalLoading(true);
     setIncrementalError(null);
     try {
-      const statementBase64s = await Promise.all(additionalJaaropgaves.map(fileToBase64));
+      const statementTexts = await Promise.all(additionalJaaropgaves.map(pdfToText));
       const body: IncrementalRequest = {
         extractedData,
         additionalStatements: additionalJaaropgaves.map((f, i) => ({
-          data: statementBase64s[i],
+          data: statementTexts[i],
           filename: f.name,
         })),
       };

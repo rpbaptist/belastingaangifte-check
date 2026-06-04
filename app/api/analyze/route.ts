@@ -27,7 +27,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const session = await runExtractionSession(taxReturn, annualStatements, apiKey);
+    const session = await runExtractionSession(
+      taxReturn,
+      annualStatements.map((s) => ({ text: s.data, filename: s.filename })),
+      apiKey
+    );
 
     if (!session.ok) {
       return NextResponse.json(

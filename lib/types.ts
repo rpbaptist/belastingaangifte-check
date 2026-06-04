@@ -84,10 +84,10 @@ export interface ExtractionError {
 // ─── API request / response ────────────────────────────────────────────────
 
 export interface AnalyseRequest {
-  taxReturn: string; // base64-encoded PDF
+  taxReturn: string; // extracted PDF text (BSN scrubbed)
   taxReturnFilename: string;
   annualStatements: Array<{
-    data: string; // base64-encoded PDF
+    data: string; // extracted PDF text (BSN scrubbed)
     filename: string;
   }>;
 }

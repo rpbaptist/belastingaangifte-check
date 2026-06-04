@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const { results: newStatements, errors: extractionErrors } = await extractStatements(
-      additionalStatements,
+      additionalStatements.map((s) => ({ text: s.data, filename: s.filename })),
       apiKey
     );
 
