@@ -30,6 +30,13 @@ If total box 3 assets (bank saldo + beleggingen) exceed the heffingsvrij vermoge
 
 ---
 
+## DEGIRO / flatexDEGIRO
+
+**Geen duplicaat voor DEGIRO geldrekening**
+The DEGIRO cash account (geldrekening, flatexDEGIRO Bank AG) often appears in the aangifte under multiple representations of the same account number: with spaces (e.g. '1019 3457 93'), without spaces ('1019345793'), or as part of a concatenated string ('rpbaptist / flatexDEGIRO Bank AG / 1019345793'). These are all the same account. Do NOT flag this as a duplicate entry in the aangifte. If the amounts are the same, it is one account reported consistently.
+
+---
+
 ## Loon / Werkgever
 
 **Datum in werkgeversjaaropgave is begindatum, niet einddatum**
