@@ -1,6 +1,14 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 
+export function isUserFacingError(err: unknown): boolean {
+  return (
+    err instanceof Anthropic.AuthenticationError ||
+    err instanceof Anthropic.PermissionDeniedError ||
+    err instanceof Anthropic.RateLimitError
+  );
+}
+
 export function handleAnthropicError(err: unknown): NextResponse {
   if (err instanceof Anthropic.AuthenticationError) {
     return NextResponse.json({ error: "Ongeldige API-sleutel" }, { status: 401 });
