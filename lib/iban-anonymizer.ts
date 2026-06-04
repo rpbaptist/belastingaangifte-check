@@ -6,8 +6,9 @@ export type IbanMaps = {
   reverse: Record<string, string>;
 };
 
-// Dutch IBAN: NL + 2 check digits + 4-letter bank code + 10 digits, with optional spaces
-export const IBAN_RE = /\bNL\d{2}\s?[A-Z]{4}\s?\d{4}\s?\d{4}\s?\d{2}\b/gi;
+// Any IBAN: 2-letter country code + 2 check digits + BBAN (9-30 alphanumeric chars).
+// Matches both compact (no spaces) and printed (space-separated 4-char groups) forms.
+export const IBAN_RE = /\b[A-Z]{2}\d{2}(?:\s?[A-Z0-9]{4}){2,6}(?:\s?[A-Z0-9]{1,4})?\b/gi;
 
 export function normalizeIban(raw: string): string {
   return raw.replace(/\s/g, "").toUpperCase();

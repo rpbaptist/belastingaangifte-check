@@ -35,6 +35,20 @@ describe("applyPrivacyFilter", () => {
     expect(result).not.toContain("987654321");
   });
 
+  it("replaces a German IBAN (compact) with a pseudonym", () => {
+    const { forward } = buildSharedIbanMaps(["DE73101308001019345793"]);
+    const result = applyPrivacyFilter("IBAN: DE73101308001019345793", forward);
+    expect(result).not.toContain("DE73101308001019345793");
+    expect(result).toContain("IBAN-1013-001");
+  });
+
+  it("replaces a German IBAN (spaced) with a pseudonym", () => {
+    const { forward } = buildSharedIbanMaps(["DE73101308001019345793"]);
+    const result = applyPrivacyFilter("IBAN: DE73 1013 0800 1019 3457 93", forward);
+    expect(result).not.toContain("DE73");
+    expect(result).toContain("IBAN-1013-001");
+  });
+
   it("does NOT scrub a 9-digit number not preceded by a BSN label", () => {
     const result = applyPrivacyFilter("Loonheffingsnummer 135689600", {});
     expect(result).toContain("135689600");
