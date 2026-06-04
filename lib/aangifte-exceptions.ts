@@ -9,11 +9,12 @@ type SecondaryMatcher = {
   getJaaropgaveAmount: (acct: AccountData) => number | null;
 };
 
-/** Entries with null accountNumber that can be matched by amount instead */
+/** Entries that can be matched by amount when account-number matching doesn't apply */
 export const SECONDARY_MATCHERS: SecondaryMatcher[] = [
   {
     fieldContains: "Loon",
-    getJaaropgaveAmount: (acct) => acct.amounts["wage"]?.["taxableWage"] ?? null,
+    getJaaropgaveAmount: (acct) =>
+      acct.amounts["wage"]?.["taxableWage"] ?? acct.amounts["wage"]?.["grossWage"] ?? null,
   },
   {
     fieldContains: "arbeidsongeschiktheid",
@@ -36,12 +37,10 @@ export function applyExceptions(
   const newMatched = [...matched];
   let remainingJaaropgave = [...onlyInJaaropgave];
 
-  // Step 2: secondary matching by amount for null-accountNumber entries
+  // Step 2: secondary matching by amount — field name is the constraint, not accountNumber
   const stillUnmatched: TaxReturnEntry[] = [];
   for (const entry of remainingAangifte) {
-    if (entry.accountNumber !== null) { stillUnmatched.push(entry); continue; }
-
-    const matcher = SECONDARY_MATCHERS.find((m) => entry.field.includes(m.fieldContains));
+    const matcher = SECONDARY_MATCHERS.find((m) => normalizeField(entry.field).includes(normalizeField(m.fieldContains)));
     if (!matcher) { stillUnmatched.push(entry); continue; }
 
     const jaaropgaveIdx = remainingJaaropgave.findIndex((j) => {
