@@ -4,8 +4,7 @@ import path from "path";
 import type { AnalysisReport, AnnualStatementData, TaxReturnData } from "./types";
 import { z } from "zod";
 import { parseLlmJson } from "./parse-llm-json";
-import { matchEntries } from "./account-matcher";
-import { applyExceptions } from "./aangifte-exceptions";
+import { koppeling } from "./koppeling";
 import { AnalysisReportSchema } from "./schemas";
 
 const MODEL = "claude-sonnet-4-6";
@@ -103,10 +102,7 @@ export async function analyzeDocuments(
   apiKey?: string
 ): Promise<Omit<AnalysisReport, "extractionErrors">> {
   const client = new Anthropic(apiKey ? { apiKey } : {});
-  const matchResult = matchEntries(taxReturn, annualStatements);
-  const { matched, onlyInAangifte, onlyInJaaropgave } = applyExceptions(
-    matchResult.matched, matchResult.onlyInAangifte, matchResult.onlyInJaaropgave
-  );
+  const { matched, onlyInAangifte, onlyInJaaropgave } = koppeling(taxReturn, annualStatements);
 
   const userMessage = [
     "## Matched pairs (account numbers resolved by code)",
