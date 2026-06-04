@@ -40,6 +40,20 @@ PDFs → [Privacy filter] → [Extraction] → [Koppeling] → [Analysis] → Re
 
 **Analysis** — Claude Sonnet receives the pre-matched pairs and produces the report. Flags are generated from a [seeded rule set](rules/aandachtspunten.md) plus open-ended LLM judgment.
 
+## Cost per run
+
+Typical run: 1 aangifte + 4 jaaropgaves.
+
+| Call | Model | Approx. tokens | Approx. cost |
+|---|---|---|---|
+| 5 × extraction (parallel) | Haiku 4.5 | ~16k input / ~2.2k output | ~$0.02 |
+| 1 × analysis | Sonnet 4.6 | ~3.3k input / ~650 output | ~$0.02 |
+| **Total** | | | **~$0.04** |
+
+Token counts are dominated by PDF text size — a large aangifte or many jaaropgaves will increase the extraction cost linearly. Analysis cost grows with the number of matched/unmatched accounts. Prompt caching on the shared jaaropgave system prompt reduces extraction cost when the cache is warm.
+
+Prices are approximate; verify current rates at [console.anthropic.com](https://console.anthropic.com/).
+
 ## API key
 
 The key is passed through the Next.js API route to Anthropic and is not stored server-side. It is held in `sessionStorage` for the duration of the session.
