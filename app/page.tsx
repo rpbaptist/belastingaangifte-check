@@ -18,19 +18,8 @@ import type {
   QuestionRequest,
 } from "@/lib/types";
 import { AnalyseResponseSchema, ApiErrorSchema, QuestionResponseSchema } from "@/lib/schemas";
-import { extractPdfText, buildSharedIbanMaps, applyPrivacyFilter, type IbanMaps } from "@/lib/pdf-to-text";
-
-function dereferenceReport(report: AnalysisReport, map: Record<string, string> = {}): AnalysisReport {
-  if (!Object.keys(map).length) return report;
-  const r = (v: string | null | undefined) => (v != null ? (map[v] ?? v) : v);
-  return {
-    ...report,
-    covered:          report.covered.map(c => ({ ...c, accountNumber: r(c.accountNumber) as string })),
-    missingStatement: report.missingStatement.map(m => ({ ...m, accountNumber: r(m.accountNumber) as string | null })),
-    notFilledIn:      report.notFilledIn.map(n => ({ ...n, accountNumber: r(n.accountNumber) as string })),
-    attentionPoints:  report.attentionPoints.map(a => ({ ...a, accountNumber: r(a.accountNumber) as string | null | undefined })),
-  };
-}
+import { extractPdfText } from "@/lib/pdf-to-text";
+import { buildSharedIbanMaps, applyPrivacyFilter, dereferenceReport, type IbanMaps } from "@/lib/iban-anonymizer";
 
 /* ─── Helpers ─────────────────────────────────────────────────────────────── */
 

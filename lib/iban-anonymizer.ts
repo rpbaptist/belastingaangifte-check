@@ -1,3 +1,5 @@
+import type { AnalysisReport } from "./types";
+
 /** Forward map (normalised IBAN → pseudonym) and reverse map (pseudonym → normalised IBAN) */
 export type IbanMaps = {
   forward: Record<string, string>;
@@ -44,6 +46,19 @@ export function buildSharedIbanMaps(
   }
 
   return { forward, reverse };
+}
+
+/** Replace pseudonymised IBANs in a report with their original values using the reverse map */
+export function dereferenceReport(report: AnalysisReport, map: Record<string, string> = {}): AnalysisReport {
+  if (!Object.keys(map).length) return report;
+  const r = (v: string | null | undefined) => (v != null ? (map[v] ?? v) : v);
+  return {
+    ...report,
+    covered:          report.covered.map(c => ({ ...c, accountNumber: r(c.accountNumber) as string })),
+    missingStatement: report.missingStatement.map(m => ({ ...m, accountNumber: r(m.accountNumber) as string | null })),
+    notFilledIn:      report.notFilledIn.map(n => ({ ...n, accountNumber: r(n.accountNumber) as string })),
+    attentionPoints:  report.attentionPoints.map(a => ({ ...a, accountNumber: r(a.accountNumber) as string | null | undefined })),
+  };
 }
 
 /** Apply the forward IBAN map and BSN scrub to raw text */

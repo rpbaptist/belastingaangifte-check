@@ -1,11 +1,5 @@
 "use client";
 
-import { buildSharedIbanMaps, applyPrivacyFilter } from "./iban-anonymizer";
-
-export type { IbanMaps } from "./iban-anonymizer";
-export { buildSharedIbanMaps, applyPrivacyFilter } from "./iban-anonymizer";
-export { extractTaxYear } from "./tax-year-extractor";
-
 /** Extract raw text from a PDF page by page — no scrubbing */
 export async function extractPdfText(file: File): Promise<string> {
   // Dynamic import keeps pdfjs out of the SSR bundle — DOMMatrix is browser-only
