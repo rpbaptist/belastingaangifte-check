@@ -8,6 +8,8 @@ import { koppeling } from "./koppeling";
 import { AnalyzerLlmOutputSchema } from "./schemas";
 import { buildAnalyzerPrompt } from "./prompts/analyzer";
 import { buildMissingStatement, buildNotFilledIn } from "./report-builder";
+import { buildCovered } from "./coverage-checker";
+import { buildDeterministicAttentionPoints } from "./attention-point-rules";
 
 const MODEL = "claude-sonnet-4-6";
 
@@ -29,6 +31,9 @@ export async function analyzeDocuments(
 ): Promise<Omit<AnalysisReport, "extractionErrors">> {
   const client = new Anthropic(apiKey ? { apiKey } : {});
   const { matched, onlyInAangifte, onlyInJaaropgave } = koppeling(taxReturn, annualStatements);
+
+  const covered = buildCovered(matched);
+  const deterministicPoints = buildDeterministicAttentionPoints(matched, onlyInJaaropgave, taxReturn.taxYear);
 
   const userMessage = [
     "## Matched pairs",
@@ -62,13 +67,13 @@ export async function analyzeDocuments(
 
   const raw = parseLlmJson(textBlock.text);
   try {
-    const { covered, attentionPoints } = AnalyzerLlmOutputSchema.parse(raw);
+    const { attentionPoints: llmPoints } = AnalyzerLlmOutputSchema.parse(raw);
     return {
       taxYear: taxReturn.taxYear,
       covered,
       missingStatement: buildMissingStatement(onlyInAangifte),
       notFilledIn: buildNotFilledIn(onlyInJaaropgave),
-      attentionPoints,
+      attentionPoints: [...deterministicPoints, ...llmPoints],
     };
   } catch (err) {
     const msg = err instanceof z.ZodError ? err.issues[0]?.message : "onverwacht formaat";
