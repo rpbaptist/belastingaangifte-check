@@ -12,9 +12,10 @@ describe("applyPrivacyFilter", () => {
   });
 
   it("replaces a spaced IBAN with the same pseudonym as the compact form", () => {
-    const result = applyPrivacyFilter("NL22 INGB 0673 3457 85 bedrag €3.080", INGB_FORWARD);
+    // NL00 INGB 0000 0000 01 is the spaced form of NL00INGB0000000001
+    const result = applyPrivacyFilter("NL00 INGB 0000 0000 01 bedrag €3.080", INGB_FORWARD);
     expect(result).toContain(INGB001);
-    expect(result).not.toContain("NL22");
+    expect(result).not.toContain("NL00 INGB");
   });
 
   it("leaves an IBAN that is not in the forward map unchanged", () => {
@@ -49,7 +50,7 @@ describe("buildSharedIbanMaps", () => {
 
   it("maps the same IBAN regardless of spacing to the same pseudonym", () => {
     const { forward: a } = buildSharedIbanMaps(["NL00INGB0000000001"]);
-    const { forward: b } = buildSharedIbanMaps(["NL22 INGB 0673 3457 85"]);
+    const { forward: b } = buildSharedIbanMaps(["NL00 INGB 0000 0000 01"]);
     expect(a["NL00INGB0000000001"]).toBe(b["NL00INGB0000000001"]);
   });
 
