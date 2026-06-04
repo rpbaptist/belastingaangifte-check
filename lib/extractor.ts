@@ -4,6 +4,7 @@ import type { AnnualStatementData, TaxReturnData } from "./types";
 import { readCache, writeCache } from "./extraction-cache";
 import { parseLlmJson } from "./parse-llm-json";
 import { AnnualStatementSchema, TaxReturnSchema } from "./schemas";
+import { extractTaxYear } from "./tax-year-extractor";
 
 const MODEL = "claude-haiku-4-5-20251001";
 
@@ -31,7 +32,6 @@ Return ONLY a JSON object with this structure:
 }
 
 Rules:
-- taxYear is the year the document covers (not the year it was printed)
 - All amounts are numbers in euros. Preserve sign: a negative balance (e.g. credit-card debt "saldo -102") must be extracted as -102, not 102
 - Use English keys for amount names
 - Broker amount semantics:
@@ -63,6 +63,7 @@ Return ONLY a JSON object with this structure:
 }
 
 Rules:
+- Use the tax year supplied above as taxYear in your output
 - Extract every entry that has a non-zero amount
 - box is "1", "2", or "3"
 - field is the Dutch label exactly as it appears in the document
@@ -88,6 +89,12 @@ export async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 4): Promi
     }
   }
   throw new Error("unreachable");
+}
+
+function buildUserMessage(prompt: string, pdfText: string): string {
+  const year = extractTaxYear(pdfText);
+  const yearLine = year ? `Tax year: ${year}` : "Tax year: unknown — infer from content";
+  return `${yearLine}\n\n${prompt}\n\nDocument text:\n\n${pdfText}`;
 }
 
 type ExtractOpts<T> = {
@@ -117,7 +124,7 @@ async function extract<T>(pdfText: string, opts: ExtractOpts<T>, apiKey?: string
       messages: [
         {
           role: "user",
-          content: `${opts.userPrompt}\n\nDocument text:\n\n${pdfText}`,
+          content: buildUserMessage(opts.userPrompt, pdfText),
         },
       ],
     })
