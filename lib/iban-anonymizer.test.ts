@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildSharedIbanMaps, applyPrivacyFilter } from "./iban-anonymizer";
 
-const INGB001 = "[IBAN:INGB:001]";
+const INGB001 = "IBAN-INGB-001";
 const INGB_FORWARD = { NL00INGB0000000001: INGB001 };
 
 describe("applyPrivacyFilter", () => {
@@ -43,9 +43,9 @@ describe("applyPrivacyFilter", () => {
 });
 
 describe("buildSharedIbanMaps", () => {
-  it("assigns [IBAN:BANKCODE:001] format to a detected IBAN", () => {
+  it("assigns IBAN-BANKCODE-001 format to a detected IBAN", () => {
     const { forward } = buildSharedIbanMaps(["NL00INGB0000000001"]);
-    expect(forward["NL00INGB0000000001"]).toBe("[IBAN:INGB:001]");
+    expect(forward["NL00INGB0000000001"]).toBe("IBAN-INGB-001");
   });
 
   it("maps the same IBAN regardless of spacing to the same pseudonym", () => {
@@ -56,27 +56,27 @@ describe("buildSharedIbanMaps", () => {
 
   it("gives two IBANs at the same bank sequential numbers", () => {
     const { forward } = buildSharedIbanMaps(["NL00INGB0000000001 NL00INGB0000000002"]);
-    expect(forward["NL00INGB0000000001"]).toBe("[IBAN:INGB:001]");
-    expect(forward["NL00INGB0000000002"]).toBe("[IBAN:INGB:002]");
+    expect(forward["NL00INGB0000000001"]).toBe("IBAN-INGB-001");
+    expect(forward["NL00INGB0000000002"]).toBe("IBAN-INGB-002");
   });
 
   it("gives IBANs at different banks each their own :001", () => {
     const { forward } = buildSharedIbanMaps(["NL00INGB0000000001 NL00RABO0000000001"]);
-    expect(forward["NL00INGB0000000001"]).toBe("[IBAN:INGB:001]");
-    expect(forward["NL00RABO0000000001"]).toBe("[IBAN:RABO:001]");
+    expect(forward["NL00INGB0000000001"]).toBe("IBAN-INGB-001");
+    expect(forward["NL00RABO0000000001"]).toBe("IBAN-RABO-001");
   });
 
   it("produces the same pseudonym for an IBAN that appears in multiple texts", () => {
     const { forward } = buildSharedIbanMaps(["NL00INGB0000000001", "NL00INGB0000000001"]);
     const entries = Object.entries(forward);
     expect(entries).toHaveLength(1);
-    expect(entries[0][1]).toBe("[IBAN:INGB:001]");
+    expect(entries[0][1]).toBe("IBAN-INGB-001");
   });
 
   it("extending an existing map: new IBAN continues numbering, existing unchanged", () => {
     const first = buildSharedIbanMaps(["NL00INGB0000000001"]);
     const extended = buildSharedIbanMaps(["NL00INGB0000000002"], first);
-    expect(extended.forward["NL00INGB0000000001"]).toBe("[IBAN:INGB:001]");
-    expect(extended.forward["NL00INGB0000000002"]).toBe("[IBAN:INGB:002]");
+    expect(extended.forward["NL00INGB0000000001"]).toBe("IBAN-INGB-001");
+    expect(extended.forward["NL00INGB0000000002"]).toBe("IBAN-INGB-002");
   });
 });

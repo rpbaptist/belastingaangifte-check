@@ -27,7 +27,7 @@ export function buildSharedIbanMaps(
   // Seed per-bank counters from existing pseudonyms so new ones don't collide
   const counters: Record<string, number> = {};
   for (const pseudo of Object.values(forward)) {
-    const m = pseudo.match(/^\[IBAN:([A-Z]{4}):(\d{3})\]$/);
+    const m = pseudo.match(/^IBAN-([A-Z]{4})-(\d{3})$/);
     if (m) counters[m[1]] = Math.max(counters[m[1]] ?? 0, parseInt(m[2], 10));
   }
 
@@ -37,7 +37,7 @@ export function buildSharedIbanMaps(
       if (forward[norm]) continue; // already mapped
       const code = norm.slice(4, 8); // bank code, e.g. "INGB", "RABO", "ASNB"
       counters[code] = (counters[code] ?? 0) + 1;
-      const pseudo = `[IBAN:${code}:${counters[code].toString().padStart(3, "0")}]`;
+      const pseudo = `IBAN-${code}-${counters[code].toString().padStart(3, "0")}`;
       forward[norm] = pseudo;
       reverse[pseudo] = norm;
     }
