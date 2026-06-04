@@ -23,24 +23,26 @@ After the initial report you can add more statements incrementally and ask follo
 
 ## How it works
 
-Three steps:
+Four steps:
 
 ```
-PDFs → [Extraction] → [Matching] → [Analysis] → Report
-            ↑               ↑            ↑
-       Claude Haiku      TypeScript  Claude Sonnet
-       (parallel)        (tested)
+PDFs → [Privacy filter] → [Extraction] → [Koppeling] → [Analysis] → Report
+            ↑                   ↑              ↑             ↑
+       IBAN anonymisation  Claude Haiku   TypeScript    Claude Sonnet
+       (client-side)        (parallel)     (tested)
 ```
 
-**Extraction** — Each PDF is sent as a native document block to Claude Haiku, which returns structured JSON (institution type, account numbers, amounts). Runs in parallel across all uploaded files with prompt caching.
+**Privacy filter** — Before any PDF text leaves the browser, BSNs are scrubbed and IBANs are replaced with readable pseudonyms (`IBAN-INGB-001`, `IBAN-RABO-002`, etc.). The pseudonym map is kept client-side and used to restore real IBANs in the displayed report. **BSNs and IBANs are never sent to the API.** Amounts and other financial identifiers are sent.
 
-**Matching** — Account numbers from the tax return and annual statements are paired in TypeScript using a normalisation function that strips whitespace, punctuation, and Dutch label prefixes. Deterministic, no LLM.
+**Extraction** — Each anonymised PDF text is sent to Claude Haiku, which returns structured JSON (institution type, account identifiers, amounts). Runs in parallel across all uploaded files with prompt caching.
+
+**Koppeling** — Account identifiers from the tax return and annual statements are matched in TypeScript (`lib/koppeling.ts`). Primary matching by normalised account number (strips whitespace, punctuation, Dutch label prefixes). Secondary matching by amount for entries without an account number (wage income, insurance premiums). Deterministic, no LLM.
 
 **Analysis** — Claude Sonnet receives the pre-matched pairs and produces the report. Flags are generated from a [seeded rule set](rules/aandachtspunten.md) plus open-ended LLM judgment.
 
 ## API key
 
-Your key never touches the server. The app calls `api.anthropic.com` directly from your browser and stores the key in `sessionStorage` for the duration of the session.
+The key is passed through the Next.js API route to Anthropic and is not stored server-side. It is held in `sessionStorage` for the duration of the session.
 
 Get a key at [console.anthropic.com](https://console.anthropic.com/).
 
@@ -82,12 +84,17 @@ app/
   api/analyze/incremental/        add statements to existing analysis
   api/question/                   follow-up Q&A on flagged items
 lib/
-  extractor.ts                    PDF → JSON via Claude Haiku
-  extraction-session.ts           parallel orchestration
+  iban-anonymizer.ts              client-side IBAN pseudonymisation + report dereference
+  pdf-to-text.ts                  browser PDF → text (pdfjs, no scrubbing)
+  extractor.ts                    anonymised text → JSON via Claude Haiku
+  extraction-session.ts           parallel orchestration + partial failure handling
   extraction-cache.ts             dev-only cache (SHA-256 keyed)
   account-normalizer.ts           strip whitespace / prefixes from account numbers
-  account-matcher.ts              tax return ↔ annual statement matching
+  account-matcher.ts              primary account-number matching
+  aangifte-exceptions.ts          secondary amount-based matching + calculated-field filter
+  koppeling.ts                    full matching pipeline (account-matcher + exceptions)
   analyzer.ts                     comparison report via Claude Sonnet
+  anthropic-error.ts              Anthropic SDK errors → HTTP responses
   schemas.ts                      Zod schemas for all LLM output
   parse-llm-json.ts               shared JSON parser
 rules/
