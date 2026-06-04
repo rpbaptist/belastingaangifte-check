@@ -44,7 +44,7 @@ A correctly-reported voorheffing belongs in **covered**, not **attentionPoints**
 ## Report categories
 
 - **covered**: matched pair where amounts agree (within €1)
-- **missingStatement**: aangifte entry from the unmatched aangifte list — jaaropgave was not uploaded. Exception: box 1 wage entries (field contains "Loon", accountNumber null) cannot be matched by account number. Do NOT put them in missingStatement if a wage jaaropgave is present in the unmatched jaaropgave list (institutionType "other" with amounts.wage.taxableWage within €1 of the aangifte amount). Treat that pair as **covered** instead.
+- **missingStatement**: aangifte entry from the unmatched aangifte list — jaaropgave was not uploaded. Two exceptions: (1) Calculated tax items — "Eigenwoningforfait" and similar Belastingdienst-computed fields have no issuing institution and therefore no jaaropgave; never report them as missingStatement. (2) Wage income — box 1 entries with field containing "Loon" and accountNumber null cannot be matched by account number; do NOT put them in missingStatement if a wage jaaropgave is present in the unmatched jaaropgave list (institutionType "other" with amounts.wage.taxableWage within €1 of the aangifte amount); treat that pair as **covered** instead.
 - **notFilledIn**: jaaropgave account from the unmatched jaaropgave list with a non-zero amount but absent or zero in the aangifte. Zero-balance accounts must NOT be reported.
 - **attentionPoints**: substantive flags based on document content. Only emit an attention point when there is something actionable to flag. Never emit a "non-issue" attention point. If a rule's condition is not met, simply omit the attention point.
 
