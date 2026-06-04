@@ -65,6 +65,12 @@ const AttentionPointSchema = z.object({
   accountNumber: s().optional(),
 });
 
+// What the LLM produces — taxYear, missingStatement, notFilledIn are built in code
+export const AnalyzerLlmOutputSchema = z.object({
+  covered: z.array(CoveredItemSchema),
+  attentionPoints: z.array(AttentionPointSchema),
+});
+
 export const AnalysisReportSchema = z.object({
   taxYear: z.number().int(),
   covered: z.array(CoveredItemSchema),

@@ -1,7 +1,5 @@
 export function buildAnalyzerPrompt(rules: string): string {
-  return `You are a Dutch tax analyst. You receive pre-matched data from a belastingaangifte and one or more jaaropgaves, and produce a structured comparison report.
-
-Account number matching has already been done in code — do not re-match. Work only with the pre-matched structure provided.
+  return `You are a Dutch tax analyst. You receive matched pairs from a belastingaangifte and one or more jaaropgaves. For each matched pair, determine whether the amounts are correctly reported and produce a covered item. Also flag any attention points.
 
 ## Amount comparison
 
@@ -17,16 +15,14 @@ Dividend tax mapping (broker jaaropgaves):
 - aangifte field "Ingehouden dividendbelasting" (a box 1 voorheffing) → jaaropgave's broker.dutchDividendTax for the same accountNumber. If multiple aangifte entries cover the same account, sum them when comparing.
 - aangifte field "Verrekenbare buitenlandse bronbelasting" / "Buitenlandse bronheffing" → jaaropgave's broker.foreignWithholdingTax.
 - aangifte field "Dividend" (box 2 or box 3 income line) → jaaropgave's broker.dividend.
-A correctly-reported voorheffing belongs in **covered**, not **attentionPoints**.
+A correctly-reported voorheffing belongs in **covered**.
+
+Mortgage interest: the aangifte records betaalde rente as a negative amount (box 1 deduction). The jaaropgave records it as a positive interestPaid. Compare absolute values within €1 — a pair where |aangifte amount| ≈ jaaropgave.interestPaid is **covered**.
 
 ## Report categories
 
-- **covered**: matched pair where amounts agree (within €1)
-- **missingStatement**: aangifte entry from the unmatched aangifte list — jaaropgave was not uploaded.
-- **notFilledIn**: jaaropgave account from the unmatched jaaropgave list with a non-zero amount but absent or zero in the aangifte. Zero-balance accounts must NOT be reported.
+- **covered**: matched pair where amounts agree (within €1). Always include a matched pair here, even for accounts with unusual lifecycle events (mortgage discharged mid-year, account opened or closed during the tax year, partial-year interest). Only escalate to **attentionPoints** when the document content reveals a substantive risk not already addressed by the correctly-reported amount.
 - **attentionPoints**: substantive flags based on document content. Only emit an attention point when there is something actionable to flag. Never emit a "non-issue" attention point. If a rule's condition is not met, simply omit the attention point.
-
-A matched pair always belongs in **covered**, even when the underlying account had unusual lifecycle events (mortgage discharged mid-year, account opened or closed during the tax year, partial-year interest). Only escalate to **attentionPoints** when the document content reveals a substantive risk AND that risk is not already addressed by a correctly-reported amount.
 
 ## Aandachtspunten rules
 
@@ -34,10 +30,9 @@ ${rules}
 
 ## Output
 
-Your response must be a single raw JSON object — nothing before the opening brace, nothing after the closing brace. No markdown fences, no prose, no explanation. If you write anything other than JSON your response will break the parser.
+Your response must be a single raw JSON object — nothing before the opening brace, nothing after the closing brace. No markdown fences, no prose, no explanation.
 
 {
-  "taxYear": 2023,
   "covered": [
     {
       "field": "Saldo bank en spaarrekeningen",
@@ -45,22 +40,6 @@ Your response must be a single raw JSON object — nothing before the opening br
       "institution": "ING",
       "amountTaxReturn": 12345,
       "amountStatement": 12345
-    }
-  ],
-  "missingStatement": [
-    {
-      "field": "Saldo bank en spaarrekeningen",
-      "accountNumber": "NL12INGB0001234567",
-      "amount": 12345,
-      "box": "3"
-    }
-  ],
-  "notFilledIn": [
-    {
-      "accountNumber": "NL98RABO0123456789",
-      "institution": "Rabobank",
-      "description": "Spaarrekening",
-      "amount": 5000
     }
   ],
   "attentionPoints": [

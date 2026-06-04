@@ -5,8 +5,9 @@ import type { AnalysisReport, AnnualStatementData, TaxReturnData } from "./types
 import { z } from "zod";
 import { parseLlmJson } from "./parse-llm-json";
 import { koppeling } from "./koppeling";
-import { AnalysisReportSchema } from "./schemas";
+import { AnalyzerLlmOutputSchema } from "./schemas";
 import { buildAnalyzerPrompt } from "./prompts/analyzer";
+import { buildMissingStatement, buildNotFilledIn } from "./report-builder";
 
 const MODEL = "claude-sonnet-4-6";
 
@@ -30,24 +31,16 @@ export async function analyzeDocuments(
   const { matched, onlyInAangifte, onlyInJaaropgave } = koppeling(taxReturn, annualStatements);
 
   const userMessage = [
-    "## Matched pairs (account numbers resolved by code)",
+    "## Matched pairs",
     "",
     JSON.stringify(matched, null, 2),
     "",
-    `## Aangifte entries without matching jaaropgave (${onlyInAangifte.length})`,
-    "",
-    JSON.stringify(onlyInAangifte, null, 2),
-    "",
-    `## Jaaropgave accounts without matching aangifte entry (${onlyInJaaropgave.length})`,
-    "",
-    JSON.stringify(onlyInJaaropgave, null, 2),
-    "",
-    "Produce the analysis report. Respond with the raw JSON object only — start your response with `{`.",
+    "Produce the analysis. Respond with the raw JSON object only — start your response with `{`.",
   ].join("\n");
 
   const response = await client.messages.create({
     model: MODEL,
-    max_tokens: 8192,
+    max_tokens: 4096,
     system: [
       {
         type: "text",
@@ -69,7 +62,14 @@ export async function analyzeDocuments(
 
   const raw = parseLlmJson(textBlock.text);
   try {
-    return AnalysisReportSchema.parse(raw);
+    const { covered, attentionPoints } = AnalyzerLlmOutputSchema.parse(raw);
+    return {
+      taxYear: taxReturn.taxYear,
+      covered,
+      missingStatement: buildMissingStatement(onlyInAangifte),
+      notFilledIn: buildNotFilledIn(onlyInJaaropgave),
+      attentionPoints,
+    };
   } catch (err) {
     const msg = err instanceof z.ZodError ? err.issues[0]?.message : "onverwacht formaat";
     throw new Error(`Analyse mislukt: ${msg}`);
