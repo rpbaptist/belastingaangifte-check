@@ -2,8 +2,8 @@
 
 import * as pdfjs from "pdfjs-dist";
 
-// Use the CDN worker to avoid bundling ~500kB into the app
-pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
+// Worker served from public/ — kept in sync with pdfjs-dist via postinstall
+pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
 export async function pdfToText(file: File): Promise<string> {
   const buffer = await file.arrayBuffer();

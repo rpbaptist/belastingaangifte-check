@@ -46,3 +46,6 @@ next-env.d.ts
 
 # dev extraction cache
 .extracted/
+
+# pdfjs worker (copied from node_modules by postinstall)
+/public/pdf.worker.min.mjs
