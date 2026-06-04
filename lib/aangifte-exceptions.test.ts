@@ -58,6 +58,15 @@ describe("applyExceptions", () => {
     expect(onlyInAangifte).toHaveLength(0);
   });
 
+  it("amount-matches 'Inkomsten uit werk' (section header) to a wage jaaropgave", () => {
+    const loon = aangifte("Inkomsten uit werk", 100932, null);
+    const wage = statement({ wage: { taxableWage: 100932 } });
+    const { matched, onlyInAangifte, onlyInJaaropgave } = applyExceptions([], [loon], [wage]);
+    expect(matched).toHaveLength(1);
+    expect(onlyInAangifte).toHaveLength(0);
+    expect(onlyInJaaropgave).toHaveLength(0);
+  });
+
   it("secondary-matches a Loon entry even when accountNumber is not null", () => {
     const loon = aangifte("Loon in Nederland", 100932, "135689600"); // loonheffingsnummer
     const wage = statement({ wage: { taxableWage: 100932 } });

@@ -9,12 +9,19 @@ type SecondaryMatcher = {
   getJaaropgaveAmount: (acct: AccountData) => number | null;
 };
 
+const wageAmount = (acct: AccountData): number | null =>
+  acct.amounts["wage"]?.["taxableWage"] ?? acct.amounts["wage"]?.["grossWage"] ?? null;
+
 /** Entries that can be matched by amount when account-number matching doesn't apply */
 export const SECONDARY_MATCHERS: SecondaryMatcher[] = [
   {
     fieldContains: "Loon",
-    getJaaropgaveAmount: (acct) =>
-      acct.amounts["wage"]?.["taxableWage"] ?? acct.amounts["wage"]?.["grossWage"] ?? null,
+    getJaaropgaveAmount: wageAmount,
+  },
+  {
+    // LLM sometimes extracts the section header instead of the per-employer line
+    fieldContains: "inkomsten uit werk",
+    getJaaropgaveAmount: wageAmount,
   },
   {
     fieldContains: "arbeidsongeschiktheid",
