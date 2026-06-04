@@ -18,9 +18,9 @@ import type {
   QuestionRequest,
 } from "@/lib/types";
 import { AnalyseResponseSchema, ApiErrorSchema, QuestionResponseSchema } from "@/lib/schemas";
-import { pdfToText } from "@/lib/pdf-to-text";
+import { extractPdfText, buildSharedIbanMaps, applyPrivacyFilter, type IbanMaps } from "@/lib/pdf-to-text";
 
-function dereferenceReport(report: AnalysisReport, map: Record<string, string>): AnalysisReport {
+function dereferenceReport(report: AnalysisReport, map: Record<string, string> = {}): AnalysisReport {
   if (!Object.keys(map).length) return report;
   const r = (v: string | null | undefined) => (v != null ? (map[v] ?? v) : v);
   return {
@@ -391,7 +391,7 @@ export default function Home() {
   const [additionalJaaropgaves, setAdditionalJaaropgaves] = useState<File[]>([]);
   const [incrementalLoading, setIncrementalLoading] = useState(false);
   const [incrementalError, setIncrementalError] = useState<string | null>(null);
-  const [ibanMap, setIbanMap] = useState<Record<string, string>>({});
+  const [ibanMaps, setIbanMaps] = useState<IbanMaps>({ forward: {}, reverse: {} });
 
   const isEnvKey = !!process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY;
   const [apiKey, setApiKey] = useState<string>(process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY ?? "");
@@ -416,16 +416,20 @@ export default function Home() {
     setAdditionalJaaropgaves([]);
     setError(null);
     try {
-      const [taxReturnResult, ...statementResults] = await Promise.all([
-        pdfToText(aangifte[0]),
-        ...jaaropgaves.map(pdfToText),
+      // Two-pass: extract raw text from all PDFs first, then build one shared IBAN map
+      const [taxReturnRaw, ...statementRaws] = await Promise.all([
+        extractPdfText(aangifte[0]),
+        ...jaaropgaves.map(extractPdfText),
       ]);
-      const mergedMap = Object.assign({}, taxReturnResult.ibanMap, ...statementResults.map(r => r.ibanMap));
-      setIbanMap(mergedMap);
+      const maps = buildSharedIbanMaps([taxReturnRaw, ...statementRaws]);
+      setIbanMaps(maps);
       const body: AnalyseRequest = {
-        taxReturn: taxReturnResult.text,
+        taxReturn: applyPrivacyFilter(taxReturnRaw, maps.forward),
         taxReturnFilename: aangifte[0].name,
-        annualStatements: jaaropgaves.map((f, i) => ({ data: statementResults[i].text, filename: f.name })),
+        annualStatements: jaaropgaves.map((f, i) => ({
+          data: applyPrivacyFilter(statementRaws[i], maps.forward),
+          filename: f.name,
+        })),
       };
       const res = await fetch("/api/analyze", {
         method: "POST",
@@ -437,7 +441,7 @@ export default function Home() {
         throw new Error(error ?? `Serverfout ${res.status}`);
       }
       const data = AnalyseResponseSchema.parse(await res.json());
-      setReport(dereferenceReport(data.report, mergedMap));
+      setReport(dereferenceReport(data.report, maps.reverse));
       setExtractedData(data.extractedData);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Er is een onbekende fout opgetreden.");
@@ -452,12 +456,16 @@ export default function Home() {
     setIncrementalLoading(true);
     setIncrementalError(null);
     try {
-      const additionalResults = await Promise.all(additionalJaaropgaves.map(pdfToText));
-      const mergedMap = { ...ibanMap, ...Object.assign({}, ...additionalResults.map(r => r.ibanMap)) };
-      setIbanMap(mergedMap);
+      // Extract raw text, extend existing maps with any new IBANs
+      const additionalRaws = await Promise.all(additionalJaaropgaves.map(extractPdfText));
+      const maps = buildSharedIbanMaps(additionalRaws, ibanMaps);
+      setIbanMaps(maps);
       const body: IncrementalRequest = {
         extractedData,
-        additionalStatements: additionalJaaropgaves.map((f, i) => ({ data: additionalResults[i].text, filename: f.name })),
+        additionalStatements: additionalJaaropgaves.map((f, i) => ({
+          data: applyPrivacyFilter(additionalRaws[i], maps.forward),
+          filename: f.name,
+        })),
       };
       const res = await fetch("/api/analyze/incremental", {
         method: "POST",
@@ -469,7 +477,7 @@ export default function Home() {
         throw new Error(error ?? `Serverfout ${res.status}`);
       }
       const data = AnalyseResponseSchema.parse(await res.json());
-      setReport(dereferenceReport(data.report, mergedMap));
+      setReport(dereferenceReport(data.report, maps.reverse));
       setExtractedData(data.extractedData);
       setAdditionalJaaropgaves([]);
     } catch (err) {
@@ -483,7 +491,7 @@ export default function Home() {
     setReport(null);
     setExtractedData(null);
     setError(null);
-    setIbanMap({});
+    setIbanMaps({ forward: {}, reverse: {} });
   }
 
   const hasAttn = !!report && report.attentionPoints.length > 0;
