@@ -5,6 +5,7 @@ import type { AnalysisReport, AnnualStatementData, TaxReturnData } from "./types
 import { z } from "zod";
 import { parseLlmJson } from "./parse-llm-json";
 import { matchEntries } from "./account-matcher";
+import { applyExceptions } from "./aangifte-exceptions";
 import { AnalysisReportSchema } from "./schemas";
 
 const MODEL = "claude-sonnet-4-6";
@@ -44,7 +45,7 @@ A correctly-reported voorheffing belongs in **covered**, not **attentionPoints**
 ## Report categories
 
 - **covered**: matched pair where amounts agree (within €1)
-- **missingStatement**: aangifte entry from the unmatched aangifte list — jaaropgave was not uploaded. Three exceptions: (1) Calculated tax items — "Eigenwoningforfait" and similar Belastingdienst-computed fields have no issuing institution and no jaaropgave; never report them as missingStatement. (2) Wage income — box 1 entries with field containing "Loon" and accountNumber null cannot be matched by account number; do NOT put them in missingStatement if a wage jaaropgave (institutionType "other", amounts.wage.taxableWage within €1) is present in the unmatched jaaropgave list; treat that pair as **covered**. (3) AO insurance premiums — box 1 entries with field containing "arbeidsongeschiktheid" or "Aftrekbare premies"; if an insurance jaaropgave is present in the unmatched jaaropgave list with premiumPaid within €1 of the aangifte amount (ignoring sign), treat that pair as **covered** regardless of whether account numbers matched.
+- **missingStatement**: aangifte entry from the unmatched aangifte list — jaaropgave was not uploaded.
 - **notFilledIn**: jaaropgave account from the unmatched jaaropgave list with a non-zero amount but absent or zero in the aangifte. Zero-balance accounts must NOT be reported.
 - **attentionPoints**: substantive flags based on document content. Only emit an attention point when there is something actionable to flag. Never emit a "non-issue" attention point. If a rule's condition is not met, simply omit the attention point.
 
@@ -102,7 +103,10 @@ export async function analyzeDocuments(
   apiKey?: string
 ): Promise<Omit<AnalysisReport, "extractionErrors">> {
   const client = new Anthropic(apiKey ? { apiKey } : {});
-  const { matched, onlyInAangifte, onlyInJaaropgave } = matchEntries(taxReturn, annualStatements);
+  const matchResult = matchEntries(taxReturn, annualStatements);
+  const { matched, onlyInAangifte, onlyInJaaropgave } = applyExceptions(
+    matchResult.matched, matchResult.onlyInAangifte, matchResult.onlyInJaaropgave
+  );
 
   const userMessage = [
     "## Matched pairs (account numbers resolved by code)",
