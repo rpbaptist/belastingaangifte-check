@@ -26,9 +26,11 @@ export function applyExceptions(
   onlyInAangifte: TaxReturnEntry[],
   onlyInJaaropgave: UnmatchedJaaropgave[],
 ): { matched: MatchedPair[]; onlyInAangifte: TaxReturnEntry[]; onlyInJaaropgave: UnmatchedJaaropgave[] } {
+  const normalizeField = (s: string) => s.replace(/-/g, "").toLowerCase();
+
   // Step 1: remove entries that have no jaaropgave by design
   let remainingAangifte = onlyInAangifte.filter(
-    (e) => !CALCULATED_FIELDS.some((f) => e.field.includes(f))
+    (e) => !CALCULATED_FIELDS.some((f) => normalizeField(e.field).includes(normalizeField(f)))
   );
 
   const newMatched = [...matched];

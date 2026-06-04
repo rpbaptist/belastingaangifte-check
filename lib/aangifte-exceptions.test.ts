@@ -30,6 +30,11 @@ describe("applyExceptions", () => {
     expect(onlyInAangifte).toHaveLength(0);
   });
 
+  it("removes Eigenwoning-forfait (hyphenated) from onlyInAangifte", () => {
+    const { onlyInAangifte } = applyExceptions([], [aangifte("Eigenwoning-forfait", 1848)], []);
+    expect(onlyInAangifte).toHaveLength(0);
+  });
+
   it("leaves non-calculated entries in onlyInAangifte", () => {
     const { onlyInAangifte } = applyExceptions([], [aangifte("Loon in Nederland", 100932, null)], []);
     // Loon has no jaaropgave to match here, so stays in onlyInAangifte
