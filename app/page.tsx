@@ -20,6 +20,18 @@ import type {
 import { AnalyseResponseSchema, ApiErrorSchema, QuestionResponseSchema } from "@/lib/schemas";
 import { pdfToText } from "@/lib/pdf-to-text";
 
+function dereferenceReport(report: AnalysisReport, map: Record<string, string>): AnalysisReport {
+  if (!Object.keys(map).length) return report;
+  const r = (v: string | null | undefined) => (v != null ? (map[v] ?? v) : v);
+  return {
+    ...report,
+    covered:          report.covered.map(c => ({ ...c, accountNumber: r(c.accountNumber) as string })),
+    missingStatement: report.missingStatement.map(m => ({ ...m, accountNumber: r(m.accountNumber) as string | null })),
+    notFilledIn:      report.notFilledIn.map(n => ({ ...n, accountNumber: r(n.accountNumber) as string })),
+    attentionPoints:  report.attentionPoints.map(a => ({ ...a, accountNumber: r(a.accountNumber) as string | null | undefined })),
+  };
+}
+
 /* ─── Helpers ─────────────────────────────────────────────────────────────── */
 
 function formatEuro(amount: number): string {
@@ -379,6 +391,7 @@ export default function Home() {
   const [additionalJaaropgaves, setAdditionalJaaropgaves] = useState<File[]>([]);
   const [incrementalLoading, setIncrementalLoading] = useState(false);
   const [incrementalError, setIncrementalError] = useState<string | null>(null);
+  const [ibanMap, setIbanMap] = useState<Record<string, string>>({});
 
   const isEnvKey = !!process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY;
   const [apiKey, setApiKey] = useState<string>(process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY ?? "");
@@ -403,14 +416,16 @@ export default function Home() {
     setAdditionalJaaropgaves([]);
     setError(null);
     try {
-      const [taxReturnText, ...statementTexts] = await Promise.all([
+      const [taxReturnResult, ...statementResults] = await Promise.all([
         pdfToText(aangifte[0]),
         ...jaaropgaves.map(pdfToText),
       ]);
+      const mergedMap = Object.assign({}, taxReturnResult.ibanMap, ...statementResults.map(r => r.ibanMap));
+      setIbanMap(mergedMap);
       const body: AnalyseRequest = {
-        taxReturn: taxReturnText,
+        taxReturn: taxReturnResult.text,
         taxReturnFilename: aangifte[0].name,
-        annualStatements: jaaropgaves.map((f, i) => ({ data: statementTexts[i], filename: f.name })),
+        annualStatements: jaaropgaves.map((f, i) => ({ data: statementResults[i].text, filename: f.name })),
       };
       const res = await fetch("/api/analyze", {
         method: "POST",
@@ -422,7 +437,7 @@ export default function Home() {
         throw new Error(error ?? `Serverfout ${res.status}`);
       }
       const data = AnalyseResponseSchema.parse(await res.json());
-      setReport(data.report);
+      setReport(dereferenceReport(data.report, mergedMap));
       setExtractedData(data.extractedData);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Er is een onbekende fout opgetreden.");
@@ -437,10 +452,12 @@ export default function Home() {
     setIncrementalLoading(true);
     setIncrementalError(null);
     try {
-      const statementTexts = await Promise.all(additionalJaaropgaves.map(pdfToText));
+      const additionalResults = await Promise.all(additionalJaaropgaves.map(pdfToText));
+      const mergedMap = { ...ibanMap, ...Object.assign({}, ...additionalResults.map(r => r.ibanMap)) };
+      setIbanMap(mergedMap);
       const body: IncrementalRequest = {
         extractedData,
-        additionalStatements: additionalJaaropgaves.map((f, i) => ({ data: statementTexts[i], filename: f.name })),
+        additionalStatements: additionalJaaropgaves.map((f, i) => ({ data: additionalResults[i].text, filename: f.name })),
       };
       const res = await fetch("/api/analyze/incremental", {
         method: "POST",
@@ -452,7 +469,7 @@ export default function Home() {
         throw new Error(error ?? `Serverfout ${res.status}`);
       }
       const data = AnalyseResponseSchema.parse(await res.json());
-      setReport(data.report);
+      setReport(dereferenceReport(data.report, mergedMap));
       setExtractedData(data.extractedData);
       setAdditionalJaaropgaves([]);
     } catch (err) {
@@ -466,6 +483,7 @@ export default function Home() {
     setReport(null);
     setExtractedData(null);
     setError(null);
+    setIbanMap({});
   }
 
   const hasAttn = !!report && report.attentionPoints.length > 0;
