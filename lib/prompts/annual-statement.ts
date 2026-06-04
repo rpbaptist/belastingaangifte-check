@@ -32,7 +32,7 @@ Rules:
   - dutchDividendTax = Nederlandse dividendbelasting ingehouden by the broker on Dutch holdings — 15% domestic voorheffing, verrekenbaar als ingehouden dividendbelasting in the aangifte
   - foreignWithholdingTax = buitenlandse bronbelasting on foreign dividends — verrekenbaar per belastingverdrag
   - If the jaaropgave only shows one combined "ingehouden dividendbelasting" line and the holdings are clearly Dutch (e.g. ASN, Nederlandse aandelen), put it in dutchDividendTax. If clearly foreign, foreignWithholdingTax. If mixed and not separable, put it in dutchDividendTax and add metadata note
-- metadata holds any non-numeric fields relevant for tax advice (e.g. mortgageType)
+- metadata holds any non-numeric fields relevant for tax advice (e.g. mortgageType). For employer jaaropgaves: if a date is shown (e.g. "01-01-2020"), it is the start date of employment (begindatum dienstverband) — store it as metadata.startDate and do NOT label it as an end date
 - Omit fields you cannot determine — never guess
 - Extract account numbers and identifiers exactly as they appear in the document — do not mask, redact, or abbreviate them (e.g. write "johndoe" not "******doe")
 - Return ONLY the raw JSON object, no markdown fences, no explanation

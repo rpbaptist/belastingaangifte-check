@@ -30,6 +30,13 @@ If total box 3 assets (bank saldo + beleggingen) exceed the heffingsvrij vermoge
 
 ---
 
+## Loon / Werkgever
+
+**Datum in werkgeversjaaropgave is begindatum, niet einddatum**
+A date shown in an employer jaaropgave (e.g. "01-01-2020" or "11-10-2021") is the **start date** of the employment relationship (begindatum dienstverband), not the end date. Do NOT flag a jaaropgave for the current tax year as suspicious merely because it shows a date from a prior year — that date indicates when employment began, which can be years in the past. Only flag an employment relationship as unusual if there is explicit evidence of an end date (einddatum) that predates the tax year covered by the jaaropgave.
+
+---
+
 ## Algemeen
 
 **Ontbrekende rekeningnummers**
