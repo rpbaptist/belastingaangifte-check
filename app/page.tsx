@@ -533,12 +533,11 @@ export default function Home() {
             lineHeight: 1.6,
           }}>
             <strong style={{ color: "var(--ink-2)" }}>Let op: demo, geen privacygarantie.</strong>{" "}
-            De inhoud van je PDF&#39;s, inclusief je BSN, IBANs en financiële gegevens, wordt
-            verstuurd naar de{" "}
+            BSN en IBAN's blijven lokaal in de browser. Bedragen en andere financiële kenmerken worden wel naar de{" "}
             <a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener noreferrer" style={{ color: "var(--bronze)" }}>
               Anthropic API
             </a>{" "}
-            voor verwerking. Anthropic bewaart API-data standaard tot 30 dagen. Gebruik dit
+            verstuurd voor verwerking. Anthropic bewaart API-data standaard tot 30 dagen. Gebruik dit
             hulpmiddel uitsluitend voor eigen testdoeleinden en deel geen gegevens van anderen.
           </div>
 
@@ -661,7 +660,7 @@ export default function Home() {
           )}
         </div>
 
-        <p className="disc">Alleen voor demo — geen privacygarantie. Controleer altijd zelf alle informatie.</p>
+        <p className="disc">Alleen voor demo. Geen privacy- of juistheidsgarantie. Controleer altijd zelf alle informatie of schakel een financeel adviseur in.</p>
       </main>
     </>
   );
