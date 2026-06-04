@@ -26,21 +26,22 @@ export function SummaryBoxes({ report }: { report: AnalysisReport }) {
     icon: Parameters<typeof Icon>[0]["name"];
     count: number;
     label: string;
+    targetId: string;
   }[] = [
-    { tone: "pos", icon: "check", count: report.covered.length, label: "Gedekt" },
-    {
-      tone: "warn",
-      icon: "alert",
-      count: report.missingStatement.length,
-      label: "Jaaropgave ontbreekt",
-    },
-    { tone: "info", icon: "file-plus", count: report.notFilledIn.length, label: "Niet ingevuld" },
-    { tone: "attn", icon: "flag", count: report.attentionPoints.length, label: "Aandachtspunten" },
+    { tone: "pos",  icon: "check",     count: report.covered.length,          label: "Gedekt",               targetId: "section-gedekt" },
+    { tone: "warn", icon: "alert",     count: report.missingStatement.length,  label: "Jaaropgave ontbreekt", targetId: "section-ontbreekt" },
+    { tone: "info", icon: "file-plus", count: report.notFilledIn.length,       label: "Niet ingevuld",        targetId: "section-niet-ingevuld" },
+    { tone: "attn", icon: "flag",      count: report.attentionPoints.length,   label: "Aandachtspunten",      targetId: "section-aandachtspunten" },
   ];
   return (
     <div className="statrow" style={{ marginTop: 18 }}>
       {items.map((s) => (
-        <div key={s.label} className={`stat tone-${s.tone}`}>
+        <button
+          key={s.label}
+          className={`stat tone-${s.tone}`}
+          onClick={() => document.getElementById(s.targetId)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+          disabled={s.count === 0}
+        >
           <div className="stat-top">
             <span className="chip">
               <Icon name={s.icon} size={17} />
@@ -48,7 +49,7 @@ export function SummaryBoxes({ report }: { report: AnalysisReport }) {
             <div className="n num">{s.count}</div>
           </div>
           <div className="l">{s.label}</div>
-        </div>
+        </button>
       ))}
     </div>
   );
@@ -61,6 +62,7 @@ function Section({
   count,
   note,
   children,
+  id,
 }: {
   tone: Tone;
   icon: Parameters<typeof Icon>[0]["name"];
@@ -68,11 +70,12 @@ function Section({
   count: number;
   note?: string;
   children: React.ReactNode;
+  id?: string;
 }) {
   const [open, setOpen] = useState(true);
   if (count === 0) return null;
   return (
-    <div className={`sec tone-${tone}`}>
+    <div id={id} className={`sec tone-${tone}`}>
       <div className={`sechead${open ? "" : " collapsed"}`} onClick={() => setOpen((v) => !v)}>
         <span className="chip">
           <Icon name={icon} size={16} />
@@ -116,6 +119,7 @@ function Row({ f, m, a, tone }: { f: string; m: string; a: string; tone: Tone })
 export function CoveredSection({ items }: { items: CoveredItem[] }) {
   return (
     <Section
+      id="section-gedekt"
       tone="pos"
       icon="check"
       title="Gedekt"
@@ -138,6 +142,7 @@ export function CoveredSection({ items }: { items: CoveredItem[] }) {
 export function MissingStatementSection({ items }: { items: MissingStatementItem[] }) {
   return (
     <Section
+      id="section-ontbreekt"
       tone="warn"
       icon="alert"
       title="Jaaropgave ontbreekt"
@@ -160,6 +165,7 @@ export function MissingStatementSection({ items }: { items: MissingStatementItem
 export function NotFilledInSection({ items }: { items: NotFilledInItem[] }) {
   return (
     <Section
+      id="section-niet-ingevuld"
       tone="info"
       icon="file-plus"
       title="Niet ingevuld in aangifte"
