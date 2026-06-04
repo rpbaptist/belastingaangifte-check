@@ -145,22 +145,27 @@ const markdownComponents = {
 type Tone = "pos" | "warn" | "info" | "attn";
 
 function SummaryBoxes({ report }: { report: AnalysisReport }) {
-  const items: { tone: Tone; icon: Parameters<typeof Icon>[0]["name"]; count: number; label: string }[] = [
-    { tone: "pos",  icon: "check",     count: report.covered.length,          label: "Gedekt" },
-    { tone: "warn", icon: "alert",     count: report.missingStatement.length,  label: "Jaaropgave ontbreekt" },
-    { tone: "info", icon: "file-plus", count: report.notFilledIn.length,       label: "Niet ingevuld" },
-    { tone: "attn", icon: "flag",      count: report.attentionPoints.length,   label: "Aandachtspunten" },
+  const items: { tone: Tone; icon: Parameters<typeof Icon>[0]["name"]; count: number; label: string; targetId: string }[] = [
+    { tone: "pos",  icon: "check",     count: report.covered.length,          label: "Gedekt",               targetId: "section-gedekt" },
+    { tone: "warn", icon: "alert",     count: report.missingStatement.length,  label: "Jaaropgave ontbreekt", targetId: "section-ontbreekt" },
+    { tone: "info", icon: "file-plus", count: report.notFilledIn.length,       label: "Niet ingevuld",        targetId: "section-niet-ingevuld" },
+    { tone: "attn", icon: "flag",      count: report.attentionPoints.length,   label: "Aandachtspunten",      targetId: "section-aandachtspunten" },
   ];
   return (
     <div className="statrow" style={{ marginTop: 18 }}>
       {items.map((s) => (
-        <div key={s.label} className={`stat tone-${s.tone}`}>
+        <button
+          key={s.label}
+          className={`stat tone-${s.tone}`}
+          onClick={() => document.getElementById(s.targetId)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+          disabled={s.count === 0}
+        >
           <div className="stat-top">
             <span className="chip"><Icon name={s.icon} size={17} /></span>
             <div className="n num">{s.count}</div>
           </div>
           <div className="l">{s.label}</div>
-        </div>
+        </button>
       ))}
     </div>
   );
@@ -168,13 +173,13 @@ function SummaryBoxes({ report }: { report: AnalysisReport }) {
 
 /* ─── Comparison sections ─────────────────────────────────────────────────── */
 
-function Section({ tone, icon, title, count, note, children }: {
+function Section({ tone, icon, title, count, note, children, id }: {
   tone: Tone; icon: Parameters<typeof Icon>[0]["name"]; title: string;
-  count: number; note?: string; children: React.ReactNode;
+  count: number; note?: string; children: React.ReactNode; id?: string;
 }) {
   if (count === 0) return null;
   return (
-    <div className={`sec tone-${tone}`}>
+    <div id={id} className={`sec tone-${tone}`}>
       <div className="sechead">
         <span className="chip"><Icon name={icon} size={16} /></span>
         <div>
@@ -202,7 +207,7 @@ function Row({ f, m, a, tone }: { f: string; m: string; a: string; tone: Tone })
 
 function CoveredSection({ items }: { items: CoveredItem[] }) {
   return (
-    <Section tone="pos" icon="check" title="Gedekt" count={items.length} note="Aangifte en jaaropgave komen overeen">
+    <Section id="section-gedekt" tone="pos" icon="check" title="Gedekt" count={items.length} note="Aangifte en jaaropgave komen overeen">
       {items.map((c, i) => (
         <Row key={i} tone="pos" f={c.field} m={[c.institution, c.accountNumber].filter(Boolean).join(" · ")} a={formatEuro(c.amountTaxReturn)} />
       ))}
@@ -212,7 +217,7 @@ function CoveredSection({ items }: { items: CoveredItem[] }) {
 
 function MissingStatementSection({ items }: { items: MissingStatementItem[] }) {
   return (
-    <Section tone="warn" icon="alert" title="Jaaropgave ontbreekt" count={items.length} note="Staat in je aangifte, geen jaaropgave geüpload">
+    <Section id="section-ontbreekt" tone="warn" icon="alert" title="Jaaropgave ontbreekt" count={items.length} note="Staat in je aangifte, geen jaaropgave geüpload">
       {items.map((c, i) => (
         <Row key={i} tone="warn" f={c.field} m={`Box ${c.box}${c.accountNumber ? ` · ${c.accountNumber}` : ""}`} a={formatEuro(c.amount)} />
       ))}
@@ -222,7 +227,7 @@ function MissingStatementSection({ items }: { items: MissingStatementItem[] }) {
 
 function NotFilledInSection({ items }: { items: NotFilledInItem[] }) {
   return (
-    <Section tone="info" icon="file-plus" title="Niet ingevuld in aangifte" count={items.length} note="Staat in je jaaropgaves, ontbreekt in aangifte">
+    <Section id="section-niet-ingevuld" tone="info" icon="file-plus" title="Niet ingevuld in aangifte" count={items.length} note="Staat in je jaaropgaves, ontbreekt in aangifte">
       {items.map((c, i) => (
         <Row key={i} tone="info" f={c.description} m={[c.institution, c.accountNumber].filter(Boolean).join(" · ")} a={formatEuro(c.amount)} />
       ))}
@@ -642,7 +647,7 @@ export default function Home() {
           </div>
 
           {hasAttn && (
-            <aside className="col-side">
+            <aside id="section-aandachtspunten" className="col-side">
               <div>
                 <div className="ahead">
                   <span className="ic"><Icon name="flag" size={18} /></span>
