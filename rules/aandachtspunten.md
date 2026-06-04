@@ -9,6 +9,9 @@ These rules seed the analyst's judgment. Flag each condition that applies. Also 
 **Aflossingsvrij hypotheek**
 If a mortgage jaaropgave indicates the product is "aflossingsvrij" (interest-only), flag that the hypotheekrenteaftrek (mortgage interest deduction) may not apply or may be time-limited depending on when the mortgage was taken out. The taxpayer should verify eligibility.
 
+**Afgesloten hypotheek — geen aandachtspunt**
+If a mortgage jaaropgave shows a remaining debt of €0 at year-end (account closed during the year), and the jaaropgave shows interestPaid > 0, do NOT flag this as missing from the aangifte. A closed mortgage with paid interest will have a matching "Betaalde rente in [year]" entry in the aangifte under the same account number. The absence of a year-end balance is expected and correct.
+
 ---
 
 ## Beleggingen / DEGIRO / Broker
