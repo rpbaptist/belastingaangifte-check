@@ -24,17 +24,18 @@ Decisions made during project design, with reasoning. Reference this when resumi
 
 ---
 
-## 3. LLM analyst handles matching; account number is the primary key
+## 3. Matching done in TypeScript (koppeling), not by the LLM
 
-**Decision:** A second LLM call (the analyst) receives all extracted data and determines which jaaropgave entries correspond to which aangifte entries. Matching is primarily by account number (IBAN).
+**Decision:** Account number matching is done in code before the LLM analyst is called. See [ADR 0002](adr/0002-js-side-account-matching.md) for full reasoning.
 
-**Why:** Aangifte entries rarely name the institution explicitly. Programmatic matching rules (by institution name, by field label) are fragile. The analyst can reason about context and edge cases. Account numbers are the natural shared identifier between both document types.
+The matching pipeline lives in `lib/koppeling.ts` and runs two passes:
 
-**Alternatives rejected:**
+1. **Primary** (`lib/account-matcher.ts`) — pair aangifte entries to jaaropgave accounts by normalised account number.
+2. **Secondary** (`lib/aangifte-exceptions.ts`) — for entries without an account number (wage income, AO insurance premiums), match by amount against known jaaropgave fields. Also filters out calculated fields (e.g. Eigenwoningforfait) that never have a corresponding jaaropgave.
 
-- Match by institution name (too fragile)
-- Match by field/category type (ambiguous with multiple accounts of same type)
-- Deterministic TypeScript matching logic (can't handle edge cases)
+The analyst receives three pre-labelled buckets and focuses on amount comparison and aandachtspunten.
+
+**Original decision (LLM matching) rejected** after three silent false flags discovered through manual inspection with no failing tests. See ADR 0002.
 
 ---
 
