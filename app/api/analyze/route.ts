@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { promises as fs } from "fs";
+import path from "path";
 import { runExtractionSession } from "@/lib/extraction-session";
 import { analyzeDocuments } from "@/lib/analyzer";
 import { handleAnthropicError } from "@/lib/anthropic-error";
@@ -27,6 +29,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const rules = await fs.readFile(path.join(process.cwd(), "rules", "aandachtspunten.md"), "utf-8");
     const session = await runExtractionSession(taxReturn, annualStatements, apiKey);
 
     if (!session.ok) {
@@ -36,7 +39,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const reportBase = await analyzeDocuments(session.taxReturn, session.annualStatements, apiKey);
+    const reportBase = await analyzeDocuments(session.taxReturn, session.annualStatements, rules, apiKey);
 
     const response: AnalyseResponse = {
       report: { ...reportBase, extractionErrors: session.errors },
