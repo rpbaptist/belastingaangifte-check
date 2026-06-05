@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { categorize } from "./categorizer";
+import { categorize, isEndOfYearAccount, isMidYearClosedMortgage } from "./categorizer";
 import type { MatchResult } from "./reconciler";
 import type { AnnualStatementData, TaxReturnEntry } from "./types";
 
@@ -354,5 +354,63 @@ describe("categorize — mid-year closed mortgage", () => {
       makeMatchResult({ onlyInJaaropgave: [{ statement, account: statement.accounts[0] }] })
     );
     expect(result.notFilledIn).toHaveLength(1);
+  });
+});
+
+describe("isEndOfYearAccount", () => {
+  const base = { institution: "ASN", institutionType: "bank" as const, taxYear: 2024, accounts: [], metadata: {} };
+
+  it("matches description containing '31 december <taxYear>'", () => {
+    const account = { accountNumber: "NL01", description: "Stand op 31 december 2024", amounts: {} };
+    expect(isEndOfYearAccount(base, account)).toBe(true);
+  });
+
+  it("returns false when description does not contain the year-end phrase", () => {
+    const account = { accountNumber: "NL01", description: "Spaarrekening", amounts: {} };
+    expect(isEndOfYearAccount(base, account)).toBe(false);
+  });
+
+  it("is case-insensitive", () => {
+    const account = { accountNumber: "NL01", description: "Stand Op 31 December 2024", amounts: {} };
+    expect(isEndOfYearAccount(base, account)).toBe(true);
+  });
+
+  it("returns false for the wrong year", () => {
+    const account = { accountNumber: "NL01", description: "Stand op 31 december 2023", amounts: {} };
+    expect(isEndOfYearAccount(base, account)).toBe(false);
+  });
+});
+
+describe("isMidYearClosedMortgage", () => {
+  const makeAccount = (mortgage: Record<string, number>) => ({
+    accountNumber: "NL01",
+    description: "Hypotheek",
+    amounts: { mortgage },
+  });
+
+  it("returns true when ratio is below 3% (mid-year discharge)", () => {
+    // €104 / €89,956 ≈ 0.12%
+    expect(isMidYearClosedMortgage(makeAccount({ interestPaid: 104, remainingDebt: 89956 }))).toBe(true);
+  });
+
+  it("returns false when ratio is above 3% (full-year mortgage)", () => {
+    // €8,400 / €200,000 = 4.2%
+    expect(isMidYearClosedMortgage(makeAccount({ interestPaid: 8400, remainingDebt: 200000 }))).toBe(false);
+  });
+
+  it("returns false when remainingDebt is zero (debt fully repaid)", () => {
+    expect(isMidYearClosedMortgage(makeAccount({ interestPaid: 8400, remainingDebt: 0 }))).toBe(false);
+  });
+
+  it("returns false when interestPaid is zero", () => {
+    expect(isMidYearClosedMortgage(makeAccount({ interestPaid: 0, remainingDebt: 50000 }))).toBe(false);
+  });
+
+  it("returns false when mortgage amounts are absent", () => {
+    expect(isMidYearClosedMortgage({ accountNumber: "NL01", description: "Spaar", amounts: {} })).toBe(false);
+  });
+
+  it("boundary: exactly 3% is not considered mid-year closed", () => {
+    expect(isMidYearClosedMortgage(makeAccount({ interestPaid: 300, remainingDebt: 10000 }))).toBe(false);
   });
 });
