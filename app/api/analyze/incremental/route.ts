@@ -3,7 +3,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { extractStatements } from "@/lib/extraction-session";
 import { analyzeDocuments } from "@/lib/analyzer";
-import { handleAnthropicError } from "@/lib/anthropic-error";
+import { classifyError } from "@/lib/anthropic-error";
 import type { AnalyseResponse, IncrementalRequest } from "@/lib/types";
 
 export const maxDuration = 300;
@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch (err) {
-    return handleAnthropicError(err);
+    const { status, message } = classifyError(err);
+    return NextResponse.json({ error: message }, { status });
   }
 }
