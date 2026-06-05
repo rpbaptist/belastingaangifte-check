@@ -56,8 +56,11 @@ function getJaaropgaveAmount(pair: MatchedPair): number | null {
       const bankBalance = amounts.bank?.balance;
       const brokerBalance = amounts.broker?.balance;
       if (bankBalance != null && brokerBalance != null) {
-        // Geldrekening vs beleggingen: use field heuristic
-        return fieldLower.includes("geld") || fieldLower.includes("spaar")
+        // Both components present (cash + portfolio). Pick the one closest to the aangifte
+        // amount so that products like ASN Themabeleggen (larger balance in bank.balance)
+        // don't get compared against the wrong component.
+        const aangifte = pair.aangifte.amount;
+        return Math.abs(aangifte - bankBalance) <= Math.abs(aangifte - brokerBalance)
           ? bankBalance
           : brokerBalance;
       }
@@ -73,8 +76,8 @@ function getJaaropgaveAmount(pair: MatchedPair): number | null {
 
 function primaryDisplayAmount(amounts: AccountAmounts): number {
   for (const category of Object.values(amounts)) {
-    for (const val of Object.values(category)) {
-      if (val !== 0) return val;
+    for (const [key, val] of Object.entries(category)) {
+      if (val !== 0 && key !== "remainingDebt") return val;
     }
   }
   return 0;
