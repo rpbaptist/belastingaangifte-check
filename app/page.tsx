@@ -550,6 +550,7 @@ export default function Home() {
             </a>{" "}
             voor verwerking. Anthropic bewaart API-data standaard tot 30 dagen. Gebruik dit
             hulpmiddel uitsluitend voor eigen testdoeleinden en deel geen gegevens van anderen.
+            Controleer altijd zelf de resultaten of raadpleeg een financieel adviseur.
           </div>
 
           <form onSubmit={handleSubmit}>
@@ -594,8 +595,6 @@ export default function Home() {
               <p style={{ fontSize: 13.5, color: "var(--ink-2)", margin: 0 }}>{error}</p>
             </div>
           )}
-
-          <p className="disc">Alleen voor demo — geen privacygarantie. Controleer altijd zelf alle informatie.</p>
         </main>
       </>
     );
@@ -670,8 +669,6 @@ export default function Home() {
             </aside>
           )}
         </div>
-
-        <p className="disc">Alleen voor demo — geen privacygarantie. Controleer altijd zelf alle informatie.</p>
       </main>
     </>
   );
