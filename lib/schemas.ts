@@ -73,6 +73,11 @@ export const AnalysisReportSchema = z.object({
   attentionPoints: z.array(AttentionPointSchema),
 });
 
+// Narrower schema for the LLM's response — it now only generates attentionPoints
+export const LLMAnalysisResponseSchema = z.object({
+  attentionPoints: z.array(AttentionPointSchema).catch([]),
+});
+
 const ExtractionErrorSchema = z.object({
   filename: z.string(),
   error: z.string(),
