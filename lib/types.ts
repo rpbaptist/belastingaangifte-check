@@ -57,7 +57,7 @@ export interface CoveredItem {
 
 export interface MissingStatementItem {
   field: string;
-  accountNumber: string | null;
+  accountNumber: string;
   amount: number;
   box: "1" | "2" | "3";
 }
@@ -73,7 +73,7 @@ export interface AttentionPoint {
   title: string;
   explanation: string;
   institution?: string;
-  accountNumber?: string | null;
+  accountNumber?: string;
 }
 
 export interface ExtractionError {
