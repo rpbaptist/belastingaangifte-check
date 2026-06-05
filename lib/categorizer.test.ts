@@ -320,3 +320,39 @@ describe("categorize — wage matching", () => {
     expect(result.covered).toHaveLength(1);
   });
 });
+
+// ─── Mid-year closed mortgage filter ────────────────────────────────────────
+
+describe("categorize — mid-year closed mortgage", () => {
+  it("excludes a mortgage with a tiny interest/debt ratio from notFilledIn", () => {
+    // €104 interest on €89,956 debt ≈ 0.1% — clearly closed mid-year
+    const statement = makeStatement("Rabobank", "mortgage", "Nummer192658069", {
+      mortgage: { interestPaid: 104, remainingDebt: 89956 },
+    });
+    const result = categorize(
+      makeMatchResult({ onlyInJaaropgave: [{ statement, account: statement.accounts[0] }] })
+    );
+    expect(result.notFilledIn).toHaveLength(0);
+  });
+
+  it("keeps a normal mortgage (high interest/debt ratio) in notFilledIn", () => {
+    const statement = makeStatement("Rabobank", "mortgage", "Nummer192658069", {
+      mortgage: { interestPaid: 8400, remainingDebt: 200000 },
+    });
+    const result = categorize(
+      makeMatchResult({ onlyInJaaropgave: [{ statement, account: statement.accounts[0] }] })
+    );
+    expect(result.notFilledIn).toHaveLength(1);
+  });
+
+  it("keeps a mortgage with zero remainingDebt in notFilledIn", () => {
+    // remainingDebt = 0 means the debt is fully repaid; filter does not apply
+    const statement = makeStatement("Rabobank", "mortgage", "Nummer192658069", {
+      mortgage: { interestPaid: 8400, remainingDebt: 0 },
+    });
+    const result = categorize(
+      makeMatchResult({ onlyInJaaropgave: [{ statement, account: statement.accounts[0] }] })
+    );
+    expect(result.notFilledIn).toHaveLength(1);
+  });
+});

@@ -126,10 +126,20 @@ export function categorize(matchResult: MatchResult): CategorizationResult {
   const isEndOfYearAccount = (statement: AnnualStatementData, account: AccountData): boolean =>
     account.description.toLowerCase().includes(`31 december ${statement.taxYear}`);
 
+  // A mortgage with very low interest relative to remaining debt was likely discharged mid-year
+  // (e.g. €104 interest on €89,956 debt ≈ 0.1%). Not a filing omission.
+  const isMidYearClosedMortgage = (account: AccountData): boolean => {
+    const m = account.amounts.mortgage;
+    if (!m?.interestPaid || !m.remainingDebt) return false;
+    return m.interestPaid / m.remainingDebt < 0.03;
+  };
+
   const notFilledIn: NotFilledInItem[] = matchResult.onlyInJaaropgave
     .filter(
       ({ statement, account }) =>
-        primaryDisplayAmount(account.amounts) !== 0 && !isEndOfYearAccount(statement, account)
+        primaryDisplayAmount(account.amounts) !== 0 &&
+        !isEndOfYearAccount(statement, account) &&
+        !isMidYearClosedMortgage(account)
     )
     .map(({ statement, account }) => ({
       accountNumber: account.accountNumber,
