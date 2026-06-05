@@ -23,18 +23,16 @@ After the initial report you can add more statements incrementally and ask follo
 
 ## How it works
 
-Four steps:
+Three steps:
 
 ```
-PDFs → [Privacy filter] → [Extraction] → [Koppeling] → [Analysis] → Report
-            ↑                   ↑              ↑             ↑
-       IBAN anonymisation  Claude Haiku   TypeScript    Claude Sonnet
-       (client-side)        (parallel)     (tested)
+PDFs → [Extraction] → [Koppeling] → [Analysis] → Report
+            ↑              ↑             ↑
+       Claude Haiku   TypeScript    Claude Sonnet
+       (parallel)     (tested)
 ```
 
-**Privacy filter** — Before any PDF text leaves the browser, BSNs are scrubbed and IBANs are replaced with readable pseudonyms (`IBAN-INGB-001`, `IBAN-RABO-002`, etc.). The pseudonym map is kept client-side and used to restore real IBANs in the displayed report. **BSNs and IBANs are never sent to the API.** Amounts and other financial identifiers are sent.
-
-**Extraction** — Each anonymised PDF text is sent to Claude Haiku, which returns structured JSON (institution type, account identifiers, amounts). Runs in parallel across all uploaded files with prompt caching.
+**Extraction** — Each PDF is sent as a native document block to Claude Haiku, which returns structured JSON (institution type, account numbers, amounts). Runs in parallel across all uploaded files with prompt caching.
 
 **Koppeling** — Account identifiers from the tax return and annual statements are matched in TypeScript (`lib/koppeling.ts`). Primary matching by normalised account number (strips whitespace, punctuation, Dutch label prefixes). Secondary matching by amount for entries without an account number (wage income, insurance premiums). Deterministic, no LLM.
 
@@ -94,21 +92,20 @@ Add a rule section with the condition and its tax implication. It is injected in
 ```
 app/
   page.tsx                        UI — upload, report, Q&A
+  components/DropZone.tsx         file drop / pick component
+  components/ReportSections.tsx   summary boxes + comparison section components
   api/analyze/route.ts            full analysis endpoint
   api/analyze/incremental/        add statements to existing analysis
   api/question/                   follow-up Q&A on flagged items
 lib/
-  iban-anonymizer.ts              client-side IBAN pseudonymisation + report dereference
-  pdf-to-text.ts                  browser PDF → text (pdfjs, no scrubbing)
-  extractor.ts                    anonymised text → JSON via Claude Haiku
+  extractor.ts                    PDF → JSON via Claude Haiku
   extraction-session.ts           parallel orchestration + partial failure handling
   extraction-cache.ts             dev-only cache (SHA-256 keyed)
   account-normalizer.ts           strip whitespace / prefixes from account numbers
-  account-matcher.ts              primary account-number matching
-  aangifte-exceptions.ts          secondary amount-based matching + calculated-field filter
-  koppeling.ts                    full matching pipeline (account-matcher + exceptions)
+  koppeling.ts                    full matching pipeline: primary IBAN match + secondary
+                                  amount match + calculated-field removal
   analyzer.ts                     comparison report via Claude Sonnet
-  anthropic-error.ts              Anthropic SDK errors → HTTP responses
+  anthropic-error.ts              Anthropic SDK error classification
   schemas.ts                      Zod schemas for all LLM output
   parse-llm-json.ts               shared JSON parser
 rules/
