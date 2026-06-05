@@ -171,4 +171,55 @@ describe("reconcile — secondary match by amount", () => {
     expect(result.matched[0].aangifte.field).toBe("Loon in Nederland");
     expect(result.matched[0].jaaropgave.account.amounts["wage"]?.["taxableWage"]).toBe(100932);
   });
+
+  it("amount-matches a Loon entry when wage is stored in bank.wage (old extraction schema)", () => {
+    const result = reconcile(taxReturn([entry("Loon in Nederland", 100932, null, "1")]), [
+      statement("employer-001", { bank: { wage: 100932 } }),
+    ]);
+    expect(result.matched).toHaveLength(1);
+    expect(result.onlyInAangifte).toHaveLength(0);
+    expect(result.onlyInJaaropgave).toHaveLength(0);
+  });
+
+  it("amount-matches DEGIRO Beleggingsrekening to a masked jaaropgave account via broker.balance", () => {
+    const result = reconcile(
+      taxReturn([entry("DEGIRO Beleggingsrekening", 47848, "rpbaptist")]),
+      [statement("******ist", { bank: { balance: 92 }, broker: { balance: 47849 } })]
+    );
+    expect(result.matched).toHaveLength(1);
+    expect(result.onlyInAangifte).toHaveLength(0);
+    expect(result.onlyInJaaropgave).toHaveLength(0);
+  });
+});
+
+// ─── IBAN suffix matching ────────────────────────────────────────────────────
+
+describe("reconcile — IBAN suffix matching", () => {
+  it("matches when aangifte has trailing digits of a full IBAN", () => {
+    const result = reconcile(
+      taxReturn([entry("flatexDEGIRO Bank AG", 92, "1019345793")]),
+      [statement("DE73101308001019345793", { bank: { balance: 92 } })]
+    );
+    expect(result.matched).toHaveLength(1);
+    expect(result.onlyInAangifte).toHaveLength(0);
+    expect(result.onlyInJaaropgave).toHaveLength(0);
+  });
+
+  it("matches when aangifte has formatted trailing digits (spaces stripped by normalizer)", () => {
+    const result = reconcile(
+      taxReturn([entry("flatexDEGIRO Bank AG", 92, "1019 3457 93")]),
+      [statement("DE73101308001019345793", { bank: { balance: 92 } })]
+    );
+    expect(result.matched).toHaveLength(1);
+    expect(result.onlyInAangifte).toHaveLength(0);
+    expect(result.onlyInJaaropgave).toHaveLength(0);
+  });
+
+  it("does NOT suffix-match short account codes (< 8 chars after normalisation)", () => {
+    const result = reconcile(
+      taxReturn([entry("Some account", 0, "12345")]),
+      [statement("NL00INGB0012345678", { bank: { balance: 0 } })]
+    );
+    expect(result.matched).toHaveLength(0);
+  });
 });

@@ -26,10 +26,16 @@ type SecondaryMatcher = {
 };
 
 const wageAmount = (acct: AccountData): number | null =>
-  acct.amounts["wage"]?.["taxableWage"] ?? acct.amounts["wage"]?.["grossWage"] ?? null;
+  acct.amounts["wage"]?.["taxableWage"] ??
+  acct.amounts["wage"]?.["grossWage"] ??
+  acct.amounts["bank"]?.["wage"] ??
+  null;
 
 const aoPremiumAmount = (acct: AccountData): number | null =>
-  acct.amounts["other"]?.["premiumPaid"] ?? null;
+  acct.amounts["other"]?.["premiumPaid"] ??
+  acct.amounts["other"]?.["premium"] ??
+  acct.amounts["other"]?.["annualPremium"] ??
+  null;
 
 /** Entries matched by amount when account-number matching doesn't apply */
 const SECONDARY_MATCHERS: SecondaryMatcher[] = [
@@ -43,7 +49,25 @@ const SECONDARY_MATCHERS: SecondaryMatcher[] = [
     fieldContains: "arbeidsongeschiktheid",
     getJaaropgaveAmount: aoPremiumAmount,
   },
+  {
+    // DEGIRO masks its account number ("******ist") — fall back to broker portfolio balance
+    fieldContains: "beleggingsrekening",
+    getJaaropgaveAmount: (acct) => acct.amounts["broker"]?.["balance"] ?? null,
+  },
 ];
+
+/**
+ * True if two normalized account numbers refer to the same account.
+ * Handles the case where the aangifte carries only the trailing digits of a full IBAN
+ * (e.g. "1019345793" is the last 10 chars of "DE73101308001019345793").
+ * The 8-char minimum prevents short internal codes from matching unrelated IBANs.
+ */
+function accountNumbersMatch(a: string, b: string): boolean {
+  if (a === b) return true;
+  if (a.length >= 8 && b.endsWith(a)) return true;
+  if (b.length >= 8 && a.endsWith(b)) return true;
+  return false;
+}
 
 function primaryMatch(
   taxReturn: TaxReturnData,
@@ -64,8 +88,8 @@ function primaryMatch(
     }
 
     const normalizedAangifte = normalize(aangifte.accountNumber);
-    const found = allAccounts.find(
-      ({ account }) => normalize(account.accountNumber) === normalizedAangifte
+    const found = allAccounts.find(({ account }) =>
+      accountNumbersMatch(normalize(account.accountNumber), normalizedAangifte)
     );
 
     if (found) {
