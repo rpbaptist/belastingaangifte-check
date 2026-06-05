@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { AnalysisReport, AnnualStatementData, TaxReturnData } from "./types";
 import { z } from "zod";
 import { parseLlmJson } from "./parse-llm-json";
-import { koppeling } from "./koppeling";
+import { reconcile } from "./reconciler";
 import { AnalysisReportSchema } from "./schemas";
 import { buildAnalyzerPrompt } from "./prompts/analyzer";
 
@@ -15,7 +15,7 @@ export async function analyzeDocuments(
   apiKey?: string
 ): Promise<Omit<AnalysisReport, "extractionErrors">> {
   const client = new Anthropic(apiKey ? { apiKey } : {});
-  const { matched, onlyInAangifte, onlyInJaaropgave } = koppeling(taxReturn, annualStatements);
+  const { matched, onlyInAangifte, onlyInJaaropgave } = reconcile(taxReturn, annualStatements);
 
   const userMessage = [
     "## Matched pairs (account numbers resolved by code)",
