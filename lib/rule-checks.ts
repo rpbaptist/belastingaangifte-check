@@ -41,7 +41,10 @@ export function runRuleChecks(
 
     for (const account of statement.accounts) {
       const broker = account.amounts.broker;
-      if (broker && ((broker.foreignDividend ?? 0) > 0 || (broker.foreignWithholdingTax ?? 0) > 0)) {
+      if (
+        broker &&
+        ((broker.foreignDividend ?? 0) > 0 || (broker.foreignWithholdingTax ?? 0) > 0)
+      ) {
         points.push({
           title: "Buitenlands dividend",
           explanation:

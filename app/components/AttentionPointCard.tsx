@@ -145,7 +145,9 @@ export function AttentionPointCard({
               onKeyDown={(e) => {
                 if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
                   e.preventDefault();
-                  void sendQuestion(question).then((ok) => { if (ok) setQuestion(""); });
+                  void sendQuestion(question).then((ok) => {
+                    if (ok) setQuestion("");
+                  });
                 }
               }}
               placeholder={history.length > 0 ? "Vervolgvraag…" : "Typ je vraag…"}

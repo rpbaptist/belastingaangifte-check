@@ -7,7 +7,12 @@ import { DropZone } from "./components/DropZone";
 import { TopBar } from "./components/TopBar";
 import { AttentionPointCard } from "./components/AttentionPointCard";
 import { ErrorCard, ExtractionErrors } from "./components/ErrorCard";
-import { SummaryBoxes, CoveredSection, MissingStatementSection, NotFilledInSection } from "./components/ReportSections";
+import {
+  SummaryBoxes,
+  CoveredSection,
+  MissingStatementSection,
+  NotFilledInSection,
+} from "./components/ReportSections";
 import { useAnalysis } from "./hooks/useAnalysis";
 
 /* ─── Incremental upload card ─────────────────────────────────────────────── */
@@ -45,13 +50,17 @@ function IncrementalCard({
           files={files}
           onFiles={(incoming) => setFiles((prev) => [...prev, ...incoming])}
         />
-        <button className="btn alt" type="submit" disabled={!files.length || loading} style={{ marginTop: 14 }}>
-          {loading ? "Bezig met verwerken…" : "Analyseer aanvulling"} <Icon name="arrow" size={16} />
+        <button
+          className="btn alt"
+          type="submit"
+          disabled={!files.length || loading}
+          style={{ marginTop: 14 }}
+        >
+          {loading ? "Bezig met verwerken…" : "Analyseer aanvulling"}{" "}
+          <Icon name="arrow" size={16} />
         </button>
       </form>
-      {error && (
-        <p style={{ fontSize: 12.5, color: "var(--warn)", marginTop: 10 }}>{error}</p>
-      )}
+      {error && <p style={{ fontSize: 12.5, color: "var(--warn)", marginTop: 10 }}>{error}</p>}
     </div>
   );
 }
@@ -92,26 +101,35 @@ export default function Home() {
       <>
         <TopBar />
         <main className="page">
-          <h1 className="h1" style={{ marginTop: 14 }}>Klopt je aangifte?</h1>
+          <h1 className="h1" style={{ marginTop: 14 }}>
+            Klopt je aangifte?
+          </h1>
           <p className="intro">
             Upload je belastingaangifte en jaaropgaves. We vergelijken de bedragen en laten zien wat
             klopt, wat ontbreekt en waar je op moet letten.
           </p>
 
-          <div style={{
-            marginTop: 20,
-            padding: "12px 14px",
-            background: "var(--paper-2)",
-            border: "1px solid var(--line)",
-            borderRadius: 10,
-            fontSize: 12.5,
-            color: "var(--ink-3)",
-            lineHeight: 1.6,
-          }}>
+          <div
+            style={{
+              marginTop: 20,
+              padding: "12px 14px",
+              background: "var(--paper-2)",
+              border: "1px solid var(--line)",
+              borderRadius: 10,
+              fontSize: 12.5,
+              color: "var(--ink-3)",
+              lineHeight: 1.6,
+            }}
+          >
             <strong style={{ color: "var(--ink-2)" }}>Let op: demo, geen privacygarantie.</strong>{" "}
             De inhoud van je PDF&#39;s, inclusief je BSN, IBANs en financiële gegevens, wordt
             verstuurd naar de{" "}
-            <a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener noreferrer" style={{ color: "var(--bronze)" }}>
+            <a
+              href="https://www.anthropic.com/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: "var(--bronze)" }}
+            >
               Anthropic API
             </a>{" "}
             voor verwerking. Anthropic bewaart API-data standaard tot 30 dagen. Gebruik dit
@@ -150,8 +168,12 @@ export default function Home() {
           {loading && (
             <div style={{ textAlign: "center", marginTop: 30 }}>
               <div className="spin" />
-              <p style={{ fontSize: 14, fontWeight: 600, margin: "14px 0 2px" }}>Documenten worden geanalyseerd…</p>
-              <p style={{ fontSize: 13, color: "var(--ink-3)", margin: 0 }}>Dit kan een paar minuten duren.</p>
+              <p style={{ fontSize: 14, fontWeight: 600, margin: "14px 0 2px" }}>
+                Documenten worden geanalyseerd…
+              </p>
+              <p style={{ fontSize: 13, color: "var(--ink-3)", margin: 0 }}>
+                Dit kan een paar minuten duren.
+              </p>
             </div>
           )}
 
@@ -193,8 +215,8 @@ export default function Home() {
           <div className="eyebrow">Resultaat</div>
           <h1 className="h-res">Je controle is klaar</h1>
           <p className="h-sub">
-            {statementCount} {statementCount === 1 ? "jaaropgave" : "jaaropgaves"} vergeleken met je aangifte
-            over {report.taxYear}.
+            {statementCount} {statementCount === 1 ? "jaaropgave" : "jaaropgaves"} vergeleken met je
+            aangifte over {report.taxYear}.
           </p>
         </div>
 
@@ -221,13 +243,20 @@ export default function Home() {
             <aside id="section-aandachtspunten" className="col-side">
               <div>
                 <div className="ahead">
-                  <span className="ic"><Icon name="flag" size={18} /></span>
+                  <span className="ic">
+                    <Icon name="flag" size={18} />
+                  </span>
                   <h2>Aandachtspunten</h2>
                   <span className="pill num">{report.attentionPoints.length}</span>
                 </div>
                 <div className="stack" style={{ marginTop: 14 }}>
                   {report.attentionPoints.map((p) => (
-                    <AttentionPointCard key={p.title} item={p} taxYear={report.taxYear} apiKey={apiKey} />
+                    <AttentionPointCard
+                      key={p.title}
+                      item={p}
+                      taxYear={report.taxYear}
+                      apiKey={apiKey}
+                    />
                   ))}
                 </div>
               </div>

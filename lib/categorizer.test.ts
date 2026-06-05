@@ -57,7 +57,9 @@ describe("categorize — basic assembly", () => {
   });
 
   it("maps onlyInJaaropgave to notFilledIn with primary non-zero amount", () => {
-    const statement = makeStatement("ING", "bank", "NL00INGB0000000001", { bank: { balance: 3000 } });
+    const statement = makeStatement("ING", "bank", "NL00INGB0000000001", {
+      bank: { balance: 3000 },
+    });
     const result = categorize(
       makeMatchResult({ onlyInJaaropgave: [{ statement, account: statement.accounts[0] }] })
     );
@@ -67,7 +69,9 @@ describe("categorize — basic assembly", () => {
   });
 
   it("falls back to aangifte accountNumber when null, using jaaropgave accountNumber", () => {
-    const statement = makeStatement("ING", "bank", "NL00INGB0000000001", { bank: { balance: 5000 } });
+    const statement = makeStatement("ING", "bank", "NL00INGB0000000001", {
+      bank: { balance: 5000 },
+    });
     const entry = makeEntry("Saldo bank", 5000, null, "3");
     const result = categorize(
       makeMatchResult({
@@ -82,7 +86,9 @@ describe("categorize — basic assembly", () => {
 
 describe("categorize — €1 tolerance", () => {
   it("places matched bank pair within €1 in covered", () => {
-    const statement = makeStatement("ING", "bank", "NL00INGB0000000001", { bank: { balance: 5001 } });
+    const statement = makeStatement("ING", "bank", "NL00INGB0000000001", {
+      bank: { balance: 5001 },
+    });
     const entry = makeEntry("Saldo bank", 5000, "NL00INGB0000000001");
     const result = categorize(
       makeMatchResult({
@@ -96,7 +102,9 @@ describe("categorize — €1 tolerance", () => {
   });
 
   it("places matched pair with >€1 difference in amountMismatches", () => {
-    const statement = makeStatement("ING", "bank", "NL00INGB0000000001", { bank: { balance: 5100 } });
+    const statement = makeStatement("ING", "bank", "NL00INGB0000000001", {
+      bank: { balance: 5100 },
+    });
     const entry = makeEntry("Saldo bank", 5000, "NL00INGB0000000001");
     const result = categorize(
       makeMatchResult({
@@ -110,7 +118,9 @@ describe("categorize — €1 tolerance", () => {
 
   it("treats unknown amount (null) as covered", () => {
     // institution "other" with no recognized fields → getJaaropgaveAmount returns null
-    const statement = makeStatement("Employer", "other", "employer-001", { wage: { taxableWage: 100000 } });
+    const statement = makeStatement("Employer", "other", "employer-001", {
+      wage: { taxableWage: 100000 },
+    });
     const entry = makeEntry("Onbekend veld", 99999, "employer-001");
     const result = categorize(
       makeMatchResult({
@@ -126,7 +136,9 @@ describe("categorize — €1 tolerance", () => {
 
 describe("categorize — bank and broker amounts", () => {
   it("compares bank balance directly", () => {
-    const statement = makeStatement("ING", "bank", "NL00INGB0000000001", { bank: { balance: 5000 } });
+    const statement = makeStatement("ING", "bank", "NL00INGB0000000001", {
+      bank: { balance: 5000 },
+    });
     const entry = makeEntry("Saldo bank", 5000, "NL00INGB0000000001");
     const result = categorize(
       makeMatchResult({
@@ -159,7 +171,9 @@ describe("categorize — bank and broker amounts", () => {
   });
 
   it("compares broker balance for broker account", () => {
-    const statement = makeStatement("DEGIRO", "broker", "johndoe/1234", { broker: { balance: 12000 } });
+    const statement = makeStatement("DEGIRO", "broker", "johndoe/1234", {
+      broker: { balance: 12000 },
+    });
     const entry = makeEntry("Beleggingen DEGIRO", 12000, "johndoe/1234");
     const result = categorize(
       makeMatchResult({
@@ -181,7 +195,12 @@ describe("categorize — geldrekening / beleggingen split", () => {
     const geldrekeningEntry = makeEntry("Geldrekening ASN", 500, "NL00ASN0000000001");
     const result = categorize(
       makeMatchResult({
-        matched: [{ aangifte: geldrekeningEntry, jaaropgave: { statement, account: statement.accounts[0] } }],
+        matched: [
+          {
+            aangifte: geldrekeningEntry,
+            jaaropgave: { statement, account: statement.accounts[0] },
+          },
+        ],
       })
     );
     expect(result.covered).toHaveLength(1);
@@ -196,7 +215,9 @@ describe("categorize — geldrekening / beleggingen split", () => {
     const beleggingEntry = makeEntry("ASN Themabeleggen", 8000, "NL00ASN0000000001");
     const result = categorize(
       makeMatchResult({
-        matched: [{ aangifte: beleggingEntry, jaaropgave: { statement, account: statement.accounts[0] } }],
+        matched: [
+          { aangifte: beleggingEntry, jaaropgave: { statement, account: statement.accounts[0] } },
+        ],
       })
     );
     expect(result.covered).toHaveLength(1);

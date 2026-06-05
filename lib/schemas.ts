@@ -2,7 +2,12 @@ import { z } from "zod";
 
 const n = () => z.number().transform(Math.round);
 // LLM string fields: coerce null → "" so a missing value never crashes the parser
-const s = () => z.string().nullable().catch(null).transform(v => v ?? "");
+const s = () =>
+  z
+    .string()
+    .nullable()
+    .catch(null)
+    .transform((v) => v ?? "");
 
 // Flexible nested record: handles bank/broker/mortgage and any other institution type.
 // Numbers are rounded to full euros; the LLM interprets the structure semantically.
@@ -19,8 +24,9 @@ export const AnnualStatementSchema = z.object({
   institutionType: z.enum(["bank", "broker", "mortgage", "other"]).catch("other"),
   taxYear: z.number().int(),
   accounts: z.array(AccountDataSchema),
-  metadata: z.record(z.string(), z.unknown())
-    .transform(obj => Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, String(v)])))
+  metadata: z
+    .record(z.string(), z.unknown())
+    .transform((obj) => Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, String(v)])))
     .default({}),
 });
 
