@@ -102,20 +102,30 @@ function secondaryMatch(
     const matcher = SECONDARY_MATCHERS.find((m) =>
       normalizeField(entry.field).includes(normalizeField(m.fieldContains))
     );
-    if (!matcher) { stillUnmatched.push(entry); continue; }
+    if (!matcher) {
+      stillUnmatched.push(entry);
+      continue;
+    }
 
     const jaaropgaveIdx = remainingJaaropgave.findIndex((j) => {
       const jAmount = matcher.getJaaropgaveAmount(j.account);
       return jAmount !== null && Math.abs(Math.abs(entry.amount) - jAmount) <= 1;
     });
 
-    if (jaaropgaveIdx === -1) { stillUnmatched.push(entry); continue; }
+    if (jaaropgaveIdx === -1) {
+      stillUnmatched.push(entry);
+      continue;
+    }
 
     newMatched.push({ aangifte: entry, jaaropgave: remainingJaaropgave[jaaropgaveIdx] });
     remainingJaaropgave = remainingJaaropgave.filter((_, i) => i !== jaaropgaveIdx);
   }
 
-  return { matched: newMatched, onlyInAangifte: stillUnmatched, onlyInJaaropgave: remainingJaaropgave };
+  return {
+    matched: newMatched,
+    onlyInAangifte: stillUnmatched,
+    onlyInJaaropgave: remainingJaaropgave,
+  };
 }
 
 /**

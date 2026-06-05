@@ -34,7 +34,10 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const rules = await fs.readFile(path.join(process.cwd(), "rules", "aandachtspunten.md"), "utf-8");
+    const rules = await fs.readFile(
+      path.join(process.cwd(), "rules", "aandachtspunten.md"),
+      "utf-8"
+    );
 
     const { results: newStatements, errors: extractionErrors } = await extractStatements(
       additionalStatements,
@@ -43,7 +46,12 @@ export async function POST(request: NextRequest) {
 
     const mergedStatements = [...extractedData.annualStatements, ...newStatements];
 
-    const reportBase = await analyzeDocuments(extractedData.taxReturn, mergedStatements, rules, apiKey);
+    const reportBase = await analyzeDocuments(
+      extractedData.taxReturn,
+      mergedStatements,
+      rules,
+      apiKey
+    );
 
     const response: AnalyseResponse = {
       report: { ...reportBase, extractionErrors },

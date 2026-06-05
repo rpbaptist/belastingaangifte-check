@@ -28,10 +28,34 @@ export function SummaryBoxes({ report }: { report: AnalysisReport }) {
     label: string;
     targetId: string;
   }[] = [
-    { tone: "pos",  icon: "check",     count: report.covered.length,          label: "Gedekt",               targetId: "section-gedekt" },
-    { tone: "warn", icon: "alert",     count: report.missingStatement.length,  label: "Jaaropgave ontbreekt", targetId: "section-ontbreekt" },
-    { tone: "info", icon: "file-plus", count: report.notFilledIn.length,       label: "Niet ingevuld",        targetId: "section-niet-ingevuld" },
-    { tone: "attn", icon: "flag",      count: report.attentionPoints.length,   label: "Aandachtspunten",      targetId: "section-aandachtspunten" },
+    {
+      tone: "pos",
+      icon: "check",
+      count: report.covered.length,
+      label: "Gedekt",
+      targetId: "section-gedekt",
+    },
+    {
+      tone: "warn",
+      icon: "alert",
+      count: report.missingStatement.length,
+      label: "Jaaropgave ontbreekt",
+      targetId: "section-ontbreekt",
+    },
+    {
+      tone: "info",
+      icon: "file-plus",
+      count: report.notFilledIn.length,
+      label: "Niet ingevuld",
+      targetId: "section-niet-ingevuld",
+    },
+    {
+      tone: "attn",
+      icon: "flag",
+      count: report.attentionPoints.length,
+      label: "Aandachtspunten",
+      targetId: "section-aandachtspunten",
+    },
   ];
   return (
     <div className="statrow" style={{ marginTop: 18 }}>
@@ -39,7 +63,11 @@ export function SummaryBoxes({ report }: { report: AnalysisReport }) {
         <button
           key={s.label}
           className={`stat tone-${s.tone}`}
-          onClick={() => document.getElementById(s.targetId)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+          onClick={() =>
+            document
+              .getElementById(s.targetId)
+              ?.scrollIntoView({ behavior: "smooth", block: "start" })
+          }
           disabled={s.count === 0}
         >
           <div className="stat-top">

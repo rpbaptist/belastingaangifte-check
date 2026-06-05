@@ -18,17 +18,17 @@ const FIELD_AMOUNT_OVERRIDES: Array<{
   negate?: boolean;
 }> = [
   { fieldIncludes: "ingehouden dividendbelasting", amountPath: ["broker", "dutchDividendTax"] },
-  { fieldIncludes: "dividendbelasting",             amountPath: ["broker", "dutchDividendTax"] },
-  { fieldIncludes: "buitenlandse bronbelasting",    amountPath: ["broker", "foreignWithholdingTax"] },
-  { fieldIncludes: "bronheffing",                   amountPath: ["broker", "foreignWithholdingTax"] },
-  { fieldIncludes: "brutodividend",                 amountPath: ["broker", "dividend"] },
-  { fieldIncludes: "loon",                          amountPath: ["wage", "taxableWage"] },
-  { fieldIncludes: "inkomsten uit werk",            amountPath: ["wage", "taxableWage"] },
-  { fieldIncludes: "arbeidsongeschiktheid",         amountPath: ["other", "premiumPaid"], negate: true },
+  { fieldIncludes: "dividendbelasting", amountPath: ["broker", "dutchDividendTax"] },
+  { fieldIncludes: "buitenlandse bronbelasting", amountPath: ["broker", "foreignWithholdingTax"] },
+  { fieldIncludes: "bronheffing", amountPath: ["broker", "foreignWithholdingTax"] },
+  { fieldIncludes: "brutodividend", amountPath: ["broker", "dividend"] },
+  { fieldIncludes: "loon", amountPath: ["wage", "taxableWage"] },
+  { fieldIncludes: "inkomsten uit werk", amountPath: ["wage", "taxableWage"] },
+  { fieldIncludes: "arbeidsongeschiktheid", amountPath: ["other", "premiumPaid"], negate: true },
   // "rente" catches hypotheekrente and betaalde rente — always a deduction (negative in aangifte)
-  { fieldIncludes: "rente",                         amountPath: ["mortgage", "interestPaid"], negate: true },
+  { fieldIncludes: "rente", amountPath: ["mortgage", "interestPaid"], negate: true },
   // "dividend" must come after "dividendbelasting" / "brutodividend" to avoid false matches
-  { fieldIncludes: "dividend",                      amountPath: ["broker", "dividend"] },
+  { fieldIncludes: "dividend", amountPath: ["broker", "dividend"] },
 ];
 
 function resolveAmountOverride(fieldLower: string, amounts: AccountAmounts): number | null {
@@ -124,9 +124,9 @@ export function categorize(matchResult: MatchResult): CategorizationResult {
     account.description.toLowerCase().includes(`31 december ${statement.taxYear}`);
 
   const notFilledIn: NotFilledInItem[] = matchResult.onlyInJaaropgave
-    .filter(({ statement, account }) =>
-      primaryDisplayAmount(account.amounts) !== 0 &&
-      !isEndOfYearAccount(statement, account)
+    .filter(
+      ({ statement, account }) =>
+        primaryDisplayAmount(account.amounts) !== 0 && !isEndOfYearAccount(statement, account)
     )
     .map(({ statement, account }) => ({
       accountNumber: account.accountNumber,

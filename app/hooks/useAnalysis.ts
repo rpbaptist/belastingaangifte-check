@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import type { AnalysisReport, AnalyseRequest, ExtractedData, IncrementalRequest } from "@/lib/types";
+import type {
+  AnalysisReport,
+  AnalyseRequest,
+  ExtractedData,
+  IncrementalRequest,
+} from "@/lib/types";
 import { AnalyseResponseSchema, ApiErrorSchema } from "@/lib/schemas";
 
 function fileToBase64(file: File): Promise<string> {
@@ -106,7 +111,9 @@ export function useAnalysis(apiKey: string) {
       return true;
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
-      setIncrementalError(err instanceof Error ? err.message : "Er is een onbekende fout opgetreden.");
+      setIncrementalError(
+        err instanceof Error ? err.message : "Er is een onbekende fout opgetreden."
+      );
     } finally {
       setIncrementalLoading(false);
     }

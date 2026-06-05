@@ -23,11 +23,11 @@ All three API call types (jaaropgave extraction, aangifte extraction, question a
 
 Typical run: 1 aangifte + 4 jaaropgaves.
 
-| Call | Model | Input | Output | Cost |
-|---|---|---|---|---|
-| 5 × extraction (parallel) | Haiku 4.5 | ~12,700 tok | ~2,200 tok | ~$0.02 |
-| 1 × analysis | Sonnet 4.6 | ~3,300 tok | ~650 tok | ~$0.02 |
-| **Total** | | | | **~$0.04** |
+| Call                      | Model      | Input       | Output     | Cost       |
+| ------------------------- | ---------- | ----------- | ---------- | ---------- |
+| 5 × extraction (parallel) | Haiku 4.5  | ~12,700 tok | ~2,200 tok | ~$0.02     |
+| 1 × analysis              | Sonnet 4.6 | ~3,300 tok  | ~650 tok   | ~$0.02     |
+| **Total**                 |            |             |            | **~$0.04** |
 
 Extraction scales linearly with PDF count and size. Analysis scales with the number of matched/unmatched accounts. Prompt caching on the shared jaaropgave system prompt reduces extraction cost when the cache is warm. Prices are approximate — verify at console.anthropic.com.
 
