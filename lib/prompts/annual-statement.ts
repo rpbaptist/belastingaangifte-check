@@ -31,6 +31,12 @@ Rules:
   - dutchDividendTax = Nederlandse dividendbelasting ingehouden by the broker on Dutch holdings — 15% domestic voorheffing, verrekenbaar als ingehouden dividendbelasting in the aangifte
   - foreignWithholdingTax = buitenlandse bronbelasting on foreign dividends — verrekenbaar per belastingverdrag
   - If the jaaropgave only shows one combined "ingehouden dividendbelasting" line and the holdings are clearly Dutch (e.g. ASN, Nederlandse aandelen), put it in dutchDividendTax. If clearly foreign, foreignWithholdingTax. If mixed and not separable, put it in dutchDividendTax and add metadata note
+- Wage amount semantics (employer jaaropgaves, institutionType "other"):
+  - amounts.wage.taxableWage = bruto fiscaal loon (gross taxable wage reported to the Belastingdienst — labelled "Loon" or "Fiscaal loon")
+  - amounts.wage.withheldTax = loonheffing ingehouden (payroll tax withheld — labelled "Loonheffing" or "Ingehouden loonheffing")
+  - amounts.wage.holidayAllowance = vakantiegeld (only if separately stated)
+  - accountNumber for an employer jaaropgave is the loonheffingsnummer (e.g. "135.689.600") — extract it exactly as shown; if absent, use the employer's fiscal number or leave null
+  - Only include fields that are explicitly shown in the document — never guess
 - metadata holds any non-numeric fields relevant for tax advice (e.g. mortgageType)
 - Omit fields you cannot determine — never guess
 - Extract account numbers and identifiers exactly as they appear in the document — do not mask, redact, or abbreviate them (e.g. write "johndoe" not "******doe")
