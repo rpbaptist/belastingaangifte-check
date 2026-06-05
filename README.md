@@ -12,12 +12,12 @@ Upload your tax return (_belastingaangifte_) and annual statements (_jaaropgaves
 
 ## Report
 
-| | Category | Meaning |
-|---|---|---|
-| ✅ | **Gedekt** | In both tax return and annual statement — amounts match |
-| ⚠️ | **Jaaropgave ontbreekt** | In tax return but no annual statement uploaded |
-| 📝 | **Niet ingevuld in aangifte** | Annual statement present but missing or zero in tax return |
-| 💡 | **Aandachtspunten** | Substantive flags — interest-only mortgage, foreign dividend withholding, etc. |
+|     | Category                      | Meaning                                                                        |
+| --- | ----------------------------- | ------------------------------------------------------------------------------ |
+| ✅  | **Gedekt**                    | In both tax return and annual statement — amounts match                        |
+| ⚠️  | **Jaaropgave ontbreekt**      | In tax return but no annual statement uploaded                                 |
+| 📝  | **Niet ingevuld in aangifte** | Annual statement present but missing or zero in tax return                     |
+| 💡  | **Aandachtspunten**           | Substantive flags — interest-only mortgage, foreign dividend withholding, etc. |
 
 After the initial report you can add more statements incrementally and ask follow-up questions about any flag.
 
@@ -45,11 +45,11 @@ PDFs → [Extraction] → [Reconciliation] → [Categorization] → [Analysis] �
 
 Typical run: 1 aangifte + 4 jaaropgaves.
 
-| Call | Model | Approx. tokens | Approx. cost |
-|---|---|---|---|
-| 5 × extraction (parallel) | Haiku 4.5 | ~16k input / ~2.2k output | ~$0.02 |
-| 1 × analysis | Sonnet 4.6 | ~3.3k input / ~650 output | ~$0.02 |
-| **Total** | | | **~$0.04** |
+| Call                      | Model      | Approx. tokens            | Approx. cost |
+| ------------------------- | ---------- | ------------------------- | ------------ |
+| 5 × extraction (parallel) | Haiku 4.5  | ~16k input / ~2.2k output | ~$0.02       |
+| 1 × analysis              | Sonnet 4.6 | ~3.3k input / ~650 output | ~$0.02       |
+| **Total**                 |            |                           | **~$0.04**   |
 
 Token counts are dominated by PDF text size — a large aangifte or many jaaropgaves will increase the extraction cost linearly. Analysis cost grows with the number of matched/unmatched accounts. Prompt caching on the shared jaaropgave system prompt reduces extraction cost when the cache is warm.
 

@@ -125,6 +125,7 @@ The LLM analyst now receives only amount mismatches and annual statements for co
 **Why:** Categorization and field-mapping were fragile as free-text LLM instructions. Silent misclassifications were discoverable only through manual inspection. Moving to TypeScript makes every rule a unit test.
 
 **Consequences:**
+
 - Categorization, field-to-field mapping, and most attention point rules are unit-testable
 - LLM context window for analysis is smaller — only mismatches + statements, not full matched buckets
 - New field-to-field mappings require a code change to `FIELD_AMOUNT_OVERRIDES`

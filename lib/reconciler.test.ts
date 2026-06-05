@@ -34,36 +34,35 @@ function statement(
 
 describe("reconcile — primary match by rekeningnummer", () => {
   it("matches despite formatting differences", () => {
-    const result = reconcile(
-      taxReturn([entry("Saldo", 0, "Nummer 1926.58.069")]),
-      [statement("1926.58.069")]
-    );
+    const result = reconcile(taxReturn([entry("Saldo", 0, "Nummer 1926.58.069")]), [
+      statement("1926.58.069"),
+    ]);
     expect(result.matched).toHaveLength(1);
     expect(result.onlyInAangifte).toHaveLength(0);
     expect(result.onlyInJaaropgave).toHaveLength(0);
   });
 
   it("places aangifte entry with null accountNumber in onlyInAangifte", () => {
-    const result = reconcile(
-      taxReturn([entry("Saldo", 0, null)]),
-      [statement("NL00INGB0000000001", { bank: { balance: 5000 } })]
-    );
+    const result = reconcile(taxReturn([entry("Saldo", 0, null)]), [
+      statement("NL00INGB0000000001", { bank: { balance: 5000 } }),
+    ]);
     expect(result.matched).toHaveLength(0);
     expect(result.onlyInAangifte).toHaveLength(1);
     expect(result.onlyInJaaropgave).toHaveLength(1);
   });
 
   it("places unmatched aangifte entry in onlyInAangifte", () => {
-    const result = reconcile(
-      taxReturn([entry("Saldo", 0, "NL99TEST0000000000")]),
-      [statement("NL00INGB0000000001", { bank: { balance: 5000 } })]
-    );
+    const result = reconcile(taxReturn([entry("Saldo", 0, "NL99TEST0000000000")]), [
+      statement("NL00INGB0000000001", { bank: { balance: 5000 } }),
+    ]);
     expect(result.onlyInAangifte).toHaveLength(1);
     expect(result.onlyInJaaropgave).toHaveLength(1);
   });
 
   it("places unmatched jaaropgave account in onlyInJaaropgave", () => {
-    const result = reconcile(taxReturn([]), [statement("NL00INGB0000000001", { bank: { balance: 5000 } })]);
+    const result = reconcile(taxReturn([]), [
+      statement("NL00INGB0000000001", { bank: { balance: 5000 } }),
+    ]);
     expect(result.onlyInJaaropgave).toHaveLength(1);
     expect(result.onlyInJaaropgave[0].account.accountNumber).toBe("NL00INGB0000000001");
   });
@@ -82,10 +81,9 @@ describe("reconcile — primary match by rekeningnummer", () => {
   });
 
   it("matches aangifte entry to jaaropgave account by account number", () => {
-    const result = reconcile(
-      taxReturn([entry("Saldo", 3080, "NL00INGB0000000001")]),
-      [statement("NL00INGB0000000001")]
-    );
+    const result = reconcile(taxReturn([entry("Saldo", 3080, "NL00INGB0000000001")]), [
+      statement("NL00INGB0000000001"),
+    ]);
     expect(result.matched).toHaveLength(1);
     expect(result.matched[0].aangifte.accountNumber).toBe("NL00INGB0000000001");
     expect(result.onlyInAangifte).toHaveLength(0);
@@ -116,10 +114,9 @@ describe("reconcile — calculated field removal", () => {
 
 describe("reconcile — secondary match by amount", () => {
   it("amount-matches a Loon entry to a wage jaaropgave and moves to matched", () => {
-    const result = reconcile(
-      taxReturn([entry("Loon in Nederland", 100932, null, "1")]),
-      [statement("employer-001", { wage: { taxableWage: 100932 } })]
-    );
+    const result = reconcile(taxReturn([entry("Loon in Nederland", 100932, null, "1")]), [
+      statement("employer-001", { wage: { taxableWage: 100932 } }),
+    ]);
     expect(result.matched).toHaveLength(1);
     expect(result.onlyInAangifte).toHaveLength(0);
     expect(result.onlyInJaaropgave).toHaveLength(0);
@@ -127,7 +124,9 @@ describe("reconcile — secondary match by amount", () => {
 
   it("amount-matches an AO premium entry to an insurance jaaropgave", () => {
     const result = reconcile(
-      taxReturn([entry("Aftrekbare premies voor een arbeidsongeschiktheidsverzekering", -940, null, "1")]),
+      taxReturn([
+        entry("Aftrekbare premies voor een arbeidsongeschiktheidsverzekering", -940, null, "1"),
+      ]),
       [statement("insurance-001", { other: { premiumPaid: 940 } })]
     );
     expect(result.matched).toHaveLength(1);
@@ -135,29 +134,26 @@ describe("reconcile — secondary match by amount", () => {
   });
 
   it("amount-matches 'Inkomsten uit werk' (section header) to a wage jaaropgave", () => {
-    const result = reconcile(
-      taxReturn([entry("Inkomsten uit werk", 100932, null, "1")]),
-      [statement("employer-001", { wage: { taxableWage: 100932 } })]
-    );
+    const result = reconcile(taxReturn([entry("Inkomsten uit werk", 100932, null, "1")]), [
+      statement("employer-001", { wage: { taxableWage: 100932 } }),
+    ]);
     expect(result.matched).toHaveLength(1);
     expect(result.onlyInAangifte).toHaveLength(0);
     expect(result.onlyInJaaropgave).toHaveLength(0);
   });
 
   it("secondary-matches a Loon entry even when accountNumber is not null", () => {
-    const result = reconcile(
-      taxReturn([entry("Loon in Nederland", 100932, "135689600", "1")]),
-      [statement("employer-001", { wage: { taxableWage: 100932 } })]
-    );
+    const result = reconcile(taxReturn([entry("Loon in Nederland", 100932, "135689600", "1")]), [
+      statement("employer-001", { wage: { taxableWage: 100932 } }),
+    ]);
     expect(result.matched).toHaveLength(1);
     expect(result.onlyInAangifte).toHaveLength(0);
   });
 
   it("does NOT match when amounts differ by more than €1", () => {
-    const result = reconcile(
-      taxReturn([entry("Loon in Nederland", 100932, null, "1")]),
-      [statement("employer-001", { wage: { taxableWage: 100000 } })]
-    );
+    const result = reconcile(taxReturn([entry("Loon in Nederland", 100932, null, "1")]), [
+      statement("employer-001", { wage: { taxableWage: 100000 } }),
+    ]);
     expect(result.matched).toHaveLength(0);
     expect(result.onlyInAangifte).toHaveLength(1);
   });
@@ -169,10 +165,9 @@ describe("reconcile — secondary match by amount", () => {
   });
 
   it("matched pair from secondary matching contains both aangifte and jaaropgave sides", () => {
-    const result = reconcile(
-      taxReturn([entry("Loon in Nederland", 100932, null, "1")]),
-      [statement("employer-001", { wage: { taxableWage: 100932 } })]
-    );
+    const result = reconcile(taxReturn([entry("Loon in Nederland", 100932, null, "1")]), [
+      statement("employer-001", { wage: { taxableWage: 100932 } }),
+    ]);
     expect(result.matched[0].aangifte.field).toBe("Loon in Nederland");
     expect(result.matched[0].jaaropgave.account.amounts["wage"]?.["taxableWage"]).toBe(100932);
   });
