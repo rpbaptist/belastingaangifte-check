@@ -96,6 +96,16 @@ export type CategorizationResult = {
   amountMismatches: AmountMismatch[];
 };
 
+function dedupeBy<T>(arr: T[], key: (item: T) => string): T[] {
+  const seen = new Set<string>();
+  return arr.filter((item) => {
+    const k = key(item);
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
 export function categorize(matchResult: MatchResult): CategorizationResult {
   const covered: CoveredItem[] = [];
   const amountMismatches: AmountMismatch[] = [];
@@ -148,5 +158,10 @@ export function categorize(matchResult: MatchResult): CategorizationResult {
       amount: primaryDisplayAmount(account.amounts),
     }));
 
-  return { covered, missingStatement, notFilledIn, amountMismatches };
+  return {
+    covered: dedupeBy(covered, (c) => `${c.accountNumber}|${c.field}`),
+    missingStatement: dedupeBy(missingStatement, (m) => `${m.accountNumber}|${m.field}`),
+    notFilledIn: dedupeBy(notFilledIn, (n) => n.accountNumber),
+    amountMismatches,
+  };
 }

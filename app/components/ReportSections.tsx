@@ -156,7 +156,7 @@ export function CoveredSection({ items }: { items: CoveredItem[] }) {
     >
       {items.map((c) => (
         <Row
-          key={c.accountNumber + c.field}
+          key={c.accountNumber + "|" + c.field}
           tone="pos"
           f={c.field}
           m={`${c.institution}${c.accountNumber ? ` · ${c.accountNumber}` : ""}`}
@@ -179,7 +179,7 @@ export function MissingStatementSection({ items }: { items: MissingStatementItem
     >
       {items.map((c) => (
         <Row
-          key={c.accountNumber + c.field}
+          key={c.accountNumber + "|" + c.field}
           tone="warn"
           f={c.field}
           m={`Box ${c.box}${c.accountNumber ? ` · ${c.accountNumber}` : ""}`}
