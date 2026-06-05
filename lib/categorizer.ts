@@ -11,25 +11,25 @@ import type {
 
 // Maps aangifte field name fragments (lowercase) to jaaropgave amount paths.
 // negate: true → jaaropgave stores a positive value but aangifte is negative (deductions).
-// Order matters: more specific patterns must precede substrings they contain.
+// Sorted longest-first at module init so more-specific substrings always win (structural invariant).
 const FIELD_AMOUNT_OVERRIDES: Array<{
   fieldIncludes: string;
   amountPath: [string, string];
   negate?: boolean;
-}> = [
-  { fieldIncludes: "ingehouden dividendbelasting", amountPath: ["broker", "dutchDividendTax"] },
-  { fieldIncludes: "dividendbelasting", amountPath: ["broker", "dutchDividendTax"] },
-  { fieldIncludes: "buitenlandse bronbelasting", amountPath: ["broker", "foreignWithholdingTax"] },
-  { fieldIncludes: "bronheffing", amountPath: ["broker", "foreignWithholdingTax"] },
-  { fieldIncludes: "brutodividend", amountPath: ["broker", "dividend"] },
-  { fieldIncludes: "loon", amountPath: ["wage", "taxableWage"] },
-  { fieldIncludes: "inkomsten uit werk", amountPath: ["wage", "taxableWage"] },
-  { fieldIncludes: "arbeidsongeschiktheid", amountPath: ["other", "premiumPaid"], negate: true },
-  // "rente" catches hypotheekrente and betaalde rente — always a deduction (negative in aangifte)
-  { fieldIncludes: "rente", amountPath: ["mortgage", "interestPaid"], negate: true },
-  // "dividend" must come after "dividendbelasting" / "brutodividend" to avoid false matches
-  { fieldIncludes: "dividend", amountPath: ["broker", "dividend"] },
-];
+}> = (
+  [
+    { fieldIncludes: "ingehouden dividendbelasting", amountPath: ["broker", "dutchDividendTax"] },
+    { fieldIncludes: "dividendbelasting", amountPath: ["broker", "dutchDividendTax"] },
+    { fieldIncludes: "buitenlandse bronbelasting", amountPath: ["broker", "foreignWithholdingTax"] },
+    { fieldIncludes: "bronheffing", amountPath: ["broker", "foreignWithholdingTax"] },
+    { fieldIncludes: "brutodividend", amountPath: ["broker", "dividend"] },
+    { fieldIncludes: "loon", amountPath: ["wage", "taxableWage"] },
+    { fieldIncludes: "inkomsten uit werk", amountPath: ["wage", "taxableWage"] },
+    { fieldIncludes: "arbeidsongeschiktheid", amountPath: ["other", "premiumPaid"], negate: true },
+    { fieldIncludes: "rente", amountPath: ["mortgage", "interestPaid"], negate: true },
+    { fieldIncludes: "dividend", amountPath: ["broker", "dividend"] },
+  ] as const
+).sort((a, b) => b.fieldIncludes.length - a.fieldIncludes.length);
 
 function resolveAmountOverride(fieldLower: string, amounts: AccountAmounts): number | null {
   for (const { fieldIncludes, amountPath, negate } of FIELD_AMOUNT_OVERRIDES) {
