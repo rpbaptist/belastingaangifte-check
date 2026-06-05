@@ -36,7 +36,7 @@ type ExtractOpts<T> = {
   schema: z.ZodType<T>;
 };
 
-async function extract<T>(pdfBase64: string, opts: ExtractOpts<T>, apiKey?: string): Promise<T> {
+async function extract<T>(pdfBase64: string, opts: ExtractOpts<T>, client: Anthropic): Promise<T> {
   const cached = readCache<T>(pdfBase64);
   if (cached) {
     try {
@@ -46,7 +46,6 @@ async function extract<T>(pdfBase64: string, opts: ExtractOpts<T>, apiKey?: stri
     }
   }
 
-  const client = new Anthropic(apiKey ? { apiKey } : {});
   const response = await withRetry(() =>
     client.messages.create({
       model: MODEL,
@@ -88,7 +87,7 @@ async function extract<T>(pdfBase64: string, opts: ExtractOpts<T>, apiKey?: stri
 
 export function extractAnnualStatement(
   pdfBase64: string,
-  apiKey?: string
+  client: Anthropic
 ): Promise<AnnualStatementData> {
   return extract(
     pdfBase64,
@@ -99,11 +98,11 @@ export function extractAnnualStatement(
       noResponseError: "Geen reactie ontvangen bij verwerking van de jaaropgave",
       schema: AnnualStatementSchema,
     },
-    apiKey
+    client
   );
 }
 
-export function extractTaxReturn(pdfBase64: string, apiKey?: string): Promise<TaxReturnData> {
+export function extractTaxReturn(pdfBase64: string, client: Anthropic): Promise<TaxReturnData> {
   return extract(
     pdfBase64,
     {
@@ -113,6 +112,6 @@ export function extractTaxReturn(pdfBase64: string, apiKey?: string): Promise<Ta
       noResponseError: "Geen reactie ontvangen bij verwerking van de aangifte",
       schema: TaxReturnSchema,
     },
-    apiKey
+    client
   );
 }
