@@ -1,6 +1,4 @@
 import Anthropic from "@anthropic-ai/sdk";
-import fs from "fs";
-import path from "path";
 import type { AnalysisReport, AnnualStatementData, TaxReturnData } from "./types";
 import { z } from "zod";
 import { parseLlmJson } from "./parse-llm-json";
@@ -10,21 +8,10 @@ import { buildAnalyzerPrompt } from "./prompts/analyzer";
 
 const MODEL = "claude-sonnet-4-6";
 
-function loadRules(): string {
-  const rulesPath = path.join(process.cwd(), "rules", "aandachtspunten.md");
-  try {
-    return fs.readFileSync(rulesPath, "utf-8");
-  } catch {
-    throw new Error(`Kon aandachtspunten-regels niet laden: ${rulesPath}`);
-  }
-}
-
-const RULES = loadRules();
-
-
 export async function analyzeDocuments(
   taxReturn: TaxReturnData,
   annualStatements: AnnualStatementData[],
+  rules: string,
   apiKey?: string
 ): Promise<Omit<AnalysisReport, "extractionErrors">> {
   const client = new Anthropic(apiKey ? { apiKey } : {});
@@ -52,7 +39,7 @@ export async function analyzeDocuments(
     system: [
       {
         type: "text",
-        text: buildAnalyzerPrompt(RULES),
+        text: buildAnalyzerPrompt(rules),
         cache_control: { type: "ephemeral" },
       },
     ],
