@@ -120,14 +120,20 @@ export function categorize(matchResult: MatchResult): CategorizationResult {
     box: e.box,
   }));
 
-  const notFilledIn: NotFilledInItem[] = matchResult.onlyInJaaropgave.map(
-    ({ statement, account }) => ({
+  const isEndOfYearAccount = (statement: AnnualStatementData, account: AccountData): boolean =>
+    account.description.toLowerCase().includes(`31 december ${statement.taxYear}`);
+
+  const notFilledIn: NotFilledInItem[] = matchResult.onlyInJaaropgave
+    .filter(({ statement, account }) =>
+      primaryDisplayAmount(account.amounts) !== 0 &&
+      !isEndOfYearAccount(statement, account)
+    )
+    .map(({ statement, account }) => ({
       accountNumber: account.accountNumber,
       institution: statement.institution,
       description: account.description,
       amount: primaryDisplayAmount(account.amounts),
-    })
-  );
+    }));
 
   return { covered, missingStatement, notFilledIn, amountMismatches };
 }
