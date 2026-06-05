@@ -3,10 +3,40 @@ import type { AnalysisReport, AnnualStatementData, TaxReturnData } from "./types
 import { z } from "zod";
 import { parseLlmJson } from "./parse-llm-json";
 import { reconcile } from "./reconciler";
-import { AnalysisReportSchema } from "./schemas";
+import { categorize, type AmountMismatch } from "./categorizer";
+import { runRuleChecks } from "./rule-checks";
+import { LLMAnalysisResponseSchema } from "./schemas";
 import { buildAnalyzerPrompt } from "./prompts/analyzer";
 
 const MODEL = "claude-sonnet-4-6";
+
+function buildUserMessage(
+  amountMismatches: AmountMismatch[],
+  annualStatements: AnnualStatementData[]
+): string {
+  const parts: string[] = [];
+
+  if (amountMismatches.length > 0) {
+    parts.push(
+      "## Amount mismatches (review each — amounts differ by more than €1)",
+      "",
+      JSON.stringify(amountMismatches, null, 2),
+      ""
+    );
+  } else {
+    parts.push("## Amount mismatches", "", "None.", "");
+  }
+
+  parts.push(
+    "## Annual statements (for context)",
+    "",
+    JSON.stringify(annualStatements, null, 2),
+    "",
+    "Generate the attentionPoints. Respond with the raw JSON object only — start your response with `{`."
+  );
+
+  return parts.join("\n");
+}
 
 export async function analyzeDocuments(
   taxReturn: TaxReturnData,
@@ -15,27 +45,14 @@ export async function analyzeDocuments(
   apiKey?: string
 ): Promise<Omit<AnalysisReport, "extractionErrors">> {
   const client = new Anthropic(apiKey ? { apiKey } : {});
-  const { matched, onlyInAangifte, onlyInJaaropgave } = reconcile(taxReturn, annualStatements);
 
-  const userMessage = [
-    "## Matched pairs (account numbers resolved by code)",
-    "",
-    JSON.stringify(matched, null, 2),
-    "",
-    `## Aangifte entries without matching jaaropgave (${onlyInAangifte.length})`,
-    "",
-    JSON.stringify(onlyInAangifte, null, 2),
-    "",
-    `## Jaaropgave accounts without matching aangifte entry (${onlyInJaaropgave.length})`,
-    "",
-    JSON.stringify(onlyInJaaropgave, null, 2),
-    "",
-    "Produce the analysis report. Respond with the raw JSON object only — start your response with `{`.",
-  ].join("\n");
+  const matchResult = reconcile(taxReturn, annualStatements);
+  const { covered, missingStatement, notFilledIn, amountMismatches } = categorize(matchResult);
+  const rulePoints = runRuleChecks(annualStatements, taxReturn.taxYear);
 
   const response = await client.messages.create({
     model: MODEL,
-    max_tokens: 8192,
+    max_tokens: 4096,
     system: [
       {
         type: "text",
@@ -43,7 +60,12 @@ export async function analyzeDocuments(
         cache_control: { type: "ephemeral" },
       },
     ],
-    messages: [{ role: "user", content: userMessage }],
+    messages: [
+      {
+        role: "user",
+        content: buildUserMessage(amountMismatches, annualStatements),
+      },
+    ],
   });
 
   if (response.stop_reason === "max_tokens") {
@@ -56,10 +78,19 @@ export async function analyzeDocuments(
   }
 
   const raw = parseLlmJson(textBlock.text);
+  let llmPoints;
   try {
-    return AnalysisReportSchema.parse(raw);
+    ({ attentionPoints: llmPoints } = LLMAnalysisResponseSchema.parse(raw));
   } catch (err) {
     const msg = err instanceof z.ZodError ? err.issues[0]?.message : "onverwacht formaat";
     throw new Error(`Analyse mislukt: ${msg}`);
   }
+
+  return {
+    taxYear: taxReturn.taxYear,
+    covered,
+    missingStatement,
+    notFilledIn,
+    attentionPoints: [...rulePoints, ...llmPoints],
+  };
 }

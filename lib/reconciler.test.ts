@@ -46,7 +46,7 @@ describe("reconcile — primary match by rekeningnummer", () => {
   it("places aangifte entry with null accountNumber in onlyInAangifte", () => {
     const result = reconcile(
       taxReturn([entry("Saldo", 0, null)]),
-      [statement("NL00INGB0000000001")]
+      [statement("NL00INGB0000000001", { bank: { balance: 5000 } })]
     );
     expect(result.matched).toHaveLength(0);
     expect(result.onlyInAangifte).toHaveLength(1);
@@ -56,14 +56,14 @@ describe("reconcile — primary match by rekeningnummer", () => {
   it("places unmatched aangifte entry in onlyInAangifte", () => {
     const result = reconcile(
       taxReturn([entry("Saldo", 0, "NL99TEST0000000000")]),
-      [statement("NL00INGB0000000001")]
+      [statement("NL00INGB0000000001", { bank: { balance: 5000 } })]
     );
     expect(result.onlyInAangifte).toHaveLength(1);
     expect(result.onlyInJaaropgave).toHaveLength(1);
   });
 
   it("places unmatched jaaropgave account in onlyInJaaropgave", () => {
-    const result = reconcile(taxReturn([]), [statement("NL00INGB0000000001")]);
+    const result = reconcile(taxReturn([]), [statement("NL00INGB0000000001", { bank: { balance: 5000 } })]);
     expect(result.onlyInJaaropgave).toHaveLength(1);
     expect(result.onlyInJaaropgave[0].account.accountNumber).toBe("NL00INGB0000000001");
   });
