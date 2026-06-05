@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { promises as fs } from "fs";
+import path from "path";
 import { extractStatements } from "@/lib/extraction-session";
 import { analyzeDocuments } from "@/lib/analyzer";
 import { handleAnthropicError } from "@/lib/anthropic-error";
@@ -32,6 +34,8 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const rules = await fs.readFile(path.join(process.cwd(), "rules", "aandachtspunten.md"), "utf-8");
+
     const { results: newStatements, errors: extractionErrors } = await extractStatements(
       additionalStatements,
       apiKey
@@ -39,7 +43,7 @@ export async function POST(request: NextRequest) {
 
     const mergedStatements = [...extractedData.annualStatements, ...newStatements];
 
-    const reportBase = await analyzeDocuments(extractedData.taxReturn, mergedStatements, apiKey);
+    const reportBase = await analyzeDocuments(extractedData.taxReturn, mergedStatements, rules, apiKey);
 
     const response: AnalyseResponse = {
       report: { ...reportBase, extractionErrors },
