@@ -26,15 +26,15 @@ After the initial report you can add more statements incrementally and ask follo
 Three steps:
 
 ```
-PDFs → [Extraction] → [Koppeling] → [Analysis] → Report
-            ↑              ↑             ↑
-       Claude Haiku   TypeScript    Claude Sonnet
-       (parallel)     (tested)
+PDFs → [Extraction] → [Reconciliation] → [Analysis] → Report
+            ↑                ↑               ↑
+       Claude Haiku     TypeScript      Claude Sonnet
+       (parallel)        (tested)
 ```
 
 **Extraction** — Each PDF is sent as a native document block to Claude Haiku, which returns structured JSON (institution type, account numbers, amounts). Runs in parallel across all uploaded files with prompt caching.
 
-**Koppeling** — Account identifiers from the tax return and annual statements are matched in TypeScript (`lib/koppeling.ts`). Primary matching by normalised account number (strips whitespace, punctuation, Dutch label prefixes). Secondary matching by amount for entries without an account number (wage income, insurance premiums). Deterministic, no LLM.
+**Reconciliation** — Account identifiers from the tax return and annual statements are matched in TypeScript (`lib/reconciler.ts`). Primary matching by normalised account number (strips whitespace, punctuation, Dutch label prefixes). Secondary matching by amount for entries without an account number (wage income, insurance premiums). Deterministic, no LLM.
 
 **Analysis** — Claude Sonnet receives the pre-matched pairs and produces the report. Flags are generated from a [seeded rule set](rules/aandachtspunten.md) plus open-ended LLM judgment.
 
@@ -102,7 +102,7 @@ lib/
   extraction-session.ts           parallel orchestration + partial failure handling
   extraction-cache.ts             dev-only cache (SHA-256 keyed)
   account-normalizer.ts           strip whitespace / prefixes from account numbers
-  koppeling.ts                    full matching pipeline: primary IBAN match + secondary
+  reconciler.ts                   full matching pipeline: primary IBAN match + secondary
                                   amount match + calculated-field removal
   analyzer.ts                     comparison report via Claude Sonnet
   anthropic-error.ts              Anthropic SDK error classification

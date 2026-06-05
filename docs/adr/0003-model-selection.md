@@ -17,7 +17,7 @@ All three API call types (jaaropgave extraction, aangifte extraction, question a
 ## Alternatives considered
 
 - **Sonnet everywhere** — baseline; no cost optimisation
-- **Haiku for analysis** — initially rejected because the LLM was doing account-number matching as well as amount comparison and aandachtspunten. After the koppeling refactor (ADR 0002) moved all matching to TypeScript, the analyser's remaining tasks are amount comparison, dividend field mapping, and aandachtspunten generation. Haiku was re-evaluated: amount comparison and field mapping are rule-following tasks Haiku handles reliably, but aandachtspunten quality (open-ended Dutch tax judgment) degraded. The cost saving is also modest — analysis is ~$0.02 of a ~$0.04 total run cost, and switching to Haiku saves ~35% of that call, ~$0.01/run. Not worth the quality risk at this volume.
+- **Haiku for analysis** — initially rejected because the LLM was doing account-number matching as well as amount comparison and aandachtspunten. After the reconciliation refactor (ADR 0002) moved all matching to TypeScript, the analyser's remaining tasks are amount comparison, dividend field mapping, and aandachtspunten generation. Haiku was re-evaluated: amount comparison and field mapping are rule-following tasks Haiku handles reliably, but aandachtspunten quality (open-ended Dutch tax judgment) degraded. The cost saving is also modest — analysis is ~$0.02 of a ~$0.04 total run cost, and switching to Haiku saves ~35% of that call, ~$0.01/run. Not worth the quality risk at this volume.
 
 ## Cost estimate
 
