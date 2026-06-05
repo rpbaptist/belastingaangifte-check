@@ -30,22 +30,22 @@ Decisions made during project design, with reasoning. Reference this when resumi
 
 The matching pipeline lives in `lib/reconciler.ts` and runs two passes:
 
-1. **Primary** (`lib/account-matcher.ts`) — pair aangifte entries to jaaropgave accounts by normalised account number.
-2. **Secondary** (`lib/aangifte-exceptions.ts`) — for entries without an account number (wage income, AO insurance premiums), match by amount against known jaaropgave fields. Also filters out calculated fields (e.g. Eigenwoningforfait) that never have a corresponding jaaropgave.
+1. **Primary** — pair aangifte entries to jaaropgave accounts by normalised account number (`primaryMatch`).
+2. **Secondary** — for entries without an account number (wage income, AO insurance premiums), match by amount against known jaaropgave fields. Also filters out calculated fields (e.g. Eigenwoningforfait) that never have a corresponding jaaropgave (`secondaryMatch`).
 
-The analyst receives three pre-labelled buckets and focuses on amount comparison and aandachtspunten.
+The analyst receives three pre-labelled buckets. Categorization (covered / missing / notFilledIn) is done in TypeScript by `lib/categorizer.ts` before the LLM is called. See decision 11.
 
 **Original decision (LLM matching) rejected** after three silent false flags discovered through manual inspection with no failing tests. See ADR 0002.
 
 ---
 
-## 4. Amount comparison rounds both sides to full euros, then exact match
+## 4. Amount comparison uses ±€1 tolerance
 
-**Decision:** Before comparing amounts, round jaaropgave amounts to the nearest full euro. Then require exact match.
+**Decision:** When comparing a matched aangifte amount to its jaaropgave counterpart, classify the pair as covered if `Math.abs(aangifte - statement) <= 1`. Larger differences surface as amount mismatches for the LLM to review.
 
-**Why:** The Belastingdienst always rounds amounts in the aangifte to full euros. Jaaropgaves may show cents. Rounding before comparison prevents false mismatches. A tolerance band (±€1) is unnecessary once both sides are rounded.
+**Why:** The Belastingdienst always rounds aangifte amounts to full euros. Jaaropgaves may show cents. After rounding the jaaropgave amount, a residual ±€1 difference can remain depending on how each institution rounds (e.g. banker's rounding vs truncation). The ±€1 band absorbs this without masking meaningful mismatches.
 
-**No tolerance band needed:** Rounding is deterministic — both sides should land on the same integer after rounding.
+**Implementation:** Applied in `lib/categorizer.ts` for covered/mismatch classification, and in `lib/reconciler.ts` for secondary amount-based matching.
 
 ---
 
@@ -109,3 +109,23 @@ The analyst receives three pre-labelled buckets and focuses on amount comparison
 **Why:** Failing the entire request because one PDF is unreadable (scanned image, corrupted file) is poor UX. The user may have 3 valid jaaropgaves and one bad scan. Partial results with a clear warning are more useful than an opaque failure.
 
 **What gets reported:** `report.extractionErrors` contains `{ filename, error }` for each failed extraction.
+
+---
+
+## 11. Categorization and rule checks moved from LLM to TypeScript
+
+**Decision:** The LLM analyst no longer categorizes the reconciliation output or evaluates deterministic rules. Two TypeScript steps replace this:
+
+1. `lib/categorizer.ts` (`categorize()`) — maps matched/unmatched buckets to covered, missingStatement, notFilledIn, and amountMismatches. Field-to-field amount mapping (e.g. aangifte "dividendbelasting" → jaaropgave `broker.dutchDividendTax`) is handled by a `FIELD_AMOUNT_OVERRIDES` lookup table.
+
+2. `lib/rule-checks.ts` (`runRuleChecks()`) — generates deterministic attention points from jaaropgave metadata: aflossingsvrij hypotheek, buitenlands dividend, and box 3 threshold check. These are prepended to LLM-generated attention points.
+
+The LLM analyst now receives only amount mismatches and annual statements for context, and generates open-ended attention points for non-deterministic issues. The analyst prompt explicitly names which checks have already been run by code and must not be re-flagged. See [ADR 0004](adr/0004-categorization-in-code.md).
+
+**Why:** Categorization and field-mapping were fragile as free-text LLM instructions. Silent misclassifications were discoverable only through manual inspection. Moving to TypeScript makes every rule a unit test.
+
+**Consequences:**
+- Categorization, field-to-field mapping, and most attention point rules are unit-testable
+- LLM context window for analysis is smaller — only mismatches + statements, not full matched buckets
+- New field-to-field mappings require a code change to `FIELD_AMOUNT_OVERRIDES`
+- The LLM's remaining scope: judging whether amount mismatches are real errors vs lifecycle events, and open-ended attention points not covered by rule checks
