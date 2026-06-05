@@ -3,7 +3,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { runExtractionSession } from "@/lib/extraction-session";
 import { analyzeDocuments } from "@/lib/analyzer";
-import { handleAnthropicError } from "@/lib/anthropic-error";
+import { classifyError } from "@/lib/anthropic-error";
 import type { AnalyseRequest, AnalyseResponse } from "@/lib/types";
 
 // Allow up to 300s — parallel extraction + analysis across many PDFs
@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch (err) {
-    return handleAnthropicError(err);
+    const { status, message } = classifyError(err);
+    return NextResponse.json({ error: message }, { status });
   }
 }

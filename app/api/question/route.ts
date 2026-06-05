@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
-import { handleAnthropicError } from "@/lib/anthropic-error";
+import { classifyError } from "@/lib/anthropic-error";
 import type { QuestionRequest, QuestionResponse } from "@/lib/types";
 
 export const maxDuration = 60;
@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
     const result: QuestionResponse = { answer: textBlock.text };
     return NextResponse.json(result);
   } catch (err) {
-    return handleAnthropicError(err);
+    const { status, message } = classifyError(err);
+    return NextResponse.json({ error: message }, { status });
   }
 }

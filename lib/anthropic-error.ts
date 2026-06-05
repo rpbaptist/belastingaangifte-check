@@ -1,5 +1,4 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { NextResponse } from "next/server";
 
 export function isUserFacingError(err: unknown): boolean {
   return (
@@ -9,25 +8,19 @@ export function isUserFacingError(err: unknown): boolean {
   );
 }
 
-export function handleAnthropicError(err: unknown): NextResponse {
+export function classifyError(err: unknown): { status: number; message: string } {
   if (err instanceof Anthropic.AuthenticationError) {
-    return NextResponse.json({ error: "Ongeldige API-sleutel" }, { status: 401 });
+    return { status: 401, message: "Ongeldige API-sleutel" };
   }
   if (err instanceof Anthropic.PermissionDeniedError) {
-    return NextResponse.json({ error: "Geen toegang met deze API-sleutel" }, { status: 403 });
+    return { status: 403, message: "Geen toegang met deze API-sleutel" };
   }
   if (err instanceof Anthropic.RateLimitError) {
-    return NextResponse.json(
-      { error: "Te veel verzoeken, probeer het later opnieuw" },
-      { status: 429 }
-    );
+    return { status: 429, message: "Te veel verzoeken, probeer het later opnieuw" };
   }
   if (err instanceof Anthropic.APIError && err.status >= 500) {
-    return NextResponse.json(
-      { error: "Anthropic-serverfout, probeer het later opnieuw" },
-      { status: 502 }
-    );
+    return { status: 502, message: "Anthropic-serverfout, probeer het later opnieuw" };
   }
   const message = err instanceof Error ? err.message : "Er is een onbekende fout opgetreden";
-  return NextResponse.json({ error: message }, { status: 500 });
+  return { status: 500, message };
 }
