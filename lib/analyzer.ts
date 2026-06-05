@@ -3,41 +3,13 @@ import type { AnalysisReport, AnnualStatementData, AttentionPoint, TaxReturnData
 import { z } from "zod";
 import { parseLlmJson } from "./parse-llm-json";
 import { reconcile } from "./reconciler";
-import { categorize, type AmountMismatch } from "./categorizer";
+import { categorize } from "./categorizer";
 import { runRuleChecks } from "./rule-checks";
 import { LLMAnalysisResponseSchema } from "./schemas";
-import { buildAnalyzerPrompt } from "./prompts/analyzer";
+import { buildAnalyzerPrompt, buildUserMessage } from "./prompts/analyzer";
 import { readAnalysisCache, writeAnalysisCache } from "./extraction-cache";
 
 const MODEL = "claude-sonnet-4-6";
-
-function buildUserMessage(
-  amountMismatches: AmountMismatch[],
-  covered: { accountNumber: string; institution: string }[]
-): string {
-  const parts: string[] = [];
-
-  parts.push(
-    "## Amount mismatches (review each — amounts differ by more than €1)",
-    "",
-    JSON.stringify(amountMismatches, null, 2),
-    ""
-  );
-
-  parts.push(
-    "## Covered accounts (already reconciled by code — do NOT raise issues about completeness for these)",
-    "",
-    JSON.stringify(
-      covered.map((c) => ({ institution: c.institution, accountNumber: c.accountNumber })),
-      null,
-      2
-    ),
-    "",
-    "Generate the attentionPoints. Respond with the raw JSON object only — start your response with `{`."
-  );
-
-  return parts.join("\n");
-}
 
 export async function analyzeDocuments(
   taxReturn: TaxReturnData,
