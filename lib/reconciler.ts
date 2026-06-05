@@ -28,6 +28,9 @@ type SecondaryMatcher = {
 const wageAmount = (acct: AccountData): number | null =>
   acct.amounts["wage"]?.["taxableWage"] ?? acct.amounts["wage"]?.["grossWage"] ?? null;
 
+const aoPremiumAmount = (acct: AccountData): number | null =>
+  acct.amounts["other"]?.["premiumPaid"] ?? null;
+
 /** Entries matched by amount when account-number matching doesn't apply */
 const SECONDARY_MATCHERS: SecondaryMatcher[] = [
   { fieldContains: "Loon", getJaaropgaveAmount: wageAmount },
@@ -38,7 +41,7 @@ const SECONDARY_MATCHERS: SecondaryMatcher[] = [
   },
   {
     fieldContains: "arbeidsongeschiktheid",
-    getJaaropgaveAmount: (acct) => acct.amounts["other"]?.["premiumPaid"] ?? null,
+    getJaaropgaveAmount: aoPremiumAmount,
   },
 ];
 
@@ -120,11 +123,16 @@ function secondaryMatch(
  * Pass 1: primary match by normalised rekeningnummer.
  * Pass 2: secondary amount-match for entries without a rekeningnummer (wage income,
  * AO insurance premiums) and removal of calculated fields that never have a jaaropgave.
+ * Pass 3: filter zero-balance jaaropgave accounts (nothing to report).
  */
 export function reconcile(
   taxReturn: TaxReturnData,
   annualStatements: AnnualStatementData[]
 ): MatchResult {
   const initial = primaryMatch(taxReturn, annualStatements);
-  return secondaryMatch(initial.matched, initial.onlyInAangifte, initial.onlyInJaaropgave);
+  const result = secondaryMatch(initial.matched, initial.onlyInAangifte, initial.onlyInJaaropgave);
+  const onlyInJaaropgave = result.onlyInJaaropgave.filter(({ account }) =>
+    Object.values(account.amounts).some((cat) => Object.values(cat).some((v) => v !== 0))
+  );
+  return { ...result, onlyInJaaropgave };
 }
