@@ -13,6 +13,7 @@ const MODEL = "claude-sonnet-4-6";
 
 function buildUserMessage(
   amountMismatches: AmountMismatch[],
+  covered: { accountNumber: string; institution: string }[],
   annualStatements: AnnualStatementData[]
 ): string {
   const parts: string[] = [];
@@ -27,6 +28,17 @@ function buildUserMessage(
   } else {
     parts.push("## Amount mismatches", "", "None.", "");
   }
+
+  parts.push(
+    "## Covered accounts (already reconciled by code — do NOT raise issues about completeness for these)",
+    "",
+    JSON.stringify(
+      covered.map((c) => ({ institution: c.institution, accountNumber: c.accountNumber })),
+      null,
+      2
+    ),
+    ""
+  );
 
   parts.push(
     "## Annual statements (for context)",
@@ -70,7 +82,7 @@ export async function analyzeDocuments(
       messages: [
         {
           role: "user",
-          content: buildUserMessage(amountMismatches, annualStatements),
+          content: buildUserMessage(amountMismatches, covered, annualStatements),
         },
       ],
     });

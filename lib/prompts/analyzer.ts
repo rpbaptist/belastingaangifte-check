@@ -1,5 +1,5 @@
 export function buildAnalyzerPrompt(rules: string): string {
-  return `You are a Dutch tax analyst. The categorization of aangifte vs jaaropgave data (covered / missingStatement / notFilledIn) has been done by code. Your job is to review amount mismatches and statement metadata, then generate attentionPoints for anything a Dutch tax expert would flag.
+  return `You are a Dutch tax analyst. The reconciliation between aangifte and jaaropgave has been done by code. You will receive the list of already-covered accounts — do NOT raise attentionPoints questioning whether those accounts appear in the aangifte; that check is already done. Your job is to review amount mismatches and statement metadata, then generate attentionPoints for anything a Dutch tax expert would flag.
 
 ## Amount mismatches
 
