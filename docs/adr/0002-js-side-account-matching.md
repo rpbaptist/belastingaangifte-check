@@ -13,12 +13,10 @@ Matching aangifte entries to jaaropgave accounts by rekeningnummer was delegated
 Account number matching is done in code before the LLM is called:
 
 - `lib/account-normalizer.ts` — `normalize(raw: string): string` reduces any rekeningnummer to a canonical lowercase form (strips whitespace, punctuation, and Dutch label prefixes)
-- `lib/account-matcher.ts` — `matchEntries(taxReturn, statements)` pairs aangifte entries to jaaropgave accounts by normalised rekeningnummer, returning matched pairs and unmatched entries on both sides
-- `lib/aangifte-exceptions.ts` — second pass: filters calculated fields (e.g. Eigenwoningforfait) that never have a jaaropgave, and secondary-matches entries without a rekeningnummer (wage income, AO insurance premiums) by amount
-- `lib/reconciler.ts` — `reconcile(taxReturn, statements)` runs both passes and returns the final three buckets; the single entry point callers use
-- `lib/analyzer.ts` — calls `reconcile` before the API call and sends the pre-matched structure to the LLM; matching prose removed from the system prompt
+- `lib/reconciler.ts` — `reconcile(taxReturn, statements)` consolidates all matching logic and returns three buckets. Internally runs two passes: `primaryMatch` (by normalised rekeningnummer) and `secondaryMatch` (by amount for entries without a rekeningnummer, e.g. wage income, AO insurance premiums; also removes calculated fields like Eigenwoningforfait that never have a jaaropgave)
+- `lib/analyzer.ts` — calls `reconcile` then `categorize` before the API call; matching and categorization prose removed from the system prompt
 
-The LLM receives three pre-labelled buckets and focuses on amount comparison and aandachtspunten.
+The LLM receives only amount mismatches and annual statements for context. See [ADR 0004](0004-categorization-in-code.md) for the subsequent move of categorization from LLM to code.
 
 ## Alternatives considered
 
