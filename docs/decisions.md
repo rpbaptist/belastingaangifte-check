@@ -24,11 +24,11 @@ Decisions made during project design, with reasoning. Reference this when resumi
 
 ---
 
-## 3. Matching done in TypeScript (koppeling), not by the LLM
+## 3. Matching done in TypeScript (reconciliation), not by the LLM
 
 **Decision:** Account number matching is done in code before the LLM analyst is called. See [ADR 0002](adr/0002-js-side-account-matching.md) for full reasoning.
 
-The matching pipeline lives in `lib/koppeling.ts` and runs two passes:
+The matching pipeline lives in `lib/reconciler.ts` and runs two passes:
 
 1. **Primary** (`lib/account-matcher.ts`) — pair aangifte entries to jaaropgave accounts by normalised account number.
 2. **Secondary** (`lib/aangifte-exceptions.ts`) — for entries without an account number (wage income, AO insurance premiums), match by amount against known jaaropgave fields. Also filters out calculated fields (e.g. Eigenwoningforfait) that never have a corresponding jaaropgave.
