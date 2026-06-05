@@ -1,3 +1,4 @@
+import Anthropic from "@anthropic-ai/sdk";
 import { extractAnnualStatement, extractTaxReturn } from "./extractor";
 import type { AnnualStatementData, ExtractionError, TaxReturnData } from "./types";
 import { isUserFacingError } from "./anthropic-error";
@@ -18,9 +19,10 @@ export async function runExtractionSession(
   statements: StatementInput[],
   apiKey?: string
 ): Promise<ExtractionSessionResult> {
+  const client = new Anthropic(apiKey ? { apiKey } : {});
   const [taxReturnResult, ...statementResults] = await Promise.allSettled([
-    extractTaxReturn(taxReturnPdf, apiKey),
-    ...statements.map((s) => extractAnnualStatement(s.data, apiKey)),
+    extractTaxReturn(taxReturnPdf, client),
+    ...statements.map((s) => extractAnnualStatement(s.data, client)),
   ]);
 
   if (taxReturnResult.status === "rejected") {
@@ -52,8 +54,9 @@ export async function extractStatements(
   statements: StatementInput[],
   apiKey?: string
 ): Promise<{ results: AnnualStatementData[]; errors: ExtractionError[] }> {
+  const client = new Anthropic(apiKey ? { apiKey } : {});
   const settled = await Promise.allSettled(
-    statements.map((s) => extractAnnualStatement(s.data, apiKey))
+    statements.map((s) => extractAnnualStatement(s.data, client))
   );
 
   const errors: ExtractionError[] = [];
