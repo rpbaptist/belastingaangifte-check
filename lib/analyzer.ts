@@ -13,21 +13,16 @@ const MODEL = "claude-sonnet-4-6";
 
 function buildUserMessage(
   amountMismatches: AmountMismatch[],
-  covered: { accountNumber: string; institution: string }[],
-  annualStatements: AnnualStatementData[]
+  covered: { accountNumber: string; institution: string }[]
 ): string {
   const parts: string[] = [];
 
-  if (amountMismatches.length > 0) {
-    parts.push(
-      "## Amount mismatches (review each — amounts differ by more than €1)",
-      "",
-      JSON.stringify(amountMismatches, null, 2),
-      ""
-    );
-  } else {
-    parts.push("## Amount mismatches", "", "None.", "");
-  }
+  parts.push(
+    "## Amount mismatches (review each — amounts differ by more than €1)",
+    "",
+    JSON.stringify(amountMismatches, null, 2),
+    ""
+  );
 
   parts.push(
     "## Covered accounts (already reconciled by code — do NOT raise issues about completeness for these)",
@@ -37,13 +32,6 @@ function buildUserMessage(
       null,
       2
     ),
-    ""
-  );
-
-  parts.push(
-    "## Annual statements (for context)",
-    "",
-    JSON.stringify(annualStatements, null, 2),
     "",
     "Generate the attentionPoints. Respond with the raw JSON object only — start your response with `{`."
   );
@@ -62,6 +50,10 @@ export async function analyzeDocuments(
   const matchResult = reconcile(taxReturn, annualStatements);
   const { covered, missingStatement, notFilledIn, amountMismatches } = categorize(matchResult);
   const rulePoints = runRuleChecks(annualStatements, taxReturn.taxYear);
+
+  if (amountMismatches.length === 0) {
+    return { taxYear: taxReturn.taxYear, covered, missingStatement, notFilledIn, attentionPoints: rulePoints };
+  }
 
   const cached = readAnalysisCache<{ llmPoints: AttentionPoint[] }>(taxReturn, annualStatements);
   let llmPoints: AttentionPoint[];
@@ -82,7 +74,7 @@ export async function analyzeDocuments(
       messages: [
         {
           role: "user",
-          content: buildUserMessage(amountMismatches, covered, annualStatements),
+          content: buildUserMessage(amountMismatches, covered),
         },
       ],
     });

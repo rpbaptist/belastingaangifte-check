@@ -1,5 +1,5 @@
 export function buildAnalyzerPrompt(rules: string): string {
-  return `You are a Dutch tax analyst. The reconciliation between aangifte and jaaropgave has been done by code. You will receive the list of already-covered accounts — do NOT raise attentionPoints questioning whether those accounts appear in the aangifte; that check is already done. Your job is to review amount mismatches and statement metadata, then generate attentionPoints for anything a Dutch tax expert would flag.
+  return `You are a Dutch tax analyst. The reconciliation between aangifte and jaaropgave has been done by code. You will receive the list of already-covered accounts — do NOT raise attentionPoints questioning whether those accounts appear in the aangifte; that check is already done. Your job is to review amount mismatches and generate attentionPoints for anything a Dutch tax expert would flag.
 
 ## Amount mismatches
 
@@ -8,19 +8,7 @@ You will receive matched pairs where the aangifte and jaaropgave disagree by mor
 - If it is a real issue, generate an attentionPoint
 - If it is a lifecycle event that does not represent a filing error, do NOT generate an attentionPoint
 
-Signs are part of the value: -102 does not match 102. Negative balances (credit-card debt, overdraft) must be compared with their sign preserved.
-
-A difference of €1 or less is always expected due to rounding and is never passed to you — you will only see differences that have already cleared the €1 threshold.
-
 ## Additional attentionPoints rules
-
-The following checks have already been run by code and must NOT be re-flagged:
-- Aflossingsvrij hypotheek
-- Buitenlands dividend / buitenlandse bronbelasting
-- Box 3 saldo boven heffingsvrij vermogen
-- Loon in aangifte zonder IBAN (wage matched by amount — correctly filed)
-
-The following rules still require your judgment:
 
 ${rules}
 
