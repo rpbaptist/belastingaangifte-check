@@ -63,7 +63,7 @@ export function ApiKeyInput({
           marginBottom: 6,
         }}
       >
-        <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-2)" }}>
+        <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-2)", whiteSpace: "nowrap" }}>
           Jouw Anthropic API-sleutel
         </label>
         {editing && (

@@ -710,20 +710,105 @@ button.stat:disabled {
   background: var(--bronze-d);
 }
 
-/* ── upload (pre-analysis) view ─────────────────────────────────────────── */
-.h1 {
-  font-size: 30px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  margin: 0;
-  line-height: 1.1;
+/* ── upload / landing view ──────────────────────────────────────────────── */
+
+.page-upload {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px 60px;
 }
-.intro {
-  font-size: 14.5px;
+
+.upload-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow:
+    0 1px 2px rgba(35, 32, 27, .04),
+    0 8px 32px -12px rgba(35, 32, 27, .12),
+    0 32px 80px -32px rgba(35, 32, 27, .14);
+  padding: 36px;
+  width: 100%;
+  max-width: 500px;
+}
+
+/* hero and form flow as single column on mobile */
+.upload-hero { margin-bottom: 28px; }
+
+.notice {
+  font-size: 12px;
   line-height: 1.6;
-  color: var(--ink-2);
-  margin: 12px 0 0;
-  max-width: 48ch;
+  color: var(--ink-3);
+  padding: 12px 14px;
+  background: var(--paper-2);
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+.notice strong { color: var(--ink-2); }
+
+.yr {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 9px;
+  white-space: nowrap;
+  margin-left: 2px;
+}
+
+.h1  { font-size: 28px; font-weight: 600; letter-spacing: -.025em; margin: 0 0 12px; line-height: 1.08; }
+.intro { font-size: 15px; line-height: 1.62; color: var(--ink-2); margin: 0; text-wrap: pretty; }
+
+/* desktop: split into hero (left) + form (right) */
+@media (min-width: 860px) {
+  .page-upload { padding: 60px 48px; }
+
+  .upload-card {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 0;
+    max-width: 900px;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .upload-hero {
+    padding: 52px 48px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-right: 1px solid var(--line);
+    margin-bottom: 0;
+  }
+
+  .upload-form {
+    padding: 40px 36px;
+    background: var(--paper);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  /* notice becomes a quiet footer inside the hero col */
+  .notice {
+    margin-top: 28px;
+    margin-bottom: 0;
+    background: transparent;
+    padding: 0;
+    font-size: 11.5px;
+    border-top: 1px solid var(--line);
+    padding-top: 18px;
+  }
+}
+
+@media (min-width: 860px) {
+  .h1 { font-size: 34px; }
 }
 
 /* ── loading + error ────────────────────────────────────────────────────── */
