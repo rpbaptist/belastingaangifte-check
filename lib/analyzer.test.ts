@@ -47,8 +47,18 @@ describe("buildAnalysisRequest", () => {
     const mismatch = {
       aangifte: { box: "3" as const, field: "Saldo", accountNumber: "NL01TEST", amount: 100 },
       jaaropgave: {
-        statement: { institution: "TestBank", institutionType: "bank" as const, taxYear: 2024, accounts: [], metadata: {} },
-        account: { accountNumber: "NL01TEST", description: "Test", amounts: { bank: { balance: 200 } } },
+        statement: {
+          institution: "TestBank",
+          institutionType: "bank" as const,
+          taxYear: 2024,
+          accounts: [],
+          metadata: {},
+        },
+        account: {
+          accountNumber: "NL01TEST",
+          description: "Test",
+          amounts: { bank: { balance: 200 } },
+        },
       },
       amountStatement: 200,
     };
