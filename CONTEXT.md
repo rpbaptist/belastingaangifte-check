@@ -9,7 +9,7 @@ The Dutch income tax return filed with the Belastingdienst. Single document per 
 An annual statement issued by a financial institution (bank, broker, mortgage provider) summarising a taxpayer's financial position or transactions in a given year. Multiple jaaropgaves may be uploaded per session.
 
 **Institution**
-The financial institution that issued a jaaropgave. Detected automatically from PDF content. Classified as one of: `bank`, `broker`, `hypotheek`, `other`.
+The financial institution that issued a jaaropgave. Detected automatically from PDF content. Classified as one of: `bank`, `broker`, `mortgage`, `other`.
 
 **Rekeningnummer**
 Account number (IBAN or broker account ID) used as the primary key for matching a jaaropgave entry to an aangifte entry.
