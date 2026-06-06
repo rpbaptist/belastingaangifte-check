@@ -20,7 +20,10 @@ const FIELD_AMOUNT_OVERRIDES: Array<{
   [
     { fieldIncludes: "ingehouden dividendbelasting", amountPath: ["broker", "dutchDividendTax"] },
     { fieldIncludes: "dividendbelasting", amountPath: ["broker", "dutchDividendTax"] },
-    { fieldIncludes: "buitenlandse bronbelasting", amountPath: ["broker", "foreignWithholdingTax"] },
+    {
+      fieldIncludes: "buitenlandse bronbelasting",
+      amountPath: ["broker", "foreignWithholdingTax"],
+    },
     { fieldIncludes: "bronheffing", amountPath: ["broker", "foreignWithholdingTax"] },
     { fieldIncludes: "brutodividend", amountPath: ["broker", "dividend"] },
     { fieldIncludes: "loon", amountPath: ["wage", "taxableWage"] },

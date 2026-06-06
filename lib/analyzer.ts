@@ -65,7 +65,13 @@ export async function analyzeDocuments(
   const rulePoints = runRuleChecks(annualStatements, taxReturn.taxYear);
 
   if (amountMismatches.length === 0) {
-    return { taxYear: taxReturn.taxYear, covered, missingStatement, notFilledIn, attentionPoints: rulePoints };
+    return {
+      taxYear: taxReturn.taxYear,
+      covered,
+      missingStatement,
+      notFilledIn,
+      attentionPoints: rulePoints,
+    };
   }
 
   const cached = readAnalysisCache<{ llmPoints: AttentionPoint[] }>(taxReturn, annualStatements);
@@ -74,7 +80,9 @@ export async function analyzeDocuments(
   if (cached) {
     llmPoints = cached.llmPoints;
   } else {
-    const response = await client.messages.create(buildAnalysisRequest(amountMismatches, covered, rules));
+    const response = await client.messages.create(
+      buildAnalysisRequest(amountMismatches, covered, rules)
+    );
     llmPoints = parseAnalysisResponse(response);
 
     writeAnalysisCache(taxReturn, annualStatements, {
