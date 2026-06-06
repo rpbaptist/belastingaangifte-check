@@ -4,8 +4,8 @@ import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 import { Icon } from "@/app/Icon";
-import type { AttentionPoint, ChatMessage, QuestionRequest } from "@/lib/types";
-import { QuestionResponseSchema, ApiErrorSchema } from "@/lib/schemas";
+import type { AttentionPoint } from "@/lib/types";
+import { useChatQuestion } from "@/app/hooks/useChatQuestion";
 
 const markdownComponents = {
   p: (props: React.HTMLAttributes<HTMLParagraphElement>) => (
@@ -35,43 +35,8 @@ export function AttentionPointCard({
 }) {
   const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState("");
-  const [history, setHistory] = useState<ChatMessage[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [resolved, setResolved] = useState(false);
-
-  async function sendQuestion(text: string): Promise<boolean> {
-    if (!text.trim() || loading) return false;
-    setLoading(true);
-    setError(null);
-    try {
-      const body: QuestionRequest = { question: text, attentionPoint: item, taxYear, history };
-      const res = await fetch("/api/question", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(apiKey ? { "x-api-key": apiKey } : {}),
-        },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const { error } = ApiErrorSchema.parse(await res.json().catch(() => ({})));
-        throw new Error(error ?? `Serverfout ${res.status}`);
-      }
-      const data = QuestionResponseSchema.parse(await res.json());
-      setHistory((prev) => [
-        ...prev,
-        { role: "user", content: text },
-        { role: "assistant", content: data.answer },
-      ]);
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Er is een fout opgetreden.");
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }
+  const { history, loading, error, sendQuestion } = useChatQuestion(item, taxYear, apiKey);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
