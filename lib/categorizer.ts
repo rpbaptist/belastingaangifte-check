@@ -14,25 +14,20 @@ import type {
 // Sorted longest-first at module init so more-specific substrings always win (structural invariant).
 const FIELD_AMOUNT_OVERRIDES: Array<{
   fieldIncludes: string;
-  amountPath: [string, string];
+  amountPath: readonly [string, string];
   negate?: boolean;
-}> = (
-  [
-    { fieldIncludes: "ingehouden dividendbelasting", amountPath: ["broker", "dutchDividendTax"] },
-    { fieldIncludes: "dividendbelasting", amountPath: ["broker", "dutchDividendTax"] },
-    {
-      fieldIncludes: "buitenlandse bronbelasting",
-      amountPath: ["broker", "foreignWithholdingTax"],
-    },
-    { fieldIncludes: "bronheffing", amountPath: ["broker", "foreignWithholdingTax"] },
-    { fieldIncludes: "brutodividend", amountPath: ["broker", "dividend"] },
-    { fieldIncludes: "loon", amountPath: ["wage", "taxableWage"] },
-    { fieldIncludes: "inkomsten uit werk", amountPath: ["wage", "taxableWage"] },
-    { fieldIncludes: "arbeidsongeschiktheid", amountPath: ["other", "premiumPaid"], negate: true },
-    { fieldIncludes: "rente", amountPath: ["mortgage", "interestPaid"], negate: true },
-    { fieldIncludes: "dividend", amountPath: ["broker", "dividend"] },
-  ] as const
-).sort((a, b) => b.fieldIncludes.length - a.fieldIncludes.length);
+}> = [
+  { fieldIncludes: "ingehouden dividendbelasting", amountPath: ["broker", "dutchDividendTax"] as const },
+  { fieldIncludes: "dividendbelasting", amountPath: ["broker", "dutchDividendTax"] as const },
+  { fieldIncludes: "buitenlandse bronbelasting", amountPath: ["broker", "foreignWithholdingTax"] as const },
+  { fieldIncludes: "bronheffing", amountPath: ["broker", "foreignWithholdingTax"] as const },
+  { fieldIncludes: "brutodividend", amountPath: ["broker", "dividend"] as const },
+  { fieldIncludes: "loon", amountPath: ["wage", "taxableWage"] as const },
+  { fieldIncludes: "inkomsten uit werk", amountPath: ["wage", "taxableWage"] as const },
+  { fieldIncludes: "arbeidsongeschiktheid", amountPath: ["other", "premiumPaid"] as const, negate: true },
+  { fieldIncludes: "rente", amountPath: ["mortgage", "interestPaid"] as const, negate: true },
+  { fieldIncludes: "dividend", amountPath: ["broker", "dividend"] as const },
+].sort((a, b) => b.fieldIncludes.length - a.fieldIncludes.length);
 
 function resolveAmountOverride(fieldLower: string, amounts: AccountAmounts): number | null {
   for (const { fieldIncludes, amountPath, negate } of FIELD_AMOUNT_OVERRIDES) {
