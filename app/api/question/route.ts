@@ -1,20 +1,11 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { classifyError } from "@/lib/anthropic-error";
 import type { QuestionRequest, QuestionResponse } from "@/lib/types";
+import { QUESTION_SYSTEM } from "@/lib/prompts/question";
+import { createClient, QUESTION_MODEL } from "@/lib/llm";
+import type Anthropic from "@anthropic-ai/sdk";
 
 export const maxDuration = 60;
-
-const MODEL = "claude-haiku-4-5-20251001";
-
-const SYSTEM = `Je bent een Nederlandse belastingadviseur. Je beantwoordt vragen over aandachtspunten die zijn gevonden in een belastingaangifte-analyse.
-
-Richtlijnen:
-- Antwoord altijd in het Nederlands
-- Wees beknopt en praktisch — maximaal 3 alinea's
-- Geef concrete vervolgstappen waar van toepassing
-- Als iets afhankelijk is van persoonlijke omstandigheden, geef dan aan welke informatie nodig is
-- Verwijs niet naar je eigen beperkingen als AI — geef gewoon het beste advies`;
 
 export async function POST(request: NextRequest) {
   let body: QuestionRequest;
@@ -26,7 +17,7 @@ export async function POST(request: NextRequest) {
   }
 
   const apiKey = request.headers.get("x-api-key") ?? undefined;
-  const client = new Anthropic(apiKey ? { apiKey } : {});
+  const client = createClient(apiKey);
   const { question, attentionPoint, taxYear, history } = body;
 
   if (!question?.trim()) {
@@ -45,9 +36,9 @@ export async function POST(request: NextRequest) {
 
   try {
     const response = await client.messages.create({
-      model: MODEL,
+      model: QUESTION_MODEL,
       max_tokens: 1024,
-      system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
+      system: [{ type: "text", text: QUESTION_SYSTEM, cache_control: { type: "ephemeral" } }],
       messages,
     });
 

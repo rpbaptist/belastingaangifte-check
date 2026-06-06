@@ -6,8 +6,9 @@ import { parseLlmJson } from "./parse-llm-json";
 import { AnnualStatementSchema, TaxReturnSchema } from "./schemas";
 import { ANNUAL_STATEMENT_SYSTEM } from "./prompts/annual-statement";
 import { TAX_RETURN_SYSTEM } from "./prompts/tax-return";
+import { EXTRACTION_MODEL } from "./llm";
 
-const MODEL = "claude-haiku-4-5-20251001";
+const MODEL = EXTRACTION_MODEL;
 
 export async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 4): Promise<T> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
