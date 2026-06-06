@@ -8,25 +8,8 @@ import type {
   IncrementalRequest,
 } from "@/lib/types";
 import { AnalyseResponseSchema, ApiErrorSchema } from "@/lib/schemas";
-
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result !== "string") {
-        reject(new Error("Bestand kon niet worden gelezen"));
-        return;
-      }
-      resolve(reader.result.split(",")[1]);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-function authHeaders(apiKey: string): Record<string, string> {
-  return apiKey ? { "x-api-key": apiKey } : {};
-}
+import { fileToBase64 } from "@/lib/fileUtils";
+import { authHeaders } from "@/lib/apiUtils";
 
 export function useAnalysis(apiKey: string) {
   const [loading, setLoading] = useState(false);
