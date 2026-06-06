@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Icon } from "./Icon";
 import { ApiKeyInput } from "./components/ApiKeyInput";
 import { DropZone } from "./components/DropZone";
@@ -14,6 +14,7 @@ import {
   NotFilledInSection,
 } from "./components/ReportSections";
 import { useAnalysis } from "./hooks/useAnalysis";
+import { useApiKeyStorage } from "./hooks/useApiKeyStorage";
 
 /* ─── Incremental upload card ─────────────────────────────────────────────── */
 
@@ -72,17 +73,7 @@ export default function Home() {
   const [jaaropgaves, setJaaropgaves] = useState<File[]>([]);
 
   const isEnvKey = !!process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY;
-  const [apiKey, setApiKey] = useState<string>(process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY ?? "");
-
-  useEffect(() => {
-    if (isEnvKey) return;
-    const stored = sessionStorage.getItem("apiKey");
-    if (stored) setApiKey(stored);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (!isEnvKey && apiKey) sessionStorage.setItem("apiKey", apiKey);
-  }, [apiKey, isEnvKey]);
+  const [apiKey, setApiKey] = useApiKeyStorage(isEnvKey);
 
   const analysis = useAnalysis(apiKey);
   const { loading, report, extractedData, error, incrementalLoading, incrementalError } = analysis;
