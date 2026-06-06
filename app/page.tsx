@@ -106,7 +106,6 @@ export default function Home() {
             <div className="brand" style={{ marginBottom: 32 }}>
               <div className="logo"><Icon name="shield" size={18} /></div>
               <span className="wm">Aangifte Checker</span>
-              <span className="yr">Belastingjaar 2024</span>
             </div>
             <h1 className="h1">Klopt je aangifte?</h1>
             <p className="intro">
