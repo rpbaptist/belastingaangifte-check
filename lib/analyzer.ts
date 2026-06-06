@@ -1,4 +1,5 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { promises as fs } from "fs";
+import path from "path";
 import type { AnalysisReport, AnnualStatementData, AttentionPoint, TaxReturnData } from "./types";
 import { z } from "zod";
 import { parseLlmJson } from "./parse-llm-json";
@@ -8,8 +9,8 @@ import { runRuleChecks } from "./rule-checks";
 import { LLMAnalysisResponseSchema } from "./schemas";
 import { buildAnalyzerPrompt, buildUserMessage } from "./prompts/analyzer";
 import { readAnalysisCache, writeAnalysisCache } from "./extraction-cache";
-
-const MODEL = "claude-sonnet-4-6";
+import { ANALYSIS_MODEL, createClient } from "./llm";
+import type Anthropic from "@anthropic-ai/sdk";
 
 export function buildAnalysisRequest(
   amountMismatches: AmountMismatch[],
@@ -17,7 +18,7 @@ export function buildAnalysisRequest(
   rules: string
 ): Anthropic.MessageCreateParamsNonStreaming {
   return {
-    model: MODEL,
+    model: ANALYSIS_MODEL,
     max_tokens: 4096,
     system: [
       {
@@ -55,10 +56,9 @@ export function parseAnalysisResponse(response: Anthropic.Message): AttentionPoi
 export async function analyzeDocuments(
   taxReturn: TaxReturnData,
   annualStatements: AnnualStatementData[],
-  rules: string,
   apiKey?: string
 ): Promise<Omit<AnalysisReport, "extractionErrors">> {
-  const client = new Anthropic(apiKey ? { apiKey } : {});
+  const client = createClient(apiKey);
 
   const matchResult = reconcile(taxReturn, annualStatements);
   const { covered, missingStatement, notFilledIn, amountMismatches } = categorize(matchResult);
@@ -80,6 +80,10 @@ export async function analyzeDocuments(
   if (cached) {
     llmPoints = cached.llmPoints;
   } else {
+    const rules = await fs.readFile(
+      path.join(process.cwd(), "rules", "aandachtspunten.md"),
+      "utf-8"
+    );
     const response = await client.messages.create(
       buildAnalysisRequest(amountMismatches, covered, rules)
     );

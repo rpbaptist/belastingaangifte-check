@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { promises as fs } from "fs";
-import path from "path";
 import { runExtractionSession } from "@/lib/extraction-session";
-import { analyzeDocuments } from "@/lib/analyzer";
+import { runAnalysis } from "@/lib/analyze-pipeline";
 import { classifyError } from "@/lib/anthropic-error";
-import type { AnalyseRequest, AnalyseResponse } from "@/lib/types";
+import type { AnalyseRequest } from "@/lib/types";
 
 // Allow up to 300s — parallel extraction + analysis across many PDFs
 export const maxDuration = 300;
@@ -29,10 +27,6 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const rules = await fs.readFile(
-      path.join(process.cwd(), "rules", "aandachtspunten.md"),
-      "utf-8"
-    );
     const session = await runExtractionSession(taxReturn, annualStatements, apiKey);
 
     if (!session.ok) {
@@ -42,22 +36,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const reportBase = await analyzeDocuments(
-      session.taxReturn,
-      session.annualStatements,
-      rules,
-      apiKey
+    return NextResponse.json(
+      await runAnalysis(session.taxReturn, session.annualStatements, session.errors, apiKey)
     );
-
-    const response: AnalyseResponse = {
-      report: { ...reportBase, extractionErrors: session.errors },
-      extractedData: {
-        taxReturn: session.taxReturn,
-        annualStatements: session.annualStatements,
-      },
-    };
-
-    return NextResponse.json(response);
   } catch (err) {
     const { status, message } = classifyError(err);
     return NextResponse.json({ error: message }, { status });
