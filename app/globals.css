@@ -242,11 +242,18 @@ body {
   margin: 4px 0 0;
 }
 
+/* ── results header ─────────────────────────────────────────────────────── */
+.res-header { margin-top: 30px; }
+
+/* ── report body ────────────────────────────────────────────────────────── */
+.body { margin-top: 24px; }
+
 /* ── summary boxes (symbol+number inline, label below) ──────────────────── */
 .statrow {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
+  margin-top: 18px;
 }
 .stat {
   position: relative;
@@ -387,9 +394,22 @@ button.stat:disabled {
   font-size: 14.5px;
   font-weight: 600;
   white-space: nowrap;
+  color: var(--c);
+}
+.irow .label-col { min-width: 0; }
+.sechead-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sechead-chevron {
+  color: var(--c);
+  transition: transform 0.18s;
 }
 
 /* ── attention ──────────────────────────────────────────────────────────── */
+.ahead + .stack { margin-top: 14px; }
 .ahead {
   display: flex;
   align-items: center;
@@ -612,6 +632,23 @@ button.stat:disabled {
   padding: 18px;
   box-shadow: 0 1px 2px rgba(35, 32, 27, 0.04);
 }
+.icard h2 {
+  font-size: 15.5px;
+  font-weight: 600;
+  margin: 0 0 3px;
+}
+.icard-desc {
+  font-size: 12.5px;
+  color: var(--ink-3);
+  margin: 0 0 14px;
+}
+.icard .btn { margin-top: 14px; }
+.icard-error {
+  font-size: 12.5px;
+  color: var(--warn);
+  margin-top: 10px;
+  margin-bottom: 0;
+}
 .drop {
   display: flex;
   flex-direction: column;
@@ -751,6 +788,7 @@ button.stat:disabled {
 
 /* hero and form flow as single column on mobile */
 .upload-hero { margin-bottom: 28px; }
+.upload-hero .brand { margin-bottom: 32px; }
 
 .notice {
   font-size: 12px;
@@ -762,6 +800,7 @@ button.stat:disabled {
   margin-bottom: 20px;
 }
 .notice strong { color: var(--ink-2); }
+.notice a { color: var(--bronze); }
 
 .yr {
   font-size: 10.5px;
@@ -779,6 +818,31 @@ button.stat:disabled {
 
 .h1  { font-size: 28px; font-weight: 600; letter-spacing: -.025em; margin: 0 0 12px; line-height: 1.08; }
 .intro { font-size: 15px; line-height: 1.62; color: var(--ink-2); margin: 0; text-wrap: pretty; }
+
+.dropzone-grid {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+/* loading state shown during analysis */
+.loading {
+  text-align: center;
+  margin-top: 24px;
+}
+.loading-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 12px 0 2px;
+}
+.loading-sub {
+  font-size: 13px;
+  color: var(--ink-3);
+  margin: 0;
+}
+
+/* upload view error margin */
+.upload-error { margin-top: 20px; }
 
 /* desktop: split into hero (left) + form (right) */
 @media (min-width: 860px) {
@@ -855,6 +919,14 @@ button.stat:disabled {
   flex: 0 0 auto;
   margin-top: 1px;
 }
+.errcard-title { font-size: 14px; font-weight: 600; }
+.errcard-file { font-size: 12px; color: var(--ink-3); margin: 3px 0 5px; }
+.errcard-detail { font-size: 13px; color: var(--ink-2); }
+.errcard-list { margin: 6px 0 0; padding: 0; list-style: none; }
+.errcard-list li + li { margin-top: 8px; }
+.errcard-detail-mt { font-size: 13px; color: var(--ink-2); margin-top: 2px; }
+.errcard-msg { font-size: 13.5px; color: var(--ink-2); margin: 0; }
+.errcard-spaced { margin-bottom: 18px; }
 
 /* ── report body layout (responsive) ────────────────────────────────────── */
 .stack > * + * {

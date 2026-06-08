@@ -45,7 +45,7 @@ export default function Home() {
 
           {/* LEFT: hero */}
           <div className="upload-hero">
-            <div className="brand" style={{ marginBottom: 32 }}>
+            <div className="brand">
               <div className="logo"><Icon name="shield" size={18} /></div>
               <span className="wm">Aangifte Checker</span>
             </div>
@@ -55,11 +55,12 @@ export default function Home() {
               wat klopt, wat ontbreekt en waar je op moet letten.
             </p>
             <div className="notice">
-              <strong style={{ color: "var(--ink-2)" }}>Let op: demo, geen privacygarantie.</strong>{" "}
+              <strong>Let op: demo, geen privacygarantie.</strong>{" "}
               De inhoud van je PDF&#39;s, inclusief je BSN, IBANs en financiële gegevens, wordt
               verstuurd naar de{" "}
-              <a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener noreferrer"
-                 style={{ color: "var(--bronze)" }}>Anthropic API</a>{" "}
+              <a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener noreferrer">
+                Anthropic API
+              </a>{" "}
               voor verwerking. Anthropic bewaart API-data standaard tot 30 dagen. Gebruik dit
               hulpmiddel uitsluitend voor eigen testdoeleinden en deel geen gegevens van anderen.
               Controleer altijd zelf de resultaten of raadpleeg een financieel adviseur.
@@ -69,7 +70,7 @@ export default function Home() {
           {/* RIGHT: form */}
           <div className="upload-form">
             <ApiKeyInput value={apiKey} onChange={setApiKey} isEnvKey={isEnvKey} />
-            <div style={{ display: "grid", gap: 10, marginBottom: 16 }}>
+            <div className="dropzone-grid">
               <DropZone
                 label="Belastingaangifte"
                 hint="Sleep je aangifte PDF hierheen, of klik om te bladeren"
@@ -91,17 +92,13 @@ export default function Home() {
               </button>
             </form>
             {loading && (
-              <div style={{ textAlign: "center", marginTop: 24 }}>
+              <div className="loading">
                 <div className="spin" />
-                <p style={{ fontSize: 14, fontWeight: 600, margin: "12px 0 2px" }}>
-                  Documenten worden geanalyseerd…
-                </p>
-                <p style={{ fontSize: 13, color: "var(--ink-3)", margin: 0 }}>
-                  Dit kan een paar minuten duren.
-                </p>
+                <p className="loading-title">Documenten worden geanalyseerd…</p>
+                <p className="loading-sub">Dit kan een paar minuten duren.</p>
               </div>
             )}
-            {error && <ErrorCard message={error} style={{ marginTop: 20 }} />}
+            {error && <ErrorCard message={error} className="upload-error" />}
           </div>
 
         </div>
@@ -137,7 +134,7 @@ export default function Home() {
           </button>
         </div>
 
-        <div style={{ marginTop: 30 }}>
+        <div className="res-header">
           <div className="eyebrow">Resultaat</div>
           <h1 className="h-res">Je controle is klaar</h1>
           <p className="h-sub">
@@ -149,7 +146,7 @@ export default function Home() {
         <ExtractionErrors errors={report.extractionErrors} />
         <SummaryBoxes report={report} />
 
-        <div className={`body${hasAttn ? "" : " single"}`} style={{ marginTop: 24 }}>
+        <div className={`body${hasAttn ? "" : " single"}`}>
           <div className="col-main">
             <div className="stack">
               <CoveredSection items={report.covered} />
@@ -175,7 +172,7 @@ export default function Home() {
                   <h2>Aandachtspunten</h2>
                   <span className="pill num">{report.attentionPoints.length}</span>
                 </div>
-                <div className="stack" style={{ marginTop: 14 }}>
+                <div className="stack">
                   {report.attentionPoints.map((p) => (
                     <AttentionPointCard
                       key={p.title}

@@ -24,8 +24,8 @@ export function IncrementalCard({
 
   return (
     <div className="icard">
-      <h2 style={{ fontSize: 15.5, fontWeight: 600, margin: "0 0 3px" }}>Jaaropgave vergeten?</h2>
-      <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: "0 0 14px" }}>
+      <h2>Jaaropgave vergeten?</h2>
+      <p className="icard-desc">
         Upload een vergeten jaaropgave. Alleen de nieuwe bestanden worden opnieuw verwerkt.
       </p>
       <form onSubmit={handleSubmit}>
@@ -37,17 +37,12 @@ export function IncrementalCard({
           files={files}
           onFiles={(incoming) => setFiles((prev) => [...prev, ...incoming])}
         />
-        <button
-          className="btn alt"
-          type="submit"
-          disabled={!files.length || loading}
-          style={{ marginTop: 14 }}
-        >
+        <button className="btn alt" type="submit" disabled={!files.length || loading}>
           {loading ? "Bezig met verwerken…" : "Analyseer aanvulling"}{" "}
           <Icon name="arrow" size={16} />
         </button>
       </form>
-      {error && <p style={{ fontSize: 12.5, color: "var(--warn)", marginTop: 10 }}>{error}</p>}
+      {error && <p className="icard-error">{error}</p>}
     </div>
   );
 }
