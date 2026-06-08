@@ -397,6 +397,17 @@ button.stat:disabled {
   color: var(--c);
 }
 .irow .label-col { min-width: 0; }
+button.sechead {
+  appearance: none;
+  text-align: left;
+  width: 100%;
+  font: inherit;
+  cursor: pointer;
+}
+button.sechead:focus-visible {
+  outline: 2px solid var(--c);
+  outline-offset: -2px;
+}
 .sechead-actions {
   margin-left: auto;
   display: flex;
