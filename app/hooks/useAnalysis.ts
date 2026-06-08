@@ -50,7 +50,7 @@ export function useAnalysis(apiKey: string) {
     }
   }
 
-  async function analyzeIncremental(files: File[]): Promise<boolean | undefined> {
+  async function analyzeIncremental(files: File[]): Promise<void> {
     if (!extractedData) return;
     const controller = new AbortController();
     abortRef.current = controller;
@@ -75,7 +75,6 @@ export function useAnalysis(apiKey: string) {
       const data = AnalyseResponseSchema.parse(await res.json());
       setReport(data.report);
       setExtractedData(data.extractedData);
-      return true;
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
       setIncrementalError(
