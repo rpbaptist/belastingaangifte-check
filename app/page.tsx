@@ -14,6 +14,7 @@ import {
   NotFilledInSection,
 } from "./components/ReportSections";
 import { useAnalysis } from "./hooks/useAnalysis";
+import { useDemoMode } from "./hooks/useDemoMode";
 import { useApiKeyStorage } from "./hooks/useApiKeyStorage";
 import { IncrementalCard } from "./components/IncrementalCard";
 import { AnalysisProgress } from "./components/AnalysisProgress";
@@ -28,9 +29,21 @@ export default function Home() {
   const isEnvKey = !!process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY;
   const [apiKey, setApiKey] = useApiKeyStorage(isEnvKey);
 
+  const demo = useDemoMode();
   const analysis = useAnalysis(apiKey);
-  const { loading, report, extractedData, error, incrementalLoading, incrementalError, isDemo } =
-    analysis;
+  const { loading, error, incrementalLoading, incrementalError } = analysis;
+  const report = demo.active ? demo.report : analysis.report;
+  const extractedData = demo.active ? demo.extractedData : analysis.extractedData;
+
+  function handleLoadDemo() {
+    analysis.reset();
+    demo.load();
+  }
+
+  function handleReset() {
+    analysis.reset();
+    demo.reset();
+  }
 
   const canSubmit = aangifte !== null && jaaropgaves.length > 0 && apiKey.length > 0 && !loading;
 
@@ -45,7 +58,7 @@ export default function Home() {
   if (!report) {
     return (
       <>
-        <TopBar onDemo={analysis.loadDemo} />
+        <TopBar onDemo={handleLoadDemo} />
         <main className="page-upload">
           <div className="upload-card">
             {/* LEFT: hero */}
@@ -107,16 +120,16 @@ export default function Home() {
   }
 
   /* ── Results view ── */
-  const statementCount = isDemo
+  const statementCount = demo.active
     ? 4
     : (extractedData?.annualStatements.length ?? jaaropgaves.length);
   const hasAttn = report.attentionPoints.length > 0;
 
   return (
-    <DemoProvider value={isDemo}>
-      <TopBar taxYear={isDemo ? undefined : report.taxYear} onReset={analysis.reset} />
+    <DemoProvider value={demo.active}>
+      <TopBar taxYear={demo.active ? undefined : report.taxYear} onReset={handleReset} />
       <main className="page">
-        {!isDemo && (
+        {!demo.active && (
           <div className="files">
             <div className="grp">
               <span className="lab">Aangifte</span>
@@ -132,7 +145,7 @@ export default function Home() {
                 </span>
               ))}
             </div>
-            <button className="edit" onClick={analysis.reset}>
+            <button className="edit" onClick={handleReset}>
               <Icon name="plus" size={14} /> Wijzig
             </button>
           </div>
@@ -157,7 +170,7 @@ export default function Home() {
               <MissingStatementSection items={report.missingStatement} />
               <NotFilledInSection items={report.notFilledIn} />
             </div>
-            {!hasAttn && !isDemo && (
+            {!hasAttn && !demo.active && (
               <IncrementalCard
                 loading={incrementalLoading}
                 error={incrementalError}
@@ -187,7 +200,7 @@ export default function Home() {
                   ))}
                 </div>
               </div>
-              {!isDemo && (
+              {!demo.active && (
                 <IncrementalCard
                   loading={incrementalLoading}
                   error={incrementalError}
