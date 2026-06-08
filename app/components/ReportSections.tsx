@@ -1,6 +1,3 @@
-"use client";
-
-import { useState } from "react";
 import { Icon } from "@/app/Icon";
 import type {
   AnalysisReport,
@@ -88,16 +85,10 @@ function Section({
   children: React.ReactNode;
   id?: string;
 }) {
-  const [open, setOpen] = useState(true);
   if (count === 0) return null;
   return (
     <div id={id} className={`sec tone-${tone}`}>
-      <button
-        type="button"
-        aria-expanded={open}
-        className={`sechead${open ? "" : " collapsed"}`}
-        onClick={() => setOpen((v) => !v)}
-      >
+      <div className="sechead">
         <span className="chip">
           <Icon name={icon} size={16} />
         </span>
@@ -105,17 +96,9 @@ function Section({
           <div className="t">{title}</div>
           {note && <div className="note">{note}</div>}
         </div>
-        <div className="sechead-actions">
-          <span className="pill num">{count}</span>
-          <Icon
-            name="chevron"
-            size={16}
-            className="sechead-chevron"
-            style={{ transform: open ? "rotate(0deg)" : "rotate(-90deg)" }}
-          />
-        </div>
-      </button>
-      {open && children}
+        <span className="pill num">{count}</span>
+      </div>
+      {children}
     </div>
   );
 }
