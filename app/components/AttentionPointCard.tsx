@@ -83,7 +83,7 @@ export function AttentionPointCard({
         <button className="gbtn" onClick={() => setOpen((v) => !v)}>
           <Icon name="message" size={14} /> {toggleLabel}
         </button>
-        {history.length === 0 && (
+        {history.length === 0 && initialMessages.length === 0 && (
           <button className="gbtn" onClick={handleMoreDetail} disabled={loading}>
             {loading ? "Bezig…" : "Meer uitleg"}
           </button>
