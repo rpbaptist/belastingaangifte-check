@@ -662,14 +662,29 @@ button.stat:disabled {
   margin-top: 4px;
   line-height: 1.45;
 }
-.drop ul {
+
+/* prevent long filenames from overflowing the column */
+.drop-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;           /* ← add: lets flex children respect column width */
+}
+
+.file-list {
   list-style: none;
-  margin: 12px 0 0;
-  padding: 0;
+  margin: 0;
+  padding: 0 2px;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  justify-content: center;
+}
+
+/* truncate long names instead of overflowing */
+.file-list .fchip {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* buttons: base = ink (primary), .alt = bronze (secondary) */
