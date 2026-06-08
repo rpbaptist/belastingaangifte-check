@@ -4,12 +4,9 @@ import { analyzeDocuments } from "@/lib/analyzer";
 import { classifyError } from "@/lib/anthropic-error";
 import { ExtractedDataSchema } from "@/lib/schemas";
 import type { ExtractedData } from "@/lib/types";
+import { fileToBase64 } from "@/lib/file-utils";
 
 export const maxDuration = 300;
-
-async function fileToBase64(file: File): Promise<string> {
-  return Buffer.from(await file.arrayBuffer()).toString("base64");
-}
 
 export async function POST(request: NextRequest) {
   let formData: FormData;
