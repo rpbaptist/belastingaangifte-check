@@ -52,7 +52,7 @@ export default function Home() {
             </div>
             <h1 className="h1">Klopt je aangifte?</h1>
             <p className="intro">
-              Upload je belastingaangifte en jaaropgaves. We vergelijken de bedragen en laten zien
+              Upload je belastingaangifte en jaaropgaves. De bedragen worden vergeleken en je ziet
               wat klopt, wat ontbreekt en waar je op moet letten.
             </p>
             <div className="notice">
