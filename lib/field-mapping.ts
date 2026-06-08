@@ -5,7 +5,7 @@ import type { AccountAmounts } from "./types";
 // Sorted longest-first so more-specific substrings always win over shorter ones (structural invariant).
 export const FIELD_AMOUNT_OVERRIDES: Array<{
   fieldIncludes: string;
-  amountPath: readonly [string, string];
+  amountPath: readonly [keyof AccountAmounts, string];
   negate?: boolean;
 }> = [
   {
