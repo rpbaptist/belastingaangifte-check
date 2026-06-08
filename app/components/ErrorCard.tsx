@@ -1,26 +1,21 @@
 import { Icon } from "@/app/Icon";
 import type { ExtractionError } from "@/lib/types";
 
-export function ErrorCard({ message, style }: { message: string; style?: React.CSSProperties }) {
+export function ErrorCard({ message, className }: { message: string; className?: string }) {
   const m = message.match(/^Aangifte "([^"]+)" kon niet worden verwerkt: ([\s\S]*)/);
   return (
-    <div className="errcard" role="alert" style={style}>
+    <div className={`errcard${className ? ` ${className}` : ""}`} role="alert">
       <span className="ic">
         <Icon name="alert" size={18} />
       </span>
       {m ? (
         <div>
-          <div style={{ fontWeight: 600, fontSize: 14 }}>Aangifte kon niet worden verwerkt</div>
-          <div
-            className="mono"
-            style={{ fontSize: 12, color: "var(--ink-3)", margin: "3px 0 5px" }}
-          >
-            {m[1]}
-          </div>
-          <div style={{ fontSize: 13, color: "var(--ink-2)" }}>{m[2]}</div>
+          <div className="errcard-title">Aangifte kon niet worden verwerkt</div>
+          <div className="mono errcard-file">{m[1]}</div>
+          <div className="errcard-detail">{m[2]}</div>
         </div>
       ) : (
-        <p style={{ fontSize: 13.5, color: "var(--ink-2)", margin: 0 }}>{message}</p>
+        <p className="errcard-msg">{message}</p>
       )}
     </div>
   );
@@ -29,22 +24,20 @@ export function ErrorCard({ message, style }: { message: string; style?: React.C
 export function ExtractionErrors({ errors }: { errors: ExtractionError[] }) {
   if (!errors.length) return null;
   return (
-    <div className="errcard" style={{ marginBottom: 18 }}>
+    <div className="errcard errcard-spaced">
       <span className="ic">
         <Icon name="alert" size={18} />
       </span>
       <div>
-        <div style={{ fontWeight: 600, fontSize: 14 }}>
+        <div className="errcard-title">
           Extractie mislukt voor{" "}
           {errors.length === 1 ? "één bestand" : `${errors.length} bestanden`}
         </div>
-        <ul style={{ margin: "6px 0 0", padding: 0, listStyle: "none" }}>
-          {errors.map((e, i) => (
-            <li key={e.filename} style={{ marginTop: i > 0 ? 8 : 0 }}>
-              <div className="mono" style={{ fontSize: 12, color: "var(--ink-3)" }}>
-                {e.filename}
-              </div>
-              <div style={{ fontSize: 13, color: "var(--ink-2)", marginTop: 2 }}>{e.error}</div>
+        <ul className="errcard-list">
+          {errors.map((e) => (
+            <li key={e.filename}>
+              <div className="mono errcard-file">{e.filename}</div>
+              <div className="errcard-detail-mt">{e.error}</div>
             </li>
           ))}
         </ul>

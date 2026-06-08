@@ -50,7 +50,7 @@ export function SummaryBoxes({ report }: { report: AnalysisReport }) {
     },
   ];
   return (
-    <div className="statrow" style={{ marginTop: 18 }}>
+    <div className="statrow">
       {items.map((s) => (
         <button
           key={s.label}
@@ -104,16 +104,13 @@ function Section({
           <div className="t">{title}</div>
           {note && <div className="note">{note}</div>}
         </div>
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+        <div className="sechead-actions">
           <span className="pill num">{count}</span>
           <Icon
             name="chevron"
             size={16}
-            style={{
-              color: "var(--c)",
-              transition: "transform .18s",
-              transform: open ? "rotate(0deg)" : "rotate(-90deg)",
-            }}
+            className="sechead-chevron"
+            style={{ transform: open ? "rotate(0deg)" : "rotate(-90deg)" }}
           />
         </div>
       </div>
@@ -124,14 +121,12 @@ function Section({
 
 function Row({ f, m, a, tone }: { f: string; m: string; a: string; tone: Tone }) {
   return (
-    <div className="irow">
-      <div style={{ minWidth: 0 }}>
+    <div className={`irow tone-${tone}`}>
+      <div className="label-col">
         <div className="f">{f}</div>
         <div className="m">{m}</div>
       </div>
-      <div className="a num" style={{ color: `var(--${tone})` }}>
-        {a}
-      </div>
+      <div className="a num">{a}</div>
     </div>
   );
 }
