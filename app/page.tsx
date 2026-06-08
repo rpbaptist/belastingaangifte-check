@@ -42,64 +42,65 @@ export default function Home() {
   /* ── Upload view ── */
   if (!report) {
     return (
-      <main className="page-upload">
-        <div className="upload-card">
-          {/* LEFT: hero */}
-          <div className="upload-hero">
-            <div className="brand">
-              <div className="logo">
-                <Icon name="shield" size={18} />
+      <>
+        <TopBar />
+        <main className="page-upload">
+          <div className="upload-card">
+            {/* LEFT: hero */}
+            <div className="upload-hero">
+              <h1 className="h1">Klopt je aangifte?</h1>
+              <p className="intro">
+                Upload je belastingaangifte en jaaropgaves. De bedragen worden vergeleken en je ziet
+                wat klopt, wat ontbreekt en waar je op moet letten.
+              </p>
+              <div className="notice">
+                <strong>Let op: demo, geen privacygarantie.</strong> De inhoud van je PDF&#39;s,
+                inclusief je BSN, IBANs en financiële gegevens, wordt verstuurd naar de{" "}
+                <a
+                  href="https://www.anthropic.com/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Anthropic API
+                </a>{" "}
+                voor verwerking. Anthropic bewaart API-data standaard tot 30 dagen. Gebruik dit
+                hulpmiddel uitsluitend voor eigen testdoeleinden en deel geen gegevens van anderen.
+                Controleer altijd zelf de resultaten of raadpleeg een financieel adviseur.
               </div>
-              <span className="wm">Aangifte Checker</span>
             </div>
-            <h1 className="h1">Klopt je aangifte?</h1>
-            <p className="intro">
-              Upload je belastingaangifte en jaaropgaves. De bedragen worden vergeleken en je ziet
-              wat klopt, wat ontbreekt en waar je op moet letten.
-            </p>
-            <div className="notice">
-              <strong>Let op: demo, geen privacygarantie.</strong> De inhoud van je PDF&#39;s,
-              inclusief je BSN, IBANs en financiële gegevens, wordt verstuurd naar de{" "}
-              <a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener noreferrer">
-                Anthropic API
-              </a>{" "}
-              voor verwerking. Anthropic bewaart API-data standaard tot 30 dagen. Gebruik dit
-              hulpmiddel uitsluitend voor eigen testdoeleinden en deel geen gegevens van anderen.
-              Controleer altijd zelf de resultaten of raadpleeg een financieel adviseur.
-            </div>
-          </div>
 
-          {/* RIGHT: form */}
-          <div className="upload-form">
-            <ApiKeyInput value={apiKey} onChange={setApiKey} isEnvKey={isEnvKey} />
-            <div className="dropzone-grid">
-              <DropZone
-                label="Belastingaangifte"
-                hint="Sleep je aangifte PDF hierheen, of klik om te bladeren"
-                accept="application/pdf"
-                multiple={false}
-                files={aangifte ? [aangifte] : []}
-                onFiles={(incoming) => setAangifte(incoming[0] ?? null)}
-              />
-              <DropZone
-                label="Jaaropgaves"
-                hint="Sleep één of meerdere PDF's hierheen of klik om te bladeren."
-                accept="application/pdf"
-                multiple
-                files={jaaropgaves}
-                onFiles={(incoming) => setJaaropgaves((prev) => [...prev, ...incoming])}
-              />
+            {/* RIGHT: form */}
+            <div className="upload-form">
+              <ApiKeyInput value={apiKey} onChange={setApiKey} isEnvKey={isEnvKey} />
+              <div className="dropzone-grid">
+                <DropZone
+                  label="Belastingaangifte"
+                  hint="Sleep je aangifte PDF hierheen, of klik om te bladeren"
+                  accept="application/pdf"
+                  multiple={false}
+                  files={aangifte ? [aangifte] : []}
+                  onFiles={(incoming) => setAangifte(incoming[0] ?? null)}
+                />
+                <DropZone
+                  label="Jaaropgaves"
+                  hint="Sleep één of meerdere PDF's hierheen of klik om te bladeren."
+                  accept="application/pdf"
+                  multiple
+                  files={jaaropgaves}
+                  onFiles={(incoming) => setJaaropgaves((prev) => [...prev, ...incoming])}
+                />
+              </div>
+              <form onSubmit={handleSubmit}>
+                <button className="btn" type="submit" disabled={!canSubmit}>
+                  {loading ? "Bezig met analyseren…" : "Analyseren"} <Icon name="arrow" size={16} />
+                </button>
+              </form>
+              <AnalysisProgress loading={loading} />
+              {error && <ErrorCard message={error} className="upload-error" />}
             </div>
-            <form onSubmit={handleSubmit}>
-              <button className="btn" type="submit" disabled={!canSubmit}>
-                {loading ? "Bezig met analyseren…" : "Analyseren"} <Icon name="arrow" size={16} />
-              </button>
-            </form>
-            <AnalysisProgress loading={loading} />
-            {error && <ErrorCard message={error} className="upload-error" />}
           </div>
-        </div>
-      </main>
+        </main>
+      </>
     );
   }
 

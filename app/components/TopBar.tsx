@@ -14,6 +14,15 @@ export function TopBar({ taxYear, onReset }: { taxYear?: number; onReset?: () =>
           </div>
         </div>
         <div className="spacer" />
+        <a
+          href="https://github.com/rpbaptist/belastingaangifte-check"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ghostbtn"
+          aria-label="Bekijk broncode op GitHub"
+        >
+          <Icon name="github" size={15} /> GitHub
+        </a>
         {onReset && (
           <button className="ghostbtn" onClick={onReset}>
             <Icon name="refresh" size={15} /> Opnieuw analyseren
