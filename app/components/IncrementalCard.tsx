@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Icon } from "../Icon";
 import { DropZone } from "./DropZone";
 import { AnalysisProgress } from "./AnalysisProgress";
@@ -12,15 +12,22 @@ export function IncrementalCard({
 }: {
   loading: boolean;
   error: string | null;
-  onSubmit: (files: File[]) => Promise<boolean | undefined>;
+  onSubmit: (files: File[]) => Promise<void>;
 }) {
   const [files, setFiles] = useState<File[]>([]);
+  const prevLoading = useRef(false);
+
+  useEffect(() => {
+    if (prevLoading.current && !loading && !error) {
+      setFiles([]);
+    }
+    prevLoading.current = loading;
+  }, [loading, error]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!files.length || loading) return;
-    const ok = await onSubmit(files);
-    if (ok) setFiles([]);
+    await onSubmit(files);
   }
 
   return (
