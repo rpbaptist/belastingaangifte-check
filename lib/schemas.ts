@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { AccountAmounts } from "./types";
 
 const n = () => z.number().transform(Math.round);
 // LLM string fields: coerce null → "" so a missing value never crashes the parser
@@ -9,9 +10,12 @@ const s = () =>
     .catch(null)
     .transform((v) => v ?? "");
 
-// Flexible nested record: handles bank/broker/mortgage and any other institution type.
-// Numbers are rounded to full euros; the LLM interprets the structure semantically.
-const AccountAmountsSchema = z.record(z.string(), z.record(z.string(), n()));
+// Flexible nested record: handles bank/broker/mortgage and any other category the LLM produces.
+// Numbers are rounded to full euros. The transform aligns the inferred type with AccountAmounts
+// without constraining which keys the LLM may emit.
+const AccountAmountsSchema = z
+  .record(z.string(), z.record(z.string(), n()))
+  .transform((v) => v as AccountAmounts);
 
 export const AccountDataSchema = z.object({
   accountNumber: z.string(),
