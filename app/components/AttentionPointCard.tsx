@@ -29,11 +29,13 @@ export function AttentionPointCard({
   taxYear,
   apiKey,
   initialMessages = [],
+  isDemo = false,
 }: {
   item: AttentionPoint;
   taxYear: number;
   apiKey: string;
   initialMessages?: ChatMessage[];
+  isDemo?: boolean;
 }) {
   const [open, setOpen] = useState(initialMessages.length > 0);
   const [question, setQuestion] = useState("");
@@ -83,7 +85,7 @@ export function AttentionPointCard({
         <button className="gbtn" onClick={() => setOpen((v) => !v)}>
           <Icon name="message" size={14} /> {toggleLabel}
         </button>
-        {history.length === 0 && initialMessages.length === 0 && (
+        {history.length === 0 && !isDemo && (
           <button className="gbtn" onClick={handleMoreDetail} disabled={loading}>
             {loading ? "Bezig…" : "Meer uitleg"}
           </button>

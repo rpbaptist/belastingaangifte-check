@@ -188,6 +188,7 @@ export default function Home() {
                       taxYear={report.taxYear}
                       apiKey={apiKey}
                       initialMessages={isDemo ? (DEMO_PREBAKED_MESSAGES[p.title] ?? []) : []}
+                      isDemo={isDemo}
                     />
                   ))}
                 </div>
