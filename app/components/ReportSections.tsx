@@ -18,49 +18,45 @@ export function SummaryBoxes({ report }: { report: AnalysisReport }) {
     icon: Parameters<typeof Icon>[0]["name"];
     count: number;
     label: string;
-    targetId: string;
+    href: string;
   }[] = [
     {
       tone: "pos",
       icon: "check",
       count: report.covered.length,
       label: "Gedekt",
-      targetId: "section-gedekt",
+      href: "#section-gedekt",
     },
     {
       tone: "warn",
       icon: "alert",
       count: report.missingStatement.length,
       label: "Jaaropgave ontbreekt",
-      targetId: "section-ontbreekt",
+      href: "#section-ontbreekt",
     },
     {
       tone: "info",
       icon: "file-plus",
       count: report.notFilledIn.length,
       label: "Niet ingevuld",
-      targetId: "section-niet-ingevuld",
+      href: "#section-niet-ingevuld",
     },
     {
       tone: "attn",
       icon: "flag",
       count: report.attentionPoints.length,
       label: "Aandachtspunten",
-      targetId: "section-aandachtspunten",
+      href: "#section-aandachtspunten",
     },
   ];
   return (
     <div className="statrow">
       {items.map((s) => (
-        <button
+        <a
           key={s.label}
+          href={s.count > 0 ? s.href : undefined}
+          aria-disabled={s.count === 0}
           className={`stat tone-${s.tone}`}
-          onClick={() =>
-            document
-              .getElementById(s.targetId)
-              ?.scrollIntoView({ behavior: "smooth", block: "start" })
-          }
-          disabled={s.count === 0}
         >
           <div className="stat-top">
             <span className="chip">
@@ -69,7 +65,7 @@ export function SummaryBoxes({ report }: { report: AnalysisReport }) {
             <div className="n num">{s.count}</div>
           </div>
           <div className="l">{s.label}</div>
-        </button>
+        </a>
       ))}
     </div>
   );
