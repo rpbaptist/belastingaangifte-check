@@ -8,6 +8,7 @@ export function useApiKeyStorage(isEnvKey: boolean): [string, (v: string) => voi
   useEffect(() => {
     if (isEnvKey) return;
     const stored = sessionStorage.getItem("apiKey");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (stored) setApiKey(stored);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
