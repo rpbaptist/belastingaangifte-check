@@ -5,6 +5,7 @@ import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 import { Icon } from "@/app/Icon";
 import type { AttentionPoint } from "@/lib/types";
+import { useDemo } from "@/app/contexts/DemoContext";
 import { useChatQuestion } from "@/app/hooks/useChatQuestion";
 
 const markdownComponents = {
@@ -33,10 +34,17 @@ export function AttentionPointCard({
   taxYear: number;
   apiKey: string;
 }) {
-  const [open, setOpen] = useState(false);
+  const isDemo = useDemo();
+  const initialMessages = item.initialMessages ?? [];
+  const [open, setOpen] = useState(initialMessages.length > 0);
   const [question, setQuestion] = useState("");
   const [resolved, setResolved] = useState(false);
-  const { history, loading, error, sendQuestion } = useChatQuestion(item, taxYear, apiKey);
+  const { history, loading, error, sendQuestion } = useChatQuestion(
+    item,
+    taxYear,
+    apiKey,
+    initialMessages
+  );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -76,7 +84,7 @@ export function AttentionPointCard({
         <button className="gbtn" onClick={() => setOpen((v) => !v)}>
           <Icon name="message" size={14} /> {toggleLabel}
         </button>
-        {history.length === 0 && (
+        {history.length === 0 && !isDemo && (
           <button className="gbtn" onClick={handleMoreDetail} disabled={loading}>
             {loading ? "Bezig…" : "Meer uitleg"}
           </button>
