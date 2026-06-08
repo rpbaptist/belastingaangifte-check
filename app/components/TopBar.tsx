@@ -1,16 +1,18 @@
+"use client";
+
 import { Icon } from "@/app/Icon";
+import { useDemo } from "@/app/contexts/DemoContext";
 
 export function TopBar({
   taxYear,
   onReset,
-  isDemo,
   onDemo,
 }: {
   taxYear?: number;
   onReset?: () => void;
-  isDemo?: boolean;
   onDemo?: () => void;
 }) {
+  const isDemo = useDemo();
   return (
     <header className="topbar">
       <div className="topbar-inner">

@@ -93,6 +93,7 @@ export interface AttentionPoint {
   explanation: string;
   institution?: string;
   accountNumber?: string;
+  initialMessages?: ChatMessage[];
 }
 
 export interface ExtractionError {

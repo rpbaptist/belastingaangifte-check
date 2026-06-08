@@ -17,7 +17,7 @@ import { useAnalysis } from "./hooks/useAnalysis";
 import { useApiKeyStorage } from "./hooks/useApiKeyStorage";
 import { IncrementalCard } from "./components/IncrementalCard";
 import { AnalysisProgress } from "./components/AnalysisProgress";
-import { DEMO_PREBAKED_MESSAGES } from "@/lib/demo-data";
+import { DemoProvider } from "./contexts/DemoContext";
 
 /* ─── Page ────────────────────────────────────────────────────────────────── */
 
@@ -113,12 +113,8 @@ export default function Home() {
   const hasAttn = report.attentionPoints.length > 0;
 
   return (
-    <>
-      <TopBar
-        taxYear={isDemo ? undefined : report.taxYear}
-        onReset={analysis.reset}
-        isDemo={isDemo}
-      />
+    <DemoProvider value={isDemo}>
+      <TopBar taxYear={isDemo ? undefined : report.taxYear} onReset={analysis.reset} />
       <main className="page">
         {!isDemo && (
           <div className="files">
@@ -187,8 +183,6 @@ export default function Home() {
                       item={p}
                       taxYear={report.taxYear}
                       apiKey={apiKey}
-                      initialMessages={isDemo ? (DEMO_PREBAKED_MESSAGES[p.title] ?? []) : []}
-                      isDemo={isDemo}
                     />
                   ))}
                 </div>
@@ -204,6 +198,6 @@ export default function Home() {
           )}
         </div>
       </main>
-    </>
+    </DemoProvider>
   );
 }

@@ -1,4 +1,4 @@
-import type { AnalysisReport, ExtractedData, ChatMessage } from "@/lib/types";
+import type { AnalysisReport, ExtractedData } from "@/lib/types";
 
 export const DEMO_REPORT: AnalysisReport = {
   taxYear: 2024,
@@ -69,6 +69,17 @@ export const DEMO_REPORT: AnalysisReport = {
         "ASN Bank heeft een spaartegoed van € 4.200 gerapporteerd dat niet in de aangifte staat. Box 3 vereist opgave van alle saldi op de peildatum 1 januari 2024. Voeg dit bedrag toe aan je aangifte.",
       institution: "ASN Bank",
       accountNumber: "NL11ASNB0987654321",
+      initialMessages: [
+        {
+          role: "user",
+          content: "Wat zijn de gevolgen als ik dit vergeten ben op te geven?",
+        },
+        {
+          role: "assistant",
+          content:
+            "Als je het spaartegoed van € 4.200 niet hebt opgegeven in box 3, kan de Belastingdienst dit later corrigeren via een navorderingsaanslag. Daarvoor geldt een termijn van vijf jaar.\n\n**Praktisch advies:**\n- Dien een verbeterde aangifte in via Mijn Belastingdienst. Dit kan tot vijf jaar na het belastingjaar.\n- Het belastingeffect is beperkt: box 3 wordt belast op basis van een forfaitair rendement. Voor € 4.200 extra vermogen is de extra belasting doorgaans slechts een tientje per jaar.\n- Als je totale vermogen onder het heffingsvrije vermogen blijft (€ 57.000 voor alleenstaanden in 2024), is er helemaal geen extra belasting verschuldigd.",
+        },
+      ],
     },
   ],
   extractionErrors: [],
@@ -77,18 +88,4 @@ export const DEMO_REPORT: AnalysisReport = {
 export const DEMO_EXTRACTED_DATA: ExtractedData = {
   taxReturn: { taxYear: 2024, entries: [] },
   annualStatements: [],
-};
-
-export const DEMO_PREBAKED_MESSAGES: Record<string, ChatMessage[]> = {
-  "Spaartegoed niet opgegeven": [
-    {
-      role: "user",
-      content: "Wat zijn de gevolgen als ik dit vergeten ben op te geven?",
-    },
-    {
-      role: "assistant",
-      content:
-        "Als je het spaartegoed van € 4.200 niet hebt opgegeven in box 3, kan de Belastingdienst dit later corrigeren via een navorderingsaanslag. Daarvoor geldt een termijn van vijf jaar.\n\n**Praktisch advies:**\n- Dien een verbeterde aangifte in via Mijn Belastingdienst. Dit kan tot vijf jaar na het belastingjaar.\n- Het belastingeffect is beperkt: box 3 wordt belast op basis van een forfaitair rendement. Voor € 4.200 extra vermogen is de extra belasting doorgaans slechts een tientje per jaar.\n- Als je totale vermogen onder het heffingsvrije vermogen blijft (€ 57.000 voor alleenstaanden in 2024), is er helemaal geen extra belasting verschuldigd.",
-    },
-  ],
 };
