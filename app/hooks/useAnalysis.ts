@@ -1,14 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import type {
-  AnalysisReport,
-  AnalyseRequest,
-  ExtractedData,
-  IncrementalRequest,
-} from "@/lib/types";
+import type { AnalysisReport, ExtractedData } from "@/lib/types";
 import { AnalyseResponseSchema, ApiErrorSchema } from "@/lib/schemas";
-import { fileToBase64 } from "@/lib/fileUtils";
 import { authHeaders } from "@/lib/apiUtils";
 
 export function useAnalysis(apiKey: string) {
@@ -30,22 +24,15 @@ export function useAnalysis(apiKey: string) {
     setExtractedData(null);
     setError(null);
     try {
-      const [taxReturnBase64, ...statementBase64s] = await Promise.all([
-        fileToBase64(aangifte),
-        ...jaaropgaves.map(fileToBase64),
-      ]);
-      const body: AnalyseRequest = {
-        taxReturn: taxReturnBase64,
-        taxReturnFilename: aangifte.name,
-        annualStatements: jaaropgaves.map((f, i) => ({
-          data: statementBase64s[i],
-          filename: f.name,
-        })),
-      };
+      const body = new FormData();
+      body.append("taxReturn", aangifte);
+      for (const f of jaaropgaves) {
+        body.append("annualStatements", f);
+      }
       const res = await fetch("/api/analyze", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders(apiKey) },
-        body: JSON.stringify(body),
+        headers: authHeaders(apiKey),
+        body,
         signal: controller.signal,
       });
       if (!res.ok) {
@@ -70,18 +57,15 @@ export function useAnalysis(apiKey: string) {
     setIncrementalLoading(true);
     setIncrementalError(null);
     try {
-      const statementBase64s = await Promise.all(files.map(fileToBase64));
-      const body: IncrementalRequest = {
-        extractedData,
-        additionalStatements: files.map((f, i) => ({
-          data: statementBase64s[i],
-          filename: f.name,
-        })),
-      };
+      const body = new FormData();
+      for (const f of files) {
+        body.append("annualStatements", f);
+      }
+      body.append("extractedData", JSON.stringify(extractedData));
       const res = await fetch("/api/analyze/incremental", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders(apiKey) },
-        body: JSON.stringify(body),
+        headers: authHeaders(apiKey),
+        body,
         signal: controller.signal,
       });
       if (!res.ok) {

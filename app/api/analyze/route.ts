@@ -2,36 +2,46 @@ import { NextRequest, NextResponse } from "next/server";
 import { runExtractionSession } from "@/lib/extraction-session";
 import { analyzeDocuments } from "@/lib/analyzer";
 import { classifyError } from "@/lib/anthropic-error";
-import type { AnalyseRequest } from "@/lib/types";
 
 // Allow up to 300s — parallel extraction + analysis across many PDFs
 export const maxDuration = 300;
 
-export async function POST(request: NextRequest) {
-  let body: AnalyseRequest;
+async function fileToBase64(file: File): Promise<string> {
+  return Buffer.from(await file.arrayBuffer()).toString("base64");
+}
 
+export async function POST(request: NextRequest) {
+  let formData: FormData;
   try {
-    body = await request.json();
+    formData = await request.formData();
   } catch {
     return NextResponse.json({ error: "Ongeldig verzoek" }, { status: 400 });
   }
 
   const apiKey = request.headers.get("x-api-key") ?? undefined;
-  const { taxReturn, taxReturnFilename, annualStatements } = body;
+  const taxReturnFile = formData.get("taxReturn");
+  const statementFiles = formData.getAll("annualStatements");
 
-  if (!taxReturn) {
+  if (!(taxReturnFile instanceof File)) {
     return NextResponse.json({ error: "Geen aangifte ontvangen" }, { status: 400 });
   }
-  if (!annualStatements?.length) {
+  if (!statementFiles.length) {
     return NextResponse.json({ error: "Minimaal één jaaropgave is vereist" }, { status: 400 });
   }
 
   try {
-    const session = await runExtractionSession(taxReturn, annualStatements, apiKey);
+    const taxReturnBase64 = await fileToBase64(taxReturnFile);
+    const statements = await Promise.all(
+      statementFiles
+        .filter((f): f is File => f instanceof File)
+        .map(async (f) => ({ data: await fileToBase64(f), filename: f.name }))
+    );
+
+    const session = await runExtractionSession(taxReturnBase64, statements, apiKey);
 
     if (!session.ok) {
       return NextResponse.json(
-        { error: `Aangifte "${taxReturnFilename}" kon niet worden verwerkt: ${session.message}` },
+        { error: `Aangifte "${taxReturnFile.name}" kon niet worden verwerkt: ${session.message}` },
         { status: 422 }
       );
     }
