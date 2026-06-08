@@ -21,6 +21,7 @@ export function AnalysisProgress({ loading }: { loading: boolean }) {
 
   useEffect(() => {
     if (!loading) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStage("reading");
       return;
     }
