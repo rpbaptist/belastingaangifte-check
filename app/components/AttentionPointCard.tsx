@@ -4,7 +4,7 @@ import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 import { Icon } from "@/app/Icon";
-import type { AttentionPoint } from "@/lib/types";
+import type { AttentionPoint, ChatMessage } from "@/lib/types";
 import { useChatQuestion } from "@/app/hooks/useChatQuestion";
 
 const markdownComponents = {
@@ -28,15 +28,22 @@ export function AttentionPointCard({
   item,
   taxYear,
   apiKey,
+  initialMessages = [],
 }: {
   item: AttentionPoint;
   taxYear: number;
   apiKey: string;
+  initialMessages?: ChatMessage[];
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initialMessages.length > 0);
   const [question, setQuestion] = useState("");
   const [resolved, setResolved] = useState(false);
-  const { history, loading, error, sendQuestion } = useChatQuestion(item, taxYear, apiKey);
+  const { history, loading, error, sendQuestion } = useChatQuestion(
+    item,
+    taxYear,
+    apiKey,
+    initialMessages
+  );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

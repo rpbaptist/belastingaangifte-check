@@ -1,6 +1,14 @@
 import { Icon } from "@/app/Icon";
 
-export function TopBar({ taxYear, onReset }: { taxYear?: number; onReset?: () => void }) {
+export function TopBar({
+  taxYear,
+  onReset,
+  isDemo,
+}: {
+  taxYear?: number;
+  onReset?: () => void;
+  isDemo?: boolean;
+}) {
   return (
     <header className="topbar">
       <div className="topbar-inner">
@@ -9,7 +17,14 @@ export function TopBar({ taxYear, onReset }: { taxYear?: number; onReset?: () =>
             <Icon name="shield" size={19} />
           </div>
           <div>
-            <div className="wm">Aangifte Checker</div>
+            {onReset ? (
+              <button className="brand-link" onClick={onReset}>
+                <span className="wm">Aangifte Checker</span>
+                {isDemo && <span className="demo-chip">Demo</span>}
+              </button>
+            ) : (
+              <div className="wm">Aangifte Checker</div>
+            )}
             {taxYear && <div className="sub">Belastingjaar {taxYear}</div>}
           </div>
         </div>
@@ -23,7 +38,7 @@ export function TopBar({ taxYear, onReset }: { taxYear?: number; onReset?: () =>
         >
           <Icon name="github" size={15} /> GitHub
         </a>
-        {onReset && (
+        {onReset && !isDemo && (
           <button className="ghostbtn" onClick={onReset}>
             <Icon name="refresh" size={15} /> Opnieuw analyseren
           </button>
