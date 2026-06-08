@@ -114,7 +114,11 @@ export default function Home() {
 
   return (
     <>
-      <TopBar taxYear={report.taxYear} onReset={analysis.reset} isDemo={isDemo} />
+      <TopBar
+        taxYear={isDemo ? undefined : report.taxYear}
+        onReset={analysis.reset}
+        isDemo={isDemo}
+      />
       <main className="page">
         {!isDemo && (
           <div className="files">
