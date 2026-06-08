@@ -96,7 +96,7 @@ function Section({
   if (count === 0) return null;
   return (
     <div id={id} className={`sec tone-${tone}`}>
-      <div className={`sechead${open ? "" : " collapsed"}`} onClick={() => setOpen((v) => !v)}>
+      <button type="button" aria-expanded={open} className={`sechead${open ? "" : " collapsed"}`} onClick={() => setOpen((v) => !v)}>
         <span className="chip">
           <Icon name={icon} size={16} />
         </span>
@@ -113,7 +113,7 @@ function Section({
             style={{ transform: open ? "rotate(0deg)" : "rotate(-90deg)" }}
           />
         </div>
-      </div>
+      </button>
       {open && children}
     </div>
   );
