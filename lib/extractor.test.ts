@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import Anthropic from "@anthropic-ai/sdk";
-import { withRetry } from "./extractor";
+import { withRetry } from "./utils";
 
 beforeEach(() => {
   vi.useFakeTimers();
