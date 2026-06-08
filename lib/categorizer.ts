@@ -131,7 +131,7 @@ export function categorize(matchResult: MatchResult): CategorizationResult {
   return {
     covered: dedupeBy(covered, (c) => `${c.accountNumber}|${c.field}`),
     missingStatement: dedupeBy(missingStatement, (m) => `${m.accountNumber}|${m.field}`),
-    notFilledIn: dedupeBy(notFilledIn, (n) => n.accountNumber),
+    notFilledIn: dedupeBy(notFilledIn, (n) => `${n.accountNumber}|${n.description}`),
     amountMismatches,
   };
 }
