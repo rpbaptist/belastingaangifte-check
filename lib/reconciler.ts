@@ -166,7 +166,7 @@ export function reconcile(
   const initial = primaryMatch(taxReturn, annualStatements);
   const result = secondaryMatch(initial.matched, initial.onlyInAangifte, initial.onlyInJaaropgave);
   const onlyInJaaropgave = result.onlyInJaaropgave.filter(({ account }) =>
-    Object.values(account.amounts).some((cat) => Object.values(cat).some((v) => v !== 0))
+    Object.values(account.amounts).some((cat) => cat && Object.values(cat).some((v) => v !== 0))
   );
   return { ...result, onlyInJaaropgave };
 }

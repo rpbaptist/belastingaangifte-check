@@ -45,8 +45,9 @@ function getJaaropgaveAmount(pair: MatchedPair): number | null {
 
 function primaryDisplayAmount(amounts: AccountAmounts): number {
   for (const category of Object.values(amounts)) {
+    if (!category) continue;
     for (const [key, val] of Object.entries(category)) {
-      if (val !== 0 && key !== "remainingDebt") return val;
+      if (val !== undefined && val !== 0 && key !== "remainingDebt") return val;
     }
   }
   return 0;
