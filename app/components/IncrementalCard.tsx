@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Icon } from "../Icon";
 import { DropZone } from "./DropZone";
+import { AnalysisProgress } from "./AnalysisProgress";
 
 export function IncrementalCard({
   loading,
@@ -42,6 +43,7 @@ export function IncrementalCard({
           <Icon name="arrow" size={16} />
         </button>
       </form>
+      <AnalysisProgress loading={loading} />
       {error && <p className="icard-error">{error}</p>}
     </div>
   );
