@@ -2,9 +2,9 @@
 
 > Cross-reference your Dutch tax return against your bank, broker, and mortgage statements in seconds.
 
-[![Vercel](https://img.shields.io/github/deployments/rpbaptist/belastingaangifte-check/Production?logo=vercel&label=Vercel)](https://www.aangiftecheck.nl)
+[![Vercel](https://img.shields.io/github/deployments/rpbaptist/belastingaangifte-check/Production?logo=vercel&label=Vercel)](https://www.aangiftechecker.nl/)
 
-**[→ Live demo at aangiftecheck.nl](https://www.aangiftecheck.nl)** — bring your own Anthropic API key.
+**[→ Live demo at aangiftechecker.nl](https://www.aangiftechecker.nl/)** — bring your own Anthropic API key.
 
 ---
 
@@ -98,12 +98,17 @@ Add a rule section with the condition and its tax implication. It is injected in
 app/
   page.tsx                        UI — upload, report, Q&A
   Icon.tsx                        self-contained SVG icon set (no external dependency)
-  hooks/useAnalysis.ts            analysis state and API call logic
+  hooks/
+    useAnalysis.ts                analysis state and API call orchestration
+    useApiKeyStorage.ts           API key sessionStorage persistence
+    useChatQuestion.ts            Q&A chat state for attention points
   components/
+    AnalysisProgress.tsx          multi-stage progress indicator (reading/extracting/analysing)
     ApiKeyInput.tsx               API key prompt
     AttentionPointCard.tsx        expandable attention point with Q&A
     DropZone.tsx                  file drop / pick component
     ErrorCard.tsx                 extraction error display
+    IncrementalCard.tsx           upload form for adding statements after initial analysis
     ReportSections.tsx            summary boxes + comparison section components
     TopBar.tsx                    header with API key status
   api/analyze/route.ts            full analysis endpoint
@@ -119,13 +124,19 @@ lib/
   account-normalizer.ts           strip whitespace / prefixes from account numbers
   reconciler.ts                   primary IBAN match + secondary amount match
   categorizer.ts                  maps matched pairs → covered / missing / mismatches
+  field-mapping.ts                FIELD_AMOUNT_OVERRIDES table + resolveAmountOverride
   rule-checks.ts                  deterministic attention points from statement metadata
   analyzer.ts                     LLM review of mismatches + open-ended attention points
   anthropic-error.ts              Anthropic SDK error classification
+  llm.ts                          model constants and Anthropic client factory
+  utils.ts                        withRetry for rate-limit / server-error retries
+  apiUtils.ts                     authHeaders helper for API routes
+  format.ts                       formatEuro currency formatter
   prompts/
     tax-return.ts                 extraction prompt for aangifte
     annual-statement.ts           extraction prompt for jaaropgave
     analyzer.ts                   system prompt for analyst LLM
+    question.ts                   system prompt for Q&A
 rules/
   aandachtspunten.md              open-ended tax flag rules (injected into LLM prompt)
 docs/adr/                         architectural decision records
