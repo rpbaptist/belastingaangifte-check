@@ -45,7 +45,7 @@ export default function Home() {
   if (!report) {
     return (
       <>
-        <TopBar />
+        <TopBar onDemo={analysis.loadDemo} />
         <main className="page-upload">
           <div className="upload-card">
             {/* LEFT: hero */}
@@ -97,12 +97,6 @@ export default function Home() {
                   {loading ? "Bezig met analyseren…" : "Analyseren"} <Icon name="arrow" size={16} />
                 </button>
               </form>
-              <div className="demo-row">
-                <button className="ghostbtn" type="button" onClick={analysis.loadDemo}>
-                  Probeer de demo
-                </button>
-                <span className="demo-hint">Geen bestanden of API-sleutel nodig.</span>
-              </div>
               <AnalysisProgress loading={loading} />
               {error && <ErrorCard message={error} className="upload-error" />}
             </div>
