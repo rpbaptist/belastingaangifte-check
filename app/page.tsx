@@ -16,6 +16,7 @@ import {
 import { useAnalysis } from "./hooks/useAnalysis";
 import { useApiKeyStorage } from "./hooks/useApiKeyStorage";
 import { IncrementalCard } from "./components/IncrementalCard";
+import { AnalysisProgress } from "./components/AnalysisProgress";
 
 /* ─── Page ────────────────────────────────────────────────────────────────── */
 
@@ -91,13 +92,7 @@ export default function Home() {
                 <Icon name="arrow" size={16} />
               </button>
             </form>
-            {loading && (
-              <div className="loading">
-                <div className="spin" />
-                <p className="loading-title">Documenten worden geanalyseerd…</p>
-                <p className="loading-sub">Dit kan een paar minuten duren.</p>
-              </div>
-            )}
+            <AnalysisProgress loading={loading} />
             {error && <ErrorCard message={error} className="upload-error" />}
           </div>
 
