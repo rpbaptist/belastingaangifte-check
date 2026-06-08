@@ -87,6 +87,10 @@ body {
   --cln: var(--attn-line);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 /* ── page + app bar ─────────────────────────────────────────────────────── */
 .page {
   max-width: 720px;
@@ -301,32 +305,35 @@ body {
   margin-top: 12px;
   line-height: 1.3;
 }
-button.stat {
-  appearance: none;
-  text-align: left;
-  width: 100%;
-  font: inherit;
+a.stat {
+  display: block;
+  text-decoration: none;
+  color: inherit;
   cursor: pointer;
   transition:
     transform 0.12s,
     box-shadow 0.12s;
 }
-button.stat:not(:disabled):hover {
+a.stat[href]:hover {
   transform: translateY(-1px);
   box-shadow:
     0 1px 2px rgba(35, 32, 27, 0.04),
     0 16px 32px -18px rgba(35, 32, 27, 0.4);
 }
-button.stat:focus-visible {
+a.stat:focus-visible {
   outline: 2px solid var(--c);
   outline-offset: 2px;
 }
-button.stat:disabled {
+a.stat:not([href]) {
   opacity: 0.5;
   cursor: default;
 }
 
 /* ── section cards ──────────────────────────────────────────────────────── */
+.sec,
+aside.col-side {
+  scroll-margin-top: 56px;
+}
 .sec {
   background: var(--card);
   border: 1px solid var(--line);
