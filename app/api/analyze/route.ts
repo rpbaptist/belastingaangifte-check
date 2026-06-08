@@ -2,13 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { runExtractionSession } from "@/lib/extraction-session";
 import { analyzeDocuments } from "@/lib/analyzer";
 import { classifyError } from "@/lib/anthropic-error";
+import { fileToBase64 } from "@/lib/file-utils";
 
 // Allow up to 300s — parallel extraction + analysis across many PDFs
 export const maxDuration = 300;
-
-async function fileToBase64(file: File): Promise<string> {
-  return Buffer.from(await file.arrayBuffer()).toString("base64");
-}
 
 export async function POST(request: NextRequest) {
   let formData: FormData;

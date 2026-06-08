@@ -64,11 +64,14 @@ export function ApiKeyInput({
         }}
       >
         <div>
-          <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-2)", whiteSpace: "nowrap" }}>
+          <label
+            style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-2)", whiteSpace: "nowrap" }}
+          >
             Jouw Anthropic API-sleutel
           </label>
           <p style={{ fontSize: 11, color: "var(--ink-3)", margin: "2px 0 0" }}>
-            Wordt alleen in je browser sessie opgeslagen. Niet op de server. Gebruik een tijdelijke of beperkte key.
+            Wordt alleen in je browser sessie opgeslagen. Niet op de server. Gebruik een tijdelijke
+            of beperkte key.
           </p>
         </div>
         {editing && (

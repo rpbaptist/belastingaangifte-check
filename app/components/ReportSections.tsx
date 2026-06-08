@@ -96,7 +96,12 @@ function Section({
   if (count === 0) return null;
   return (
     <div id={id} className={`sec tone-${tone}`}>
-      <button type="button" aria-expanded={open} className={`sechead${open ? "" : " collapsed"}`} onClick={() => setOpen((v) => !v)}>
+      <button
+        type="button"
+        aria-expanded={open}
+        className={`sechead${open ? "" : " collapsed"}`}
+        onClick={() => setOpen((v) => !v)}
+      >
         <span className="chip">
           <Icon name={icon} size={16} />
         </span>

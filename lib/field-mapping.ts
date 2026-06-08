@@ -8,14 +8,24 @@ export const FIELD_AMOUNT_OVERRIDES: Array<{
   amountPath: readonly [string, string];
   negate?: boolean;
 }> = [
-  { fieldIncludes: "ingehouden dividendbelasting", amountPath: ["broker", "dutchDividendTax"] as const },
+  {
+    fieldIncludes: "ingehouden dividendbelasting",
+    amountPath: ["broker", "dutchDividendTax"] as const,
+  },
   { fieldIncludes: "dividendbelasting", amountPath: ["broker", "dutchDividendTax"] as const },
-  { fieldIncludes: "buitenlandse bronbelasting", amountPath: ["broker", "foreignWithholdingTax"] as const },
+  {
+    fieldIncludes: "buitenlandse bronbelasting",
+    amountPath: ["broker", "foreignWithholdingTax"] as const,
+  },
   { fieldIncludes: "bronheffing", amountPath: ["broker", "foreignWithholdingTax"] as const },
   { fieldIncludes: "brutodividend", amountPath: ["broker", "dividend"] as const },
   { fieldIncludes: "loon", amountPath: ["wage", "taxableWage"] as const },
   { fieldIncludes: "inkomsten uit werk", amountPath: ["wage", "taxableWage"] as const },
-  { fieldIncludes: "arbeidsongeschiktheid", amountPath: ["other", "premiumPaid"] as const, negate: true },
+  {
+    fieldIncludes: "arbeidsongeschiktheid",
+    amountPath: ["other", "premiumPaid"] as const,
+    negate: true,
+  },
   { fieldIncludes: "rente", amountPath: ["mortgage", "interestPaid"] as const, negate: true },
   { fieldIncludes: "dividend", amountPath: ["broker", "dividend"] as const },
 ].sort((a, b) => b.fieldIncludes.length - a.fieldIncludes.length);
