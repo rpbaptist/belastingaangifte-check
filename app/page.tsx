@@ -17,6 +17,7 @@ import { useAnalysis } from "./hooks/useAnalysis";
 import { useApiKeyStorage } from "./hooks/useApiKeyStorage";
 import { IncrementalCard } from "./components/IncrementalCard";
 import { AnalysisProgress } from "./components/AnalysisProgress";
+import { DEMO_PREBAKED_MESSAGES } from "@/lib/demo-data";
 
 /* ─── Page ────────────────────────────────────────────────────────────────── */
 
@@ -28,7 +29,8 @@ export default function Home() {
   const [apiKey, setApiKey] = useApiKeyStorage(isEnvKey);
 
   const analysis = useAnalysis(apiKey);
-  const { loading, report, extractedData, error, incrementalLoading, incrementalError } = analysis;
+  const { loading, report, extractedData, error, incrementalLoading, incrementalError, isDemo } =
+    analysis;
 
   const canSubmit = aangifte !== null && jaaropgaves.length > 0 && apiKey.length > 0 && !loading;
 
@@ -95,6 +97,12 @@ export default function Home() {
                   {loading ? "Bezig met analyseren…" : "Analyseren"} <Icon name="arrow" size={16} />
                 </button>
               </form>
+              <div className="demo-row">
+                <button className="ghostbtn" type="button" onClick={analysis.loadDemo}>
+                  Probeer de demo
+                </button>
+                <span className="demo-hint">Geen bestanden of API-sleutel nodig.</span>
+              </div>
               <AnalysisProgress loading={loading} />
               {error && <ErrorCard message={error} className="upload-error" />}
             </div>
@@ -105,32 +113,36 @@ export default function Home() {
   }
 
   /* ── Results view ── */
-  const statementCount = extractedData?.annualStatements.length ?? jaaropgaves.length;
+  const statementCount = isDemo
+    ? 4
+    : (extractedData?.annualStatements.length ?? jaaropgaves.length);
   const hasAttn = report.attentionPoints.length > 0;
 
   return (
     <>
-      <TopBar taxYear={report.taxYear} onReset={analysis.reset} />
+      <TopBar taxYear={report.taxYear} onReset={analysis.reset} isDemo={isDemo} />
       <main className="page">
-        <div className="files">
-          <div className="grp">
-            <span className="lab">Aangifte</span>
-            <span className="fchip ok">
-              <Icon name="check" size={13} /> {aangifte?.name ?? "aangifte.pdf"}
-            </span>
-          </div>
-          <div className="grp">
-            <span className="lab">Jaaropgaves</span>
-            {jaaropgaves.map((f) => (
-              <span key={f.name} className="fchip">
-                <Icon name="file" size={13} /> {f.name}
+        {!isDemo && (
+          <div className="files">
+            <div className="grp">
+              <span className="lab">Aangifte</span>
+              <span className="fchip ok">
+                <Icon name="check" size={13} /> {aangifte?.name ?? "aangifte.pdf"}
               </span>
-            ))}
+            </div>
+            <div className="grp">
+              <span className="lab">Jaaropgaves</span>
+              {jaaropgaves.map((f) => (
+                <span key={f.name} className="fchip">
+                  <Icon name="file" size={13} /> {f.name}
+                </span>
+              ))}
+            </div>
+            <button className="edit" onClick={analysis.reset}>
+              <Icon name="plus" size={14} /> Wijzig
+            </button>
           </div>
-          <button className="edit" onClick={analysis.reset}>
-            <Icon name="plus" size={14} /> Wijzig
-          </button>
-        </div>
+        )}
 
         <div className="res-header">
           <div className="eyebrow">Resultaat</div>
@@ -151,7 +163,7 @@ export default function Home() {
               <MissingStatementSection items={report.missingStatement} />
               <NotFilledInSection items={report.notFilledIn} />
             </div>
-            {!hasAttn && (
+            {!hasAttn && !isDemo && (
               <IncrementalCard
                 loading={incrementalLoading}
                 error={incrementalError}
@@ -177,15 +189,18 @@ export default function Home() {
                       item={p}
                       taxYear={report.taxYear}
                       apiKey={apiKey}
+                      initialMessages={isDemo ? (DEMO_PREBAKED_MESSAGES[p.title] ?? []) : []}
                     />
                   ))}
                 </div>
               </div>
-              <IncrementalCard
-                loading={incrementalLoading}
-                error={incrementalError}
-                onSubmit={analysis.analyzeIncremental}
-              />
+              {!isDemo && (
+                <IncrementalCard
+                  loading={incrementalLoading}
+                  error={incrementalError}
+                  onSubmit={analysis.analyzeIncremental}
+                />
+              )}
             </aside>
           )}
         </div>

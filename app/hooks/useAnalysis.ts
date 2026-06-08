@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import type { AnalysisReport, ExtractedData } from "@/lib/types";
 import { AnalyseResponseSchema, ApiErrorSchema } from "@/lib/schemas";
 import { authHeaders } from "@/lib/apiUtils";
+import { DEMO_REPORT, DEMO_EXTRACTED_DATA } from "@/lib/demo-data";
 
 export function useAnalysis(apiKey: string) {
   const [loading, setLoading] = useState(false);
@@ -12,6 +13,7 @@ export function useAnalysis(apiKey: string) {
   const [error, setError] = useState<string | null>(null);
   const [incrementalLoading, setIncrementalLoading] = useState(false);
   const [incrementalError, setIncrementalError] = useState<string | null>(null);
+  const [isDemo, setIsDemo] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -85,11 +87,20 @@ export function useAnalysis(apiKey: string) {
     }
   }
 
+  function loadDemo() {
+    abortRef.current?.abort();
+    setReport(DEMO_REPORT);
+    setExtractedData(DEMO_EXTRACTED_DATA);
+    setError(null);
+    setIsDemo(true);
+  }
+
   function reset() {
     abortRef.current?.abort();
     setReport(null);
     setExtractedData(null);
     setError(null);
+    setIsDemo(false);
   }
 
   return {
@@ -99,8 +110,10 @@ export function useAnalysis(apiKey: string) {
     error,
     incrementalLoading,
     incrementalError,
+    isDemo,
     analyze,
     analyzeIncremental,
+    loadDemo,
     reset,
   };
 }
