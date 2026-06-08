@@ -4,10 +4,12 @@ export function TopBar({
   taxYear,
   onReset,
   isDemo,
+  onDemo,
 }: {
   taxYear?: number;
   onReset?: () => void;
   isDemo?: boolean;
+  onDemo?: () => void;
 }) {
   return (
     <header className="topbar">
@@ -28,6 +30,11 @@ export function TopBar({
             {taxYear && <div className="sub">Belastingjaar {taxYear}</div>}
           </div>
         </div>
+        {onDemo && (
+          <button className="topbar-demo" type="button" onClick={onDemo}>
+            Probeer de demo
+          </button>
+        )}
         <div className="spacer" />
         <a
           href="https://github.com/rpbaptist/belastingaangifte-check"
