@@ -82,6 +82,73 @@ describe("categorize — basic assembly", () => {
   });
 });
 
+// ─── notFilledIn deduplication ──────────────────────────────────────────────
+
+describe("categorize — notFilledIn deduplication", () => {
+  it("keeps two entries with the same accountNumber but different descriptions", () => {
+    const makeAccountEntry = (accountNumber: string, description: string, balance: number) => ({
+      accountNumber,
+      description,
+      amounts: { bank: { balance } },
+    });
+
+    const statement: AnnualStatementData = {
+      institution: "ING",
+      institutionType: "bank",
+      taxYear: 2024,
+      metadata: {},
+      accounts: [
+        makeAccountEntry("NL00INGB0000000001", "Betaalrekening", 1000),
+        makeAccountEntry("NL00INGB0000000001", "Spaarrekening", 2000),
+      ],
+    };
+
+    const result = categorize(
+      makeMatchResult({
+        onlyInJaaropgave: [
+          { statement, account: statement.accounts[0] },
+          { statement, account: statement.accounts[1] },
+        ],
+      })
+    );
+
+    expect(result.notFilledIn).toHaveLength(2);
+    const descriptions = result.notFilledIn.map((n) => n.description);
+    expect(descriptions).toContain("Betaalrekening");
+    expect(descriptions).toContain("Spaarrekening");
+  });
+
+  it("deduplicates two entries with the same accountNumber AND same description", () => {
+    const makeAccountEntry = (accountNumber: string, description: string, balance: number) => ({
+      accountNumber,
+      description,
+      amounts: { bank: { balance } },
+    });
+
+    const statement: AnnualStatementData = {
+      institution: "ING",
+      institutionType: "bank",
+      taxYear: 2024,
+      metadata: {},
+      accounts: [
+        makeAccountEntry("NL00INGB0000000001", "Betaalrekening", 1000),
+        makeAccountEntry("NL00INGB0000000001", "Betaalrekening", 1000),
+      ],
+    };
+
+    const result = categorize(
+      makeMatchResult({
+        onlyInJaaropgave: [
+          { statement, account: statement.accounts[0] },
+          { statement, account: statement.accounts[1] },
+        ],
+      })
+    );
+
+    expect(result.notFilledIn).toHaveLength(1);
+  });
+});
+
 // ─── €1 tolerance ───────────────────────────────────────────────────────────
 
 describe("categorize — €1 tolerance", () => {

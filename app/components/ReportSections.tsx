@@ -189,7 +189,7 @@ export function NotFilledInSection({ items }: { items: NotFilledInItem[] }) {
     >
       {items.map((c) => (
         <Row
-          key={c.accountNumber}
+          key={`${c.accountNumber}|${c.description}`}
           tone="info"
           f={c.description}
           m={`${c.institution}${c.accountNumber ? ` · ${c.accountNumber}` : ""}`}
