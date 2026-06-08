@@ -64,7 +64,7 @@ export function runRuleChecks(
   if (totalBox3 > threshold) {
     points.push({
       title: "Vermogen boven heffingsvrij vermogen",
-      explanation: `De totale box 3 activa bedragen circa ${formatEuro(totalBox3)}, wat de vrijstelling van ${formatEuro(threshold)} (voor één persoon) overstijgt. Controleer of het fictief rendement correct is berekend in de aangifte.`,
+      explanation: `Op basis van de geüploade jaaropgaves bedragen de box 3 activa circa ${formatEuro(totalBox3)}, wat de vrijstelling van ${formatEuro(threshold)} (voor één persoon) overstijgt. Het werkelijke vermogen kan hoger zijn als niet alle jaaropgaves zijn geüpload. Controleer of het fictief rendement correct is berekend in de aangifte.`,
     });
   }
 

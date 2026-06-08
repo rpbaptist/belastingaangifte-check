@@ -76,6 +76,8 @@ To skip the key prompt on every reload, set `NEXT_PUBLIC_ANTHROPIC_API_KEY`:
 mise set NEXT_PUBLIC_ANTHROPIC_API_KEY=sk-ant-...
 ```
 
+> **Warning — local dev only.** `NEXT_PUBLIC_` variables are inlined into the client-side JS bundle at build time. Never set this variable on a public or shared deployment — your API key will be visible to anyone who visits the site.
+
 ## Extending the tax flag rules
 
 Flags are defined in plain Markdown — no code change or redeploy needed:

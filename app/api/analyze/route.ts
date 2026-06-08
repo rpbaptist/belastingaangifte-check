@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runExtractionSession } from "@/lib/extraction-session";
-import { runAnalysis } from "@/lib/analyze-pipeline";
+import { analyzeDocuments } from "@/lib/analyzer";
 import { classifyError } from "@/lib/anthropic-error";
 import type { AnalyseRequest } from "@/lib/types";
 
@@ -36,9 +36,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json(
-      await runAnalysis(session.taxReturn, session.annualStatements, session.errors, apiKey)
-    );
+    const reportBase = await analyzeDocuments(session.taxReturn, session.annualStatements, apiKey);
+    return NextResponse.json({
+      report: { ...reportBase, extractionErrors: session.errors },
+      extractedData: { taxReturn: session.taxReturn, annualStatements: session.annualStatements },
+    });
   } catch (err) {
     const { status, message } = classifyError(err);
     return NextResponse.json({ error: message }, { status });

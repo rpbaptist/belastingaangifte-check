@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { extractStatements } from "@/lib/extraction-session";
-import { runAnalysis } from "@/lib/analyze-pipeline";
+import { analyzeDocuments } from "@/lib/analyzer";
 import { classifyError } from "@/lib/anthropic-error";
 import type { IncrementalRequest } from "@/lib/types";
 
@@ -39,9 +39,11 @@ export async function POST(request: NextRequest) {
 
     const mergedStatements = [...extractedData.annualStatements, ...newStatements];
 
-    return NextResponse.json(
-      await runAnalysis(extractedData.taxReturn, mergedStatements, extractionErrors, apiKey)
-    );
+    const reportBase = await analyzeDocuments(extractedData.taxReturn, mergedStatements, apiKey);
+    return NextResponse.json({
+      report: { ...reportBase, extractionErrors },
+      extractedData: { taxReturn: extractedData.taxReturn, annualStatements: mergedStatements },
+    });
   } catch (err) {
     const { status, message } = classifyError(err);
     return NextResponse.json({ error: message }, { status });
