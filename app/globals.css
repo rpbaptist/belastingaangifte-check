@@ -108,16 +108,27 @@ html {
   border-bottom: 1px solid var(--line);
 }
 .topbar-inner {
-  max-width: 720px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 12px 26px;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 14px;
-  position: relative;
 }
-.topbar .spacer {
-  flex: 1;
+.topbar-left {
+  display: flex;
+  align-items: center;
+}
+.topbar-center {
+  display: flex;
+  justify-content: center;
+}
+.topbar-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
 }
 
 .brand {
@@ -175,9 +186,6 @@ html {
   line-height: 1.4;
 }
 .topbar-demo {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
   display: inline-flex;
   align-items: center;
   font-family: inherit;
