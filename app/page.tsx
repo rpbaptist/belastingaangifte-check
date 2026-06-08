@@ -83,7 +83,7 @@ export default function Home() {
               />
               <DropZone
                 label="Jaaropgaves"
-                hint="Sleep één of meerdere PDF's hierheen — ING, Rabobank, DEGIRO, hypotheek …"
+                hint="Sleep één of meerdere PDF's hierheen of klik om te bladeren."
                 accept="application/pdf"
                 multiple
                 files={jaaropgaves}
