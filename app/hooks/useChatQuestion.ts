@@ -5,8 +5,13 @@ import type { AttentionPoint, ChatMessage, QuestionRequest } from "@/lib/types";
 import { QuestionResponseSchema, ApiErrorSchema } from "@/lib/schemas";
 import { authHeaders } from "@/lib/apiUtils";
 
-export function useChatQuestion(item: AttentionPoint, taxYear: number, apiKey: string) {
-  const [history, setHistory] = useState<ChatMessage[]>([]);
+export function useChatQuestion(
+  item: AttentionPoint,
+  taxYear: number,
+  apiKey: string,
+  initialMessages: ChatMessage[] = []
+) {
+  const [history, setHistory] = useState<ChatMessage[]>(initialMessages);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

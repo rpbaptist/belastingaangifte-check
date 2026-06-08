@@ -108,15 +108,27 @@ html {
   border-bottom: 1px solid var(--line);
 }
 .topbar-inner {
-  max-width: 720px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 12px 26px;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 14px;
 }
-.topbar .spacer {
-  flex: 1;
+.topbar-left {
+  display: flex;
+  align-items: center;
+}
+.topbar-center {
+  display: flex;
+  justify-content: center;
+}
+.topbar-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
 }
 
 .brand {
@@ -146,6 +158,53 @@ html {
   font-size: 12px;
   color: var(--ink-3);
   margin-top: 1px;
+}
+.brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+  color: inherit;
+}
+.brand-link:hover .wm {
+  color: var(--bronze);
+}
+.demo-chip {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--bronze);
+  background: color-mix(in oklab, var(--bronze) 12%, transparent);
+  border: 1px solid color-mix(in oklab, var(--bronze) 30%, transparent);
+  border-radius: 4px;
+  padding: 2px 6px;
+  line-height: 1.4;
+}
+.topbar-demo {
+  display: inline-flex;
+  align-items: center;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--bronze);
+  background: color-mix(in oklab, var(--bronze) 10%, transparent);
+  border: 1px solid color-mix(in oklab, var(--bronze) 35%, transparent);
+  border-radius: 999px;
+  padding: 6px 16px;
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
+}
+.topbar-demo:hover {
+  background: color-mix(in oklab, var(--bronze) 18%, transparent);
+  border-color: var(--bronze);
 }
 
 .ghostbtn {
@@ -409,27 +468,6 @@ aside.col-side {
 }
 .irow .label-col {
   min-width: 0;
-}
-button.sechead {
-  appearance: none;
-  text-align: left;
-  width: 100%;
-  font: inherit;
-  cursor: pointer;
-}
-button.sechead:focus-visible {
-  outline: 2px solid var(--c);
-  outline-offset: -2px;
-}
-.sechead-actions {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.sechead-chevron {
-  color: var(--c);
-  transition: transform 0.18s;
 }
 
 /* ── attention ──────────────────────────────────────────────────────────── */

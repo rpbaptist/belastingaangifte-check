@@ -14,9 +14,11 @@ import {
   NotFilledInSection,
 } from "./components/ReportSections";
 import { useAnalysis } from "./hooks/useAnalysis";
+import { useDemoMode } from "./hooks/useDemoMode";
 import { useApiKeyStorage } from "./hooks/useApiKeyStorage";
 import { IncrementalCard } from "./components/IncrementalCard";
 import { AnalysisProgress } from "./components/AnalysisProgress";
+import { DemoProvider } from "./contexts/DemoContext";
 
 /* ─── Page ────────────────────────────────────────────────────────────────── */
 
@@ -27,8 +29,21 @@ export default function Home() {
   const isEnvKey = !!process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY;
   const [apiKey, setApiKey] = useApiKeyStorage(isEnvKey);
 
+  const demo = useDemoMode();
   const analysis = useAnalysis(apiKey);
-  const { loading, report, extractedData, error, incrementalLoading, incrementalError } = analysis;
+  const { loading, error, incrementalLoading, incrementalError } = analysis;
+  const report = demo.active ? demo.report : analysis.report;
+  const extractedData = demo.active ? demo.extractedData : analysis.extractedData;
+
+  function handleLoadDemo() {
+    analysis.reset();
+    demo.load();
+  }
+
+  function handleReset() {
+    analysis.reset();
+    demo.reset();
+  }
 
   const canSubmit = aangifte !== null && jaaropgaves.length > 0 && apiKey.length > 0 && !loading;
 
@@ -42,94 +57,99 @@ export default function Home() {
   /* ── Upload view ── */
   if (!report) {
     return (
-      <main className="page-upload">
-        <div className="upload-card">
-          {/* LEFT: hero */}
-          <div className="upload-hero">
-            <div className="brand">
-              <div className="logo">
-                <Icon name="shield" size={18} />
+      <>
+        <TopBar onDemo={handleLoadDemo} />
+        <main className="page-upload">
+          <div className="upload-card">
+            {/* LEFT: hero */}
+            <div className="upload-hero">
+              <h1 className="h1">Klopt je aangifte?</h1>
+              <p className="intro">
+                Upload je belastingaangifte en jaaropgaves. De bedragen worden vergeleken en je ziet
+                wat klopt, wat ontbreekt en waar je op moet letten.
+              </p>
+              <div className="notice">
+                <strong>Let op: demo, geen privacygarantie.</strong> De inhoud van je PDF&#39;s,
+                inclusief je BSN, IBANs en financiële gegevens, wordt verstuurd naar de{" "}
+                <a
+                  href="https://www.anthropic.com/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Anthropic API
+                </a>{" "}
+                voor verwerking. Anthropic bewaart API-data standaard tot 30 dagen. Gebruik dit
+                hulpmiddel uitsluitend voor eigen testdoeleinden en deel geen gegevens van anderen.
+                Controleer altijd zelf de resultaten of raadpleeg een financieel adviseur.
               </div>
-              <span className="wm">Aangifte Checker</span>
             </div>
-            <h1 className="h1">Klopt je aangifte?</h1>
-            <p className="intro">
-              Upload je belastingaangifte en jaaropgaves. De bedragen worden vergeleken en je ziet
-              wat klopt, wat ontbreekt en waar je op moet letten.
-            </p>
-            <div className="notice">
-              <strong>Let op: demo, geen privacygarantie.</strong> De inhoud van je PDF&#39;s,
-              inclusief je BSN, IBANs en financiële gegevens, wordt verstuurd naar de{" "}
-              <a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener noreferrer">
-                Anthropic API
-              </a>{" "}
-              voor verwerking. Anthropic bewaart API-data standaard tot 30 dagen. Gebruik dit
-              hulpmiddel uitsluitend voor eigen testdoeleinden en deel geen gegevens van anderen.
-              Controleer altijd zelf de resultaten of raadpleeg een financieel adviseur.
-            </div>
-          </div>
 
-          {/* RIGHT: form */}
-          <div className="upload-form">
-            <ApiKeyInput value={apiKey} onChange={setApiKey} isEnvKey={isEnvKey} />
-            <div className="dropzone-grid">
-              <DropZone
-                label="Belastingaangifte"
-                hint="Sleep je aangifte PDF hierheen, of klik om te bladeren"
-                accept="application/pdf"
-                multiple={false}
-                files={aangifte ? [aangifte] : []}
-                onFiles={(incoming) => setAangifte(incoming[0] ?? null)}
-              />
-              <DropZone
-                label="Jaaropgaves"
-                hint="Sleep één of meerdere PDF's hierheen — ING, Rabobank, DEGIRO, hypotheek …"
-                accept="application/pdf"
-                multiple
-                files={jaaropgaves}
-                onFiles={(incoming) => setJaaropgaves((prev) => [...prev, ...incoming])}
-              />
+            {/* RIGHT: form */}
+            <div className="upload-form">
+              <ApiKeyInput value={apiKey} onChange={setApiKey} isEnvKey={isEnvKey} />
+              <div className="dropzone-grid">
+                <DropZone
+                  label="Belastingaangifte"
+                  hint="Sleep je aangifte PDF hierheen, of klik om te bladeren"
+                  accept="application/pdf"
+                  multiple={false}
+                  files={aangifte ? [aangifte] : []}
+                  onFiles={(incoming) => setAangifte(incoming[0] ?? null)}
+                />
+                <DropZone
+                  label="Jaaropgaves"
+                  hint="Sleep één of meerdere PDF's hierheen of klik om te bladeren."
+                  accept="application/pdf"
+                  multiple
+                  files={jaaropgaves}
+                  onFiles={(incoming) => setJaaropgaves((prev) => [...prev, ...incoming])}
+                />
+              </div>
+              <form onSubmit={handleSubmit}>
+                <button className="btn" type="submit" disabled={!canSubmit}>
+                  {loading ? "Bezig met analyseren…" : "Analyseren"} <Icon name="arrow" size={16} />
+                </button>
+              </form>
+              <AnalysisProgress loading={loading} />
+              {error && <ErrorCard message={error} className="upload-error" />}
             </div>
-            <form onSubmit={handleSubmit}>
-              <button className="btn" type="submit" disabled={!canSubmit}>
-                {loading ? "Bezig met analyseren…" : "Analyseren"} <Icon name="arrow" size={16} />
-              </button>
-            </form>
-            <AnalysisProgress loading={loading} />
-            {error && <ErrorCard message={error} className="upload-error" />}
           </div>
-        </div>
-      </main>
+        </main>
+      </>
     );
   }
 
   /* ── Results view ── */
-  const statementCount = extractedData?.annualStatements.length ?? jaaropgaves.length;
+  const statementCount = demo.active
+    ? 4
+    : (extractedData?.annualStatements.length ?? jaaropgaves.length);
   const hasAttn = report.attentionPoints.length > 0;
 
   return (
-    <>
-      <TopBar taxYear={report.taxYear} onReset={analysis.reset} />
+    <DemoProvider value={demo.active}>
+      <TopBar taxYear={demo.active ? undefined : report.taxYear} onReset={handleReset} />
       <main className="page">
-        <div className="files">
-          <div className="grp">
-            <span className="lab">Aangifte</span>
-            <span className="fchip ok">
-              <Icon name="check" size={13} /> {aangifte?.name ?? "aangifte.pdf"}
-            </span>
-          </div>
-          <div className="grp">
-            <span className="lab">Jaaropgaves</span>
-            {jaaropgaves.map((f) => (
-              <span key={f.name} className="fchip">
-                <Icon name="file" size={13} /> {f.name}
+        {!demo.active && (
+          <div className="files">
+            <div className="grp">
+              <span className="lab">Aangifte</span>
+              <span className="fchip ok">
+                <Icon name="check" size={13} /> {aangifte?.name ?? "aangifte.pdf"}
               </span>
-            ))}
+            </div>
+            <div className="grp">
+              <span className="lab">Jaaropgaves</span>
+              {jaaropgaves.map((f) => (
+                <span key={f.name} className="fchip">
+                  <Icon name="file" size={13} /> {f.name}
+                </span>
+              ))}
+            </div>
+            <button className="edit" onClick={handleReset}>
+              <Icon name="plus" size={14} /> Wijzig
+            </button>
           </div>
-          <button className="edit" onClick={analysis.reset}>
-            <Icon name="plus" size={14} /> Wijzig
-          </button>
-        </div>
+        )}
 
         <div className="res-header">
           <div className="eyebrow">Resultaat</div>
@@ -150,7 +170,7 @@ export default function Home() {
               <MissingStatementSection items={report.missingStatement} />
               <NotFilledInSection items={report.notFilledIn} />
             </div>
-            {!hasAttn && (
+            {!hasAttn && !demo.active && (
               <IncrementalCard
                 loading={incrementalLoading}
                 error={incrementalError}
@@ -180,15 +200,17 @@ export default function Home() {
                   ))}
                 </div>
               </div>
-              <IncrementalCard
-                loading={incrementalLoading}
-                error={incrementalError}
-                onSubmit={analysis.analyzeIncremental}
-              />
+              {!demo.active && (
+                <IncrementalCard
+                  loading={incrementalLoading}
+                  error={incrementalError}
+                  onSubmit={analysis.analyzeIncremental}
+                />
+              )}
             </aside>
           )}
         </div>
       </main>
-    </>
+    </DemoProvider>
   );
 }
