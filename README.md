@@ -61,6 +61,11 @@ The key is passed through the Next.js API route to Anthropic and is not stored s
 
 Get a key at [console.anthropic.com](https://console.anthropic.com/).
 
+## Caveats
+
+Development has been tested with a limited set of annual statements. Different issuers may not be processed correctly
+and result in false flags.
+
 ## Running locally
 
 ```bash
