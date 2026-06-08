@@ -93,7 +93,7 @@ const FullAnalysisReportSchema = AnalysisReportSchema.extend({
   extractionErrors: z.array(ExtractionErrorSchema),
 });
 
-const ExtractedDataSchema = z.object({
+export const ExtractedDataSchema = z.object({
   taxReturn: TaxReturnSchema,
   annualStatements: z.array(AnnualStatementSchema),
 });

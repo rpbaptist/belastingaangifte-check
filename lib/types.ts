@@ -83,28 +83,9 @@ export interface ExtractionError {
 
 // ─── API request / response ────────────────────────────────────────────────
 
-export interface AnalyseRequest {
-  taxReturn: string; // base64-encoded PDF
-  taxReturnFilename: string;
-  annualStatements: Array<{
-    data: string; // base64-encoded PDF
-    filename: string;
-  }>;
-}
-
 export interface ExtractedData {
   taxReturn: TaxReturnData;
   annualStatements: AnnualStatementData[];
-}
-
-export interface AnalyseResponse {
-  report: AnalysisReport;
-  extractedData: ExtractedData;
-}
-
-export interface IncrementalRequest {
-  extractedData: ExtractedData;
-  additionalStatements: Array<{ data: string; filename: string }>;
 }
 
 export interface QuestionRequest {
