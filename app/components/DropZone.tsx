@@ -38,23 +38,26 @@ export function DropZone({
   }
 
   return (
-    <label
-      className={`drop${dragging ? " dragging" : ""}${files.length ? " filled" : ""}`}
-      onDragOver={(e) => {
-        e.preventDefault();
-        setDragging(true);
-      }}
-      onDragLeave={() => setDragging(false)}
-      onDrop={handleDrop}
-    >
-      <input type="file" accept={accept} multiple={multiple} hidden onChange={handleChange} />
-      <div className="dropic">
-        <Icon name={files.length ? "check" : "upload"} size={20} />
-      </div>
-      <div className="dl">{label}</div>
-      <div className="dh">{hint}</div>
+    <div className="drop-group">
+      <label
+        className={`drop${dragging ? " dragging" : ""}${files.length ? " filled" : ""}`}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={handleDrop}
+      >
+        <input type="file" accept={accept} multiple={multiple} hidden onChange={handleChange} />
+        <div className="dropic">
+          <Icon name={files.length ? "check" : "upload"} size={20} />
+        </div>
+        <div className="dl">{label}</div>
+        <div className="dh">{hint}</div>
+      </label>
+
       {files.length > 0 && (
-        <ul>
+        <ul className="file-list">
           {files.map((f) => (
             <li key={f.name} className="fchip ok">
               <Icon name="file" size={13} /> {f.name}
@@ -62,6 +65,6 @@ export function DropZone({
           ))}
         </ul>
       )}
-    </label>
+    </div>
   );
 }
