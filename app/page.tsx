@@ -21,7 +21,7 @@ import { AnalysisProgress } from "./components/AnalysisProgress";
 /* ─── Page ────────────────────────────────────────────────────────────────── */
 
 export default function Home() {
-  const [aangifte, setAangifte] = useState<File[]>([]);
+  const [aangifte, setAangifte] = useState<File | null>(null);
   const [jaaropgaves, setJaaropgaves] = useState<File[]>([]);
 
   const isEnvKey = !!process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY;
@@ -30,12 +30,13 @@ export default function Home() {
   const analysis = useAnalysis(apiKey);
   const { loading, report, extractedData, error, incrementalLoading, incrementalError } = analysis;
 
-  const canSubmit = aangifte.length > 0 && jaaropgaves.length > 0 && apiKey.length > 0 && !loading;
+  const canSubmit = aangifte !== null && jaaropgaves.length > 0 && apiKey.length > 0 && !loading;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!aangifte) return;
     if (!canSubmit) return;
-    await analysis.analyze(aangifte[0], jaaropgaves);
+    await analysis.analyze(aangifte, jaaropgaves);
   }
 
   /* ── Upload view ── */
@@ -76,7 +77,7 @@ export default function Home() {
                 label="Belastingaangifte"
                 hint="Sleep je aangifte PDF hierheen, of klik om te bladeren"
                 accept="application/pdf" multiple={false}
-                files={aangifte} onFiles={setAangifte}
+                files={aangifte ? [aangifte] : []} onFiles={(incoming) => setAangifte(incoming[0] ?? null)}
               />
               <DropZone
                 label="Jaaropgaves"
@@ -113,7 +114,7 @@ export default function Home() {
           <div className="grp">
             <span className="lab">Aangifte</span>
             <span className="fchip ok">
-              <Icon name="check" size={13} /> {aangifte[0]?.name ?? "aangifte.pdf"}
+              <Icon name="check" size={13} /> {aangifte?.name ?? "aangifte.pdf"}
             </span>
           </div>
           <div className="grp">
