@@ -1145,14 +1145,26 @@ aside.col-side {
   }
 }
 
+.github-footer {
+  display: none;
+}
+
 @media (max-width: 440px) {
   .ghostbtn .lbl {
     display: none;
   }
-  .ghostbtn {
+  .topbar .ghostbtn {
     padding: 8px;
   }
   .brand .sub {
     display: none;
+  }
+  .github-topbar {
+    display: none;
+  }
+  .github-footer {
+    display: flex;
+    justify-content: center;
+    padding: 8px 16px 20px;
   }
 }
