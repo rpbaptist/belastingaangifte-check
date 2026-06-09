@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Icon } from "@/app/Icon";
+import { filterPdfFiles } from "@/lib/file-utils";
 
 export function DropZone({
   label,
@@ -23,9 +24,7 @@ export function DropZone({
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     setDragging(false);
-    const dropped = Array.from(e.dataTransfer.files).filter(
-      (f) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf")
-    );
+    const dropped = filterPdfFiles(Array.from(e.dataTransfer.files));
     if (!dropped.length) return;
     onFiles(multiple ? dropped : [dropped[0]]);
   }

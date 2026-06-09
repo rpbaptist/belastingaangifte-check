@@ -7,6 +7,7 @@ import { Icon } from "@/app/Icon";
 import type { AttentionPoint } from "@/lib/types";
 import { useDemo } from "@/app/contexts/DemoContext";
 import { useChatQuestion } from "@/app/hooks/useChatQuestion";
+import { formatMetadata } from "@/lib/format";
 
 const markdownComponents = {
   p: (props: React.HTMLAttributes<HTMLParagraphElement>) => (
@@ -73,9 +74,7 @@ export function AttentionPointCard({
           <div className="t">{item.title}</div>
           <div className="x">{item.explanation}</div>
           {(item.institution || item.accountNumber) && (
-            <div className="meta">
-              {[item.institution, item.accountNumber].filter(Boolean).join(" · ")}
-            </div>
+            <div className="meta">{formatMetadata([item.institution, item.accountNumber])}</div>
           )}
         </div>
       </div>
