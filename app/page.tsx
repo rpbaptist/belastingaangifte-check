@@ -115,6 +115,17 @@ export default function Home() {
             </div>
           </div>
         </main>
+        <footer className="github-footer">
+          <a
+            href="https://github.com/rpbaptist/belastingaangifte-check"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ghostbtn"
+            aria-label="Bekijk broncode op GitHub"
+          >
+            <Icon name="github" size={15} /> GitHub
+          </a>
+        </footer>
       </>
     );
   }
@@ -211,6 +222,17 @@ export default function Home() {
           )}
         </div>
       </main>
+      <footer className="github-footer">
+        <a
+          href="https://github.com/rpbaptist/belastingaangifte-check"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ghostbtn"
+          aria-label="Bekijk broncode op GitHub"
+        >
+          <Icon name="github" size={15} /> GitHub
+        </a>
+      </footer>
     </DemoProvider>
   );
 }

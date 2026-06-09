@@ -48,7 +48,7 @@ export function TopBar({
             href="https://github.com/rpbaptist/belastingaangifte-check"
             target="_blank"
             rel="noopener noreferrer"
-            className="ghostbtn"
+            className="ghostbtn github-topbar"
             aria-label="Bekijk broncode op GitHub"
           >
             <Icon name="github" size={15} /> GitHub
