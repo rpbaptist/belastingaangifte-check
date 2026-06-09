@@ -24,9 +24,9 @@ describe("resolveAmountOverride", () => {
   });
 
   it("maps 'arbeidsongeschiktheid' to other.premiumPaid negated", () => {
-    expect(resolveAmountOverride("premies voor een arbeidsongeschiktheidsverzekering", amounts)).toBe(
-      -940
-    );
+    expect(
+      resolveAmountOverride("premies voor een arbeidsongeschiktheidsverzekering", amounts)
+    ).toBe(-940);
   });
 
   it("maps 'ingehouden dividendbelasting' to broker.dutchDividendTax (longer key wins over 'dividendbelasting')", () => {

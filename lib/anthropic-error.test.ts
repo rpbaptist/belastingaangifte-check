@@ -41,7 +41,10 @@ describe("classifyError", () => {
 
   it("maps RateLimitError to 429", () => {
     const result = classifyError(new Anthropic.RateLimitError(429, undefined, "", h));
-    expect(result).toEqual({ status: 429, message: "Te veel verzoeken, probeer het later opnieuw" });
+    expect(result).toEqual({
+      status: 429,
+      message: "Te veel verzoeken, probeer het later opnieuw",
+    });
   });
 
   it("maps a 5xx APIError to 502", () => {
