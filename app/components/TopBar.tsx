@@ -38,7 +38,7 @@ export function TopBar({
         <div className="topbar-center">
           {onDemo && (
             <button className="topbar-demo" type="button" onClick={onDemo}>
-              Probeer de demo
+              Bekijk demo
             </button>
           )}
         </div>
