@@ -1,18 +1,19 @@
 import { Icon } from "@/app/Icon";
 import type { ExtractionError } from "@/lib/types";
+import { parseExtractionError } from "@/lib/format";
 
 export function ErrorCard({ message, className }: { message: string; className?: string }) {
-  const m = message.match(/^Aangifte "([^"]+)" kon niet worden verwerkt: ([\s\S]*)/);
+  const parsed = parseExtractionError(message);
   return (
     <div className={`errcard${className ? ` ${className}` : ""}`} role="alert">
       <span className="ic">
         <Icon name="alert" size={18} />
       </span>
-      {m ? (
+      {parsed ? (
         <div>
           <div className="errcard-title">Aangifte kon niet worden verwerkt</div>
-          <div className="mono errcard-file">{m[1]}</div>
-          <div className="errcard-detail">{m[2]}</div>
+          <div className="mono errcard-file">{parsed.filename}</div>
+          <div className="errcard-detail">{parsed.detail}</div>
         </div>
       ) : (
         <p className="errcard-msg">{message}</p>
