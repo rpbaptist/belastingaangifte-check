@@ -1162,6 +1162,9 @@ aside.col-side {
   .github-topbar {
     display: none;
   }
+  .topbar-inner {
+    grid-template-columns: 1fr auto auto;
+  }
   .github-footer {
     display: flex;
     justify-content: center;
