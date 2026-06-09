@@ -81,11 +81,15 @@ export function AttentionPointCard({
       </div>
 
       <div className="actions">
-        <button className="gbtn" onClick={() => setOpen((v) => !v)}>
+        <button
+          className="gbtn"
+          onClick={() => setOpen((v) => !v)}
+          disabled={isDemo && history.length === 0}
+        >
           <Icon name="message" size={14} /> {toggleLabel}
         </button>
-        {history.length === 0 && !isDemo && (
-          <button className="gbtn" onClick={handleMoreDetail} disabled={loading}>
+        {history.length === 0 && (
+          <button className="gbtn" onClick={handleMoreDetail} disabled={loading || isDemo}>
             {loading ? "Bezig…" : "Meer uitleg"}
           </button>
         )}
@@ -111,25 +115,27 @@ export function AttentionPointCard({
             </div>
           ))}
           {loading && <div className="typing">Bezig met antwoorden…</div>}
-          <form className="chatin" onSubmit={handleSubmit}>
-            <textarea
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              onKeyDown={(e) => {
-                if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-                  e.preventDefault();
-                  void sendQuestion(question).then((ok) => {
-                    if (ok) setQuestion("");
-                  });
-                }
-              }}
-              placeholder={history.length > 0 ? "Vervolgvraag…" : "Typ je vraag…"}
-              rows={1}
-            />
-            <button type="submit" disabled={!question.trim() || loading} aria-label="Verstuur">
-              <Icon name="send" size={16} />
-            </button>
-          </form>
+          {!isDemo && (
+            <form className="chatin" onSubmit={handleSubmit}>
+              <textarea
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                onKeyDown={(e) => {
+                  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                    e.preventDefault();
+                    void sendQuestion(question).then((ok) => {
+                      if (ok) setQuestion("");
+                    });
+                  }
+                }}
+                placeholder={history.length > 0 ? "Vervolgvraag…" : "Typ je vraag…"}
+                rows={1}
+              />
+              <button type="submit" disabled={!question.trim() || loading} aria-label="Verstuur">
+                <Icon name="send" size={16} />
+              </button>
+            </form>
+          )}
           {error && (
             <p style={{ fontSize: 12, color: "var(--warn)", margin: "4px 2px 0" }}>{error}</p>
           )}
