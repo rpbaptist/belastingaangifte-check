@@ -2,6 +2,7 @@
 
 > Cross-reference your Dutch tax return against your bank, broker, and mortgage statements in seconds.
 
+[![MIT](https://img.shields.io/badge/license-MIT-blue)](#license)
 [![Vercel](https://img.shields.io/github/deployments/rpbaptist/belastingaangifte-check/Production?logo=vercel&label=Vercel)](https://www.aangiftechecker.nl/)
 
 **[→ Live demo at aangiftechecker.nl](https://www.aangiftechecker.nl/)** — bring your own Anthropic API key.
@@ -96,6 +97,10 @@ Add a rule section with the condition and its tax implication. It is injected in
 ## Stack
 
 [Next.js 16](https://nextjs.org) · [TypeScript](https://typescriptlang.org) · [Zod](https://zod.dev) · [Tailwind CSS](https://tailwindcss.com) · [Anthropic API](https://anthropic.com)
+
+## License
+
+[MIT](LICENSE) — see [LICENSE](LICENSE) for details.
 
 ## Project structure
 
