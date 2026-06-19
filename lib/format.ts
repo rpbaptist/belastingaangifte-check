@@ -13,7 +13,9 @@ export interface ParsedExtractionError {
 }
 
 export function parseExtractionError(message: string): ParsedExtractionError | null {
-  const m = message.match(/^Aangifte "([^"]+)" kon niet worden verwerkt: ([\s\S]*)/);
+  const m = message.match(
+    /^(?:Aangifte|Tax return) "([^"]+)" (?:kon niet worden verwerkt|could not be processed): ([\s\S]*)/
+  );
   return m ? { filename: m[1], detail: m[2] } : null;
 }
 
