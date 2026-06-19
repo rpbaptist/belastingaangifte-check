@@ -6,10 +6,12 @@ import type {
   NotFilledInItem,
 } from "@/lib/types";
 import { formatEuro } from "@/lib/format";
+import { useTranslation } from "@/app/hooks/useTranslation";
 
 type Tone = "pos" | "warn" | "info" | "attn";
 
 export function SummaryBoxes({ report }: { report: AnalysisReport }) {
+  const { t } = useTranslation();
   const items: {
     tone: Tone;
     icon: Parameters<typeof Icon>[0]["name"];
@@ -21,28 +23,28 @@ export function SummaryBoxes({ report }: { report: AnalysisReport }) {
       tone: "pos",
       icon: "check",
       count: report.covered.length,
-      label: "Gedekt",
+      label: t("coveredLabel"),
       href: "#section-gedekt",
     },
     {
       tone: "warn",
       icon: "alert",
       count: report.missingStatement.length,
-      label: "Jaaropgave ontbreekt",
+      label: t("missingStatementLabel"),
       href: "#section-ontbreekt",
     },
     {
       tone: "info",
       icon: "file-plus",
       count: report.notFilledIn.length,
-      label: "Niet ingevuld",
+      label: t("notFilledInSummaryLabel"),
       href: "#section-niet-ingevuld",
     },
     {
       tone: "attn",
       icon: "flag",
       count: report.attentionPoints.length,
-      label: "Aandachtspunten",
+      label: t("attentionPointsLabel"),
       href: "#section-aandachtspunten",
     },
   ];
@@ -116,14 +118,15 @@ function Row({ f, m, a, tone }: { f: string; m: string; a: string; tone: Tone })
 }
 
 export function CoveredSection({ items }: { items: CoveredItem[] }) {
+  const { t } = useTranslation();
   return (
     <Section
       id="section-gedekt"
       tone="pos"
       icon="check"
-      title="Gedekt"
+      title={t("coveredLabel")}
       count={items.length}
-      note="Aangifte en jaaropgave komen overeen"
+      note={t("coveredNote")}
     >
       {items.map((c) => (
         <Row
@@ -139,21 +142,22 @@ export function CoveredSection({ items }: { items: CoveredItem[] }) {
 }
 
 export function MissingStatementSection({ items }: { items: MissingStatementItem[] }) {
+  const { t } = useTranslation();
   return (
     <Section
       id="section-ontbreekt"
       tone="warn"
       icon="alert"
-      title="Jaaropgave ontbreekt"
+      title={t("missingStatementLabel")}
       count={items.length}
-      note="Staat in je aangifte, geen jaaropgave geüpload"
+      note={t("missingStatementNote")}
     >
       {items.map((c) => (
         <Row
           key={c.accountNumber + "|" + c.field}
           tone="warn"
           f={c.field}
-          m={`Box ${c.box}${c.accountNumber ? ` · ${c.accountNumber}` : ""}`}
+          m={`${t("boxPrefix")} ${c.box}${c.accountNumber ? ` · ${c.accountNumber}` : ""}`}
           a={formatEuro(c.amount)}
         />
       ))}
@@ -162,14 +166,15 @@ export function MissingStatementSection({ items }: { items: MissingStatementItem
 }
 
 export function NotFilledInSection({ items }: { items: NotFilledInItem[] }) {
+  const { t } = useTranslation();
   return (
     <Section
       id="section-niet-ingevuld"
       tone="info"
       icon="file-plus"
-      title="Niet ingevuld in aangifte"
+      title={t("notFilledInSectionTitle")}
       count={items.length}
-      note="Staat in je jaaropgaves, ontbreekt in aangifte"
+      note={t("notFilledInNote")}
     >
       {items.map((c) => (
         <Row

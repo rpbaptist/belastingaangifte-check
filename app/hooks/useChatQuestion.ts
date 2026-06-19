@@ -3,12 +3,14 @@
 import { useState } from "react";
 import type { AttentionPoint, ChatMessage, QuestionRequest } from "@/lib/types";
 import { QuestionResponseSchema, ApiErrorSchema } from "@/lib/schemas";
-import { authHeaders } from "@/lib/apiUtils";
+import { authHeaders, languageHeaders } from "@/lib/apiUtils";
+import { translate, type Language } from "@/lib/translations";
 
 export function useChatQuestion(
   item: AttentionPoint,
   taxYear: number,
   apiKey: string,
+  language: Language,
   initialMessages: ChatMessage[] = []
 ) {
   const [history, setHistory] = useState<ChatMessage[]>(initialMessages);
@@ -23,12 +25,16 @@ export function useChatQuestion(
       const body: QuestionRequest = { question: text, attentionPoint: item, taxYear, history };
       const res = await fetch("/api/question", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders(apiKey) },
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders(apiKey),
+          ...languageHeaders(language),
+        },
         body: JSON.stringify(body),
       });
       if (!res.ok) {
         const { error } = ApiErrorSchema.parse(await res.json().catch(() => ({})));
-        throw new Error(error ?? `Serverfout ${res.status}`);
+        throw new Error(error ?? `${translate("serverErrorPrefix", language)} ${res.status}`);
       }
       const data = QuestionResponseSchema.parse(await res.json());
       setHistory((prev) => [
@@ -38,7 +44,7 @@ export function useChatQuestion(
       ]);
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Er is een fout opgetreden.");
+      setError(err instanceof Error ? err.message : translate("chatUnknownError", language));
       return false;
     } finally {
       setLoading(false);

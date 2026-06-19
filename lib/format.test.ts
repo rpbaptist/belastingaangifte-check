@@ -16,7 +16,7 @@ describe("formatEuro", () => {
 });
 
 describe("parseExtractionError", () => {
-  it("parses a well-formed extraction error message", () => {
+  it("parses a Dutch extraction error message", () => {
     const result = parseExtractionError(
       'Aangifte "mijn-aangifte.pdf" kon niet worden verwerkt: Geen belastingaangifte gevonden.'
     );
@@ -26,15 +26,32 @@ describe("parseExtractionError", () => {
     });
   });
 
+  it("parses an English extraction error message", () => {
+    const result = parseExtractionError(
+      'Tax return "mijn-aangifte.pdf" could not be processed: No tax return found.'
+    );
+    expect(result).toEqual({
+      filename: "mijn-aangifte.pdf",
+      detail: "No tax return found.",
+    });
+  });
+
   it("returns null for a message that does not match the pattern", () => {
     expect(parseExtractionError("Onbekende fout")).toBeNull();
   });
 
-  it("captures multi-line detail text", () => {
+  it("captures multi-line detail text in Dutch", () => {
     const result = parseExtractionError(
       'Aangifte "test.pdf" kon niet worden verwerkt: Regel 1\nRegel 2'
     );
     expect(result?.detail).toBe("Regel 1\nRegel 2");
+  });
+
+  it("captures multi-line detail text in English", () => {
+    const result = parseExtractionError(
+      'Tax return "test.pdf" could not be processed: Line 1\nLine 2'
+    );
+    expect(result?.detail).toBe("Line 1\nLine 2");
   });
 });
 

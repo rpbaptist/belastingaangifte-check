@@ -5,15 +5,18 @@ import { classifyError } from "@/lib/anthropic-error";
 import { ExtractedDataSchema } from "@/lib/schemas";
 import type { ExtractedData } from "@/lib/types";
 import { fileToBase64 } from "@/lib/file-utils";
+import { translate, type Language } from "@/lib/translations";
 
 export const maxDuration = 300;
 
 export async function POST(request: NextRequest) {
+  const language: Language = request.headers.get("x-language") === "en" ? "en" : "nl";
+
   let formData: FormData;
   try {
     formData = await request.formData();
   } catch {
-    return NextResponse.json({ error: "Ongeldig verzoek" }, { status: 400 });
+    return NextResponse.json({ error: translate("invalidRequest", language) }, { status: 400 });
   }
 
   const apiKey = request.headers.get("x-api-key") ?? undefined;
@@ -22,13 +25,13 @@ export async function POST(request: NextRequest) {
 
   if (typeof extractedDataRaw !== "string") {
     return NextResponse.json(
-      { error: "Geen eerder geëxtraheerde data ontvangen" },
+      { error: translate("noEarlierExtractedDataReceived", language) },
       { status: 400 }
     );
   }
   if (!statementFiles.length) {
     return NextResponse.json(
-      { error: "Minimaal één aanvullende jaaropgave is vereist" },
+      { error: translate("atLeastOneAdditionalStatementRequired", language) },
       { status: 400 }
     );
   }
@@ -37,7 +40,10 @@ export async function POST(request: NextRequest) {
   try {
     extractedData = ExtractedDataSchema.parse(JSON.parse(extractedDataRaw));
   } catch {
-    return NextResponse.json({ error: "Ongeldige geëxtraheerde data" }, { status: 400 });
+    return NextResponse.json(
+      { error: translate("invalidExtractedData", language) },
+      { status: 400 }
+    );
   }
 
   try {
@@ -49,18 +55,24 @@ export async function POST(request: NextRequest) {
 
     const { results: newStatements, errors: extractionErrors } = await extractStatements(
       additionalStatements,
-      apiKey
+      apiKey,
+      language
     );
 
     const mergedStatements = [...extractedData.annualStatements, ...newStatements];
 
-    const reportBase = await analyzeDocuments(extractedData.taxReturn, mergedStatements, apiKey);
+    const reportBase = await analyzeDocuments(
+      extractedData.taxReturn,
+      mergedStatements,
+      apiKey,
+      language
+    );
     return NextResponse.json({
       report: { ...reportBase, extractionErrors },
       extractedData: { taxReturn: extractedData.taxReturn, annualStatements: mergedStatements },
     });
   } catch (err) {
-    const { status, message } = classifyError(err);
+    const { status, message } = classifyError(err, language);
     return NextResponse.json({ error: message }, { status });
   }
 }

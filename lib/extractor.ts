@@ -8,6 +8,7 @@ import { ANNUAL_STATEMENT_SYSTEM } from "./prompts/annual-statement";
 import { TAX_RETURN_SYSTEM } from "./prompts/tax-return";
 import { EXTRACTION_MODEL } from "./llm";
 import { withRetry } from "./utils";
+import { translate, formatExtractionFailed, type Language } from "./translations";
 
 const MODEL = EXTRACTION_MODEL;
 
@@ -15,11 +16,16 @@ type ExtractOpts<T> = {
   systemPrompt: string;
   maxTokens: number;
   userPrompt: string;
-  noResponseError: string;
+  noResponseErrorKey: "noResponseAnnualStatement" | "noResponseTaxReturn";
   schema: z.ZodType<T>;
 };
 
-async function extract<T>(pdfBase64: string, opts: ExtractOpts<T>, client: Anthropic): Promise<T> {
+async function extract<T>(
+  pdfBase64: string,
+  opts: ExtractOpts<T>,
+  client: Anthropic,
+  language: Language
+): Promise<T> {
   const cached = readCache<T>(pdfBase64);
   if (cached) {
     try {
@@ -50,11 +56,11 @@ async function extract<T>(pdfBase64: string, opts: ExtractOpts<T>, client: Anthr
   );
 
   if (response.stop_reason === "max_tokens") {
-    throw new Error("Extractie afgebroken — het PDF is mogelijk te groot of te complex");
+    throw new Error(translate("extractionAbortedTooLarge", language));
   }
   const textBlock = response.content.find((b) => b.type === "text");
   if (!textBlock || textBlock.type !== "text") {
-    throw new Error(opts.noResponseError);
+    throw new Error(translate(opts.noResponseErrorKey, language));
   }
 
   const raw = parseLlmJson(textBlock.text);
@@ -63,14 +69,18 @@ async function extract<T>(pdfBase64: string, opts: ExtractOpts<T>, client: Anthr
     writeCache(pdfBase64, result);
     return result;
   } catch (err) {
-    const msg = err instanceof z.ZodError ? err.issues[0]?.message : "onverwacht formaat";
-    throw new Error(`Extractie mislukt: ${msg}`);
+    const msg =
+      err instanceof z.ZodError ? err.issues[0]?.message : translate("unexpectedFormat", language);
+    throw new Error(
+      formatExtractionFailed(msg ?? translate("unexpectedFormat", language), language)
+    );
   }
 }
 
 export function extractAnnualStatement(
   pdfBase64: string,
-  client: Anthropic
+  client: Anthropic,
+  language: Language = "nl"
 ): Promise<AnnualStatementData> {
   return extract(
     pdfBase64,
@@ -78,23 +88,29 @@ export function extractAnnualStatement(
       systemPrompt: ANNUAL_STATEMENT_SYSTEM,
       maxTokens: 4096,
       userPrompt: "Extract the structured data from this jaaropgave.",
-      noResponseError: "Geen reactie ontvangen bij verwerking van de jaaropgave",
+      noResponseErrorKey: "noResponseAnnualStatement",
       schema: AnnualStatementSchema,
     },
-    client
+    client,
+    language
   );
 }
 
-export function extractTaxReturn(pdfBase64: string, client: Anthropic): Promise<TaxReturnData> {
+export function extractTaxReturn(
+  pdfBase64: string,
+  client: Anthropic,
+  language: Language = "nl"
+): Promise<TaxReturnData> {
   return extract(
     pdfBase64,
     {
       systemPrompt: TAX_RETURN_SYSTEM,
       maxTokens: 8192,
       userPrompt: "Extract all non-zero entries from this belastingaangifte.",
-      noResponseError: "Geen reactie ontvangen bij verwerking van de aangifte",
+      noResponseErrorKey: "noResponseTaxReturn",
       schema: TaxReturnSchema,
     },
-    client
+    client,
+    language
   );
 }

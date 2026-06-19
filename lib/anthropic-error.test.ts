@@ -29,17 +29,27 @@ describe("isUserFacingError", () => {
 });
 
 describe("classifyError", () => {
-  it("maps AuthenticationError to 401", () => {
+  it("maps AuthenticationError to 401 in Dutch", () => {
     const result = classifyError(new Anthropic.AuthenticationError(401, undefined, "", h));
     expect(result).toEqual({ status: 401, message: "Ongeldige API-sleutel" });
   });
 
-  it("maps PermissionDeniedError to 403", () => {
+  it("maps AuthenticationError to 401 in English", () => {
+    const result = classifyError(new Anthropic.AuthenticationError(401, undefined, "", h), "en");
+    expect(result).toEqual({ status: 401, message: "Invalid API key" });
+  });
+
+  it("maps PermissionDeniedError to 403 in Dutch", () => {
     const result = classifyError(new Anthropic.PermissionDeniedError(403, undefined, "", h));
     expect(result).toEqual({ status: 403, message: "Geen toegang met deze API-sleutel" });
   });
 
-  it("maps RateLimitError to 429", () => {
+  it("maps PermissionDeniedError to 403 in English", () => {
+    const result = classifyError(new Anthropic.PermissionDeniedError(403, undefined, "", h), "en");
+    expect(result).toEqual({ status: 403, message: "No access with this API key" });
+  });
+
+  it("maps RateLimitError to 429 in Dutch", () => {
     const result = classifyError(new Anthropic.RateLimitError(429, undefined, "", h));
     expect(result).toEqual({
       status: 429,
@@ -47,7 +57,12 @@ describe("classifyError", () => {
     });
   });
 
-  it("maps a 5xx APIError to 502", () => {
+  it("maps RateLimitError to 429 in English", () => {
+    const result = classifyError(new Anthropic.RateLimitError(429, undefined, "", h), "en");
+    expect(result).toEqual({ status: 429, message: "Too many requests, try again later" });
+  });
+
+  it("maps a 5xx APIError to 502 in Dutch", () => {
     const result = classifyError(new Anthropic.APIError(503, undefined, "", h));
     expect(result).toEqual({
       status: 502,
@@ -55,13 +70,23 @@ describe("classifyError", () => {
     });
   });
 
+  it("maps a 5xx APIError to 502 in English", () => {
+    const result = classifyError(new Anthropic.APIError(503, undefined, "", h), "en");
+    expect(result).toEqual({ status: 502, message: "Anthropic server error, try again later" });
+  });
+
   it("maps a plain Error to 500 with its message", () => {
     const result = classifyError(new Error("network failure"));
     expect(result).toEqual({ status: 500, message: "network failure" });
   });
 
-  it("maps unknown throws to 500 with a fallback message", () => {
+  it("maps unknown throws to 500 with Dutch fallback", () => {
     const result = classifyError("not an error");
     expect(result).toEqual({ status: 500, message: "Er is een onbekende fout opgetreden" });
+  });
+
+  it("maps unknown throws to 500 with English fallback", () => {
+    const result = classifyError("not an error", "en");
+    expect(result).toEqual({ status: 500, message: "An unknown error occurred" });
   });
 });
