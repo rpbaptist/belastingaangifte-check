@@ -3,9 +3,10 @@
 import { useState, useRef, useEffect } from "react";
 import type { AnalysisReport, ExtractedData } from "@/lib/types";
 import { AnalyseResponseSchema, ApiErrorSchema } from "@/lib/schemas";
-import { authHeaders } from "@/lib/apiUtils";
+import { authHeaders, languageHeaders } from "@/lib/apiUtils";
+import { translate, type Language } from "@/lib/translations";
 
-export function useAnalysis(apiKey: string) {
+export function useAnalysis(apiKey: string, language: Language) {
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState<AnalysisReport | null>(null);
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
@@ -31,20 +32,20 @@ export function useAnalysis(apiKey: string) {
       }
       const res = await fetch("/api/analyze", {
         method: "POST",
-        headers: authHeaders(apiKey),
+        headers: { ...authHeaders(apiKey), ...languageHeaders(language) },
         body,
         signal: controller.signal,
       });
       if (!res.ok) {
         const { error: msg } = ApiErrorSchema.parse(await res.json().catch(() => ({})));
-        throw new Error(msg ?? `Serverfout ${res.status}`);
+        throw new Error(msg ?? `${translate("serverErrorPrefix", language)} ${res.status}`);
       }
       const data = AnalyseResponseSchema.parse(await res.json());
       setReport(data.report);
       setExtractedData(data.extractedData);
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
-      setError(err instanceof Error ? err.message : "Er is een onbekende fout opgetreden.");
+      setError(err instanceof Error ? err.message : translate("clientUnknownError", language));
     } finally {
       setLoading(false);
     }
@@ -64,13 +65,13 @@ export function useAnalysis(apiKey: string) {
       body.append("extractedData", JSON.stringify(extractedData));
       const res = await fetch("/api/analyze/incremental", {
         method: "POST",
-        headers: authHeaders(apiKey),
+        headers: { ...authHeaders(apiKey), ...languageHeaders(language) },
         body,
         signal: controller.signal,
       });
       if (!res.ok) {
         const { error: msg } = ApiErrorSchema.parse(await res.json().catch(() => ({})));
-        throw new Error(msg ?? `Serverfout ${res.status}`);
+        throw new Error(msg ?? `${translate("serverErrorPrefix", language)} ${res.status}`);
       }
       const data = AnalyseResponseSchema.parse(await res.json());
       setReport(data.report);
@@ -78,7 +79,7 @@ export function useAnalysis(apiKey: string) {
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
       setIncrementalError(
-        err instanceof Error ? err.message : "Er is een onbekende fout opgetreden."
+        err instanceof Error ? err.message : translate("clientUnknownError", language)
       );
     } finally {
       setIncrementalLoading(false);
