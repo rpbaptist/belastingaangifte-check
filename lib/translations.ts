@@ -202,6 +202,16 @@ export const translations = {
   },
   unexpectedFormat: { nl: "onverwacht formaat", en: "unexpected format" },
 
+  // Rule checks
+  assetsAboveThresholdTitle: {
+    nl: "Vermogen boven heffingsvrij vermogen",
+    en: "Assets above tax-free threshold",
+  },
+  assetsAboveThresholdExplanation: {
+    nl: "Op basis van de geüploade jaaropgaves bedragen de box 3 activa circa {total}, wat de vrijstelling van {threshold} (voor één persoon) overstijgt. Het werkelijke vermogen kan hoger zijn als niet alle jaaropgaves zijn geüpload. Controleer of het fictief rendement correct is berekend in de aangifte.",
+    en: "Based on the uploaded annual income statements, box 3 assets total approximately {total}, which exceeds the {threshold} exemption (for one person). Actual assets may be higher if not all annual income statements have been uploaded. Check whether the deemed return is correctly calculated in the tax return.",
+  },
+
   // Analyzer
   analysisAbortedTooMany: {
     nl: "Analyse afgebroken — te veel posten om te verwerken. Probeer met minder jaaropgaves tegelijk.",
