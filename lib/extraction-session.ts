@@ -2,6 +2,7 @@ import { extractAnnualStatement, extractTaxReturn } from "./extractor";
 import type { AnnualStatementData, ExtractionError, TaxReturnData } from "./types";
 import { isUserFacingError } from "./anthropic-error";
 import { createClient } from "./llm";
+import { translate, type Language } from "./translations";
 
 type StatementInput = { data: string; filename: string };
 
@@ -17,18 +18,21 @@ export type ExtractionSessionResult =
 export async function runExtractionSession(
   taxReturnPdf: string,
   statements: StatementInput[],
-  apiKey?: string
+  apiKey?: string,
+  language: Language = "nl"
 ): Promise<ExtractionSessionResult> {
   const client = createClient(apiKey);
   const [taxReturnResult, ...statementResults] = await Promise.allSettled([
-    extractTaxReturn(taxReturnPdf, client),
-    ...statements.map((s) => extractAnnualStatement(s.data, client)),
+    extractTaxReturn(taxReturnPdf, client, language),
+    ...statements.map((s) => extractAnnualStatement(s.data, client, language)),
   ]);
 
   if (taxReturnResult.status === "rejected") {
     if (isUserFacingError(taxReturnResult.reason)) throw taxReturnResult.reason;
     const message =
-      taxReturnResult.reason instanceof Error ? taxReturnResult.reason.message : "Onbekende fout";
+      taxReturnResult.reason instanceof Error
+        ? taxReturnResult.reason.message
+        : translate("unknownError", language);
     return { ok: false, message };
   }
 
@@ -39,7 +43,10 @@ export async function runExtractionSession(
         if (isUserFacingError(result.reason)) throw result.reason;
         errors.push({
           filename: statements[i].filename,
-          error: result.reason instanceof Error ? result.reason.message : "Extractie mislukt",
+          error:
+            result.reason instanceof Error
+              ? result.reason.message
+              : translate("extractionFailedShort", language),
         });
         return null;
       }
@@ -52,11 +59,12 @@ export async function runExtractionSession(
 
 export async function extractStatements(
   statements: StatementInput[],
-  apiKey?: string
+  apiKey?: string,
+  language: Language = "nl"
 ): Promise<{ results: AnnualStatementData[]; errors: ExtractionError[] }> {
   const client = createClient(apiKey);
   const settled = await Promise.allSettled(
-    statements.map((s) => extractAnnualStatement(s.data, client))
+    statements.map((s) => extractAnnualStatement(s.data, client, language))
   );
 
   const errors: ExtractionError[] = [];
@@ -66,7 +74,10 @@ export async function extractStatements(
         if (isUserFacingError(result.reason)) throw result.reason;
         errors.push({
           filename: statements[i].filename,
-          error: result.reason instanceof Error ? result.reason.message : "Extractie mislukt",
+          error:
+            result.reason instanceof Error
+              ? result.reason.message
+              : translate("extractionFailedShort", language),
         });
         return null;
       }

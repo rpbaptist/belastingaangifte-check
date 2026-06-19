@@ -23,7 +23,7 @@ function makeStatement(
 }
 
 describe("runRuleChecks — aflossingsvrij hypotheek", () => {
-  it("flags when mortgageType is aflossingsvrij", () => {
+  it("flags with Dutch title when language is 'nl'", () => {
     const statement = makeStatement({
       institutionType: "mortgage",
       metadata: { mortgageType: "aflossingsvrij" },
@@ -31,6 +31,16 @@ describe("runRuleChecks — aflossingsvrij hypotheek", () => {
     });
     const points = runRuleChecks([statement], 2024);
     expect(points.some((p) => p.title === "Aflossingsvrij hypotheek")).toBe(true);
+  });
+
+  it("flags with English title when language is 'en'", () => {
+    const statement = makeStatement({
+      institutionType: "mortgage",
+      metadata: { mortgageType: "aflossingsvrij" },
+      amounts: { mortgage: { interestPaid: 8400, remainingDebt: 200000 } },
+    });
+    const points = runRuleChecks([statement], 2024, "en");
+    expect(points.some((p) => p.title === "Interest-only mortgage")).toBe(true);
   });
 
   it("does not flag when mortgageType is annuïteit", () => {
@@ -51,13 +61,22 @@ describe("runRuleChecks — aflossingsvrij hypotheek", () => {
 });
 
 describe("runRuleChecks — buitenlands dividend", () => {
-  it("flags when foreignDividend > 0", () => {
+  it("flags with Dutch title when language is 'nl'", () => {
     const statement = makeStatement({
       institutionType: "broker",
       amounts: { broker: { balance: 10000, foreignDividend: 200, foreignWithholdingTax: 0 } },
     });
     const points = runRuleChecks([statement], 2024);
     expect(points.some((p) => p.title === "Buitenlands dividend")).toBe(true);
+  });
+
+  it("flags with English title when language is 'en'", () => {
+    const statement = makeStatement({
+      institutionType: "broker",
+      amounts: { broker: { balance: 10000, foreignDividend: 200, foreignWithholdingTax: 0 } },
+    });
+    const points = runRuleChecks([statement], 2024, "en");
+    expect(points.some((p) => p.title === "Foreign dividend")).toBe(true);
   });
 
   it("flags when foreignWithholdingTax > 0", () => {
@@ -89,10 +108,16 @@ describe("runRuleChecks — buitenlands dividend", () => {
 });
 
 describe("runRuleChecks — saldo boven heffingsvrij vermogen", () => {
-  it("flags when total box 3 assets exceed threshold for tax year", () => {
+  it("flags with Dutch title when language is 'nl'", () => {
     const statement = makeStatement({ amounts: { bank: { balance: 60000 } } });
     const points = runRuleChecks([statement], 2024);
     expect(points.some((p) => p.title === "Vermogen boven heffingsvrij vermogen")).toBe(true);
+  });
+
+  it("flags with English title when language is 'en'", () => {
+    const statement = makeStatement({ amounts: { bank: { balance: 60000 } } });
+    const points = runRuleChecks([statement], 2024, "en");
+    expect(points.some((p) => p.title === "Assets above tax-free threshold")).toBe(true);
   });
 
   it("does not flag when total box 3 assets are below threshold", () => {

@@ -1,8 +1,10 @@
 import { Icon } from "@/app/Icon";
 import type { ExtractionError } from "@/lib/types";
 import { parseExtractionError } from "@/lib/format";
+import { useTranslation } from "@/app/hooks/useTranslation";
 
 export function ErrorCard({ message, className }: { message: string; className?: string }) {
+  const { t } = useTranslation();
   const parsed = parseExtractionError(message);
   return (
     <div className={`errcard${className ? ` ${className}` : ""}`} role="alert">
@@ -11,7 +13,7 @@ export function ErrorCard({ message, className }: { message: string; className?:
       </span>
       {parsed ? (
         <div>
-          <div className="errcard-title">Aangifte kon niet worden verwerkt</div>
+          <div className="errcard-title">{t("taxReturnProcessingFailedTitle")}</div>
           <div className="mono errcard-file">{parsed.filename}</div>
           <div className="errcard-detail">{parsed.detail}</div>
         </div>
@@ -23,6 +25,7 @@ export function ErrorCard({ message, className }: { message: string; className?:
 }
 
 export function ExtractionErrors({ errors }: { errors: ExtractionError[] }) {
+  const { t } = useTranslation();
   if (!errors.length) return null;
   return (
     <div className="errcard errcard-spaced">
@@ -31,8 +34,8 @@ export function ExtractionErrors({ errors }: { errors: ExtractionError[] }) {
       </span>
       <div>
         <div className="errcard-title">
-          Extractie mislukt voor{" "}
-          {errors.length === 1 ? "één bestand" : `${errors.length} bestanden`}
+          {t("extractionFailedForLabel")}{" "}
+          {errors.length === 1 ? t("oneFile") : `${errors.length} ${t("filesPlural")}`}
         </div>
         <ul className="errcard-list">
           {errors.map((e) => (

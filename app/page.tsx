@@ -16,6 +16,7 @@ import {
 import { useAnalysis } from "./hooks/useAnalysis";
 import { useDemoMode } from "./hooks/useDemoMode";
 import { useApiKeyStorage } from "./hooks/useApiKeyStorage";
+import { useTranslation } from "./hooks/useTranslation";
 import { IncrementalCard } from "./components/IncrementalCard";
 import { AnalysisProgress } from "./components/AnalysisProgress";
 import { DemoProvider } from "./contexts/DemoContext";
@@ -23,6 +24,7 @@ import { DemoProvider } from "./contexts/DemoContext";
 /* ─── Page ────────────────────────────────────────────────────────────────── */
 
 export default function Home() {
+  const { t, language } = useTranslation();
   const [aangifte, setAangifte] = useState<File | null>(null);
   const [jaaropgaves, setJaaropgaves] = useState<File[]>([]);
 
@@ -30,7 +32,7 @@ export default function Home() {
   const [apiKey, setApiKey] = useApiKeyStorage(isEnvKey);
 
   const demo = useDemoMode();
-  const analysis = useAnalysis(apiKey);
+  const analysis = useAnalysis(apiKey, language);
   const { loading, error, incrementalLoading, incrementalError } = analysis;
   const report = demo.active ? demo.report : analysis.report;
   const extractedData = demo.active ? demo.extractedData : analysis.extractedData;
@@ -63,24 +65,18 @@ export default function Home() {
           <div className="upload-card">
             {/* LEFT: hero */}
             <div className="upload-hero">
-              <h1 className="h1">Klopt je aangifte?</h1>
-              <p className="intro">
-                Upload je belastingaangifte en jaaropgaves. De bedragen worden vergeleken en je ziet
-                wat klopt, wat ontbreekt en waar je op moet letten.
-              </p>
+              <h1 className="h1">{t("heroTitle")}</h1>
+              <p className="intro">{t("heroIntro")}</p>
               <div className="notice">
-                <strong>Let op: demo, geen privacygarantie.</strong> De inhoud van je PDF&#39;s,
-                inclusief je BSN, IBANs en financiële gegevens, wordt verstuurd naar de{" "}
+                <strong>{t("privacyWarningStrong")}</strong> {t("privacyNoticeBefore")}{" "}
                 <a
                   href="https://www.anthropic.com/privacy"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  Anthropic API
+                  {t("anthropicApiLinkText")}
                 </a>{" "}
-                voor verwerking. Anthropic bewaart API-data standaard tot 30 dagen. Gebruik dit
-                hulpmiddel uitsluitend voor eigen testdoeleinden en deel geen gegevens van anderen.
-                Controleer altijd zelf de resultaten of raadpleeg een financieel adviseur.
+                {t("privacyNoticeAfter")}
               </div>
             </div>
 
@@ -89,16 +85,16 @@ export default function Home() {
               <ApiKeyInput value={apiKey} onChange={setApiKey} isEnvKey={isEnvKey} />
               <div className="dropzone-grid">
                 <DropZone
-                  label="Belastingaangifte"
-                  hint="Sleep je aangifte PDF hierheen, of klik om te bladeren"
+                  label={t("taxReturnLabel")}
+                  hint={t("taxReturnDropHint")}
                   accept="application/pdf"
                   multiple={false}
                   files={aangifte ? [aangifte] : []}
                   onFiles={(incoming) => setAangifte(incoming[0] ?? null)}
                 />
                 <DropZone
-                  label="Jaaropgaves"
-                  hint="Sleep één of meerdere PDF's hierheen of klik om te bladeren."
+                  label={t("annualStatementsLabel")}
+                  hint={t("annualStatementsDropHint")}
                   accept="application/pdf"
                   multiple
                   files={jaaropgaves}
@@ -107,7 +103,7 @@ export default function Home() {
               </div>
               <form onSubmit={handleSubmit}>
                 <button className="btn" type="submit" disabled={!canSubmit}>
-                  {loading ? "Bezig met analyseren…" : "Analyseren"} <Icon name="arrow" size={16} />
+                  {loading ? t("analyzing") : t("analyze")} <Icon name="arrow" size={16} />
                 </button>
               </form>
               <AnalysisProgress loading={loading} />
@@ -121,7 +117,7 @@ export default function Home() {
             target="_blank"
             rel="noopener noreferrer"
             className="ghostbtn"
-            aria-label="Bekijk broncode op GitHub"
+            aria-label={t("githubAriaLabel")}
           >
             <Icon name="github" size={15} /> GitHub
           </a>
@@ -143,13 +139,13 @@ export default function Home() {
         {!demo.active && (
           <div className="files">
             <div className="grp">
-              <span className="lab">Aangifte</span>
+              <span className="lab">{t("filesAangifteLabel")}</span>
               <span className="fchip ok">
-                <Icon name="check" size={13} /> {aangifte?.name ?? "aangifte.pdf"}
+                <Icon name="check" size={13} /> {aangifte?.name ?? t("defaultTaxReturnFilename")}
               </span>
             </div>
             <div className="grp">
-              <span className="lab">Jaaropgaves</span>
+              <span className="lab">{t("filesJaaropgavesLabel")}</span>
               {jaaropgaves.map((f) => (
                 <span key={f.name} className="fchip">
                   <Icon name="file" size={13} /> {f.name}
@@ -157,17 +153,18 @@ export default function Home() {
               ))}
             </div>
             <button className="edit" onClick={handleReset}>
-              <Icon name="plus" size={14} /> Wijzig
+              <Icon name="plus" size={14} /> {t("editFiles")}
             </button>
           </div>
         )}
 
         <div className="res-header">
-          <div className="eyebrow">Resultaat</div>
-          <h1 className="h-res">Je controle is klaar</h1>
+          <div className="eyebrow">{t("resultEyebrow")}</div>
+          <h1 className="h-res">{t("resultTitle")}</h1>
           <p className="h-sub">
-            {statementCount} {statementCount === 1 ? "jaaropgave" : "jaaropgaves"} vergeleken met je
-            aangifte over {report.taxYear}.
+            {statementCount}{" "}
+            {statementCount === 1 ? t("annualStatementSingular") : t("annualStatementPlural")}{" "}
+            {t("comparedWithYourTaxReturnFor")} {report.taxYear}.
           </p>
         </div>
 
@@ -197,7 +194,7 @@ export default function Home() {
                   <span className="ic">
                     <Icon name="flag" size={18} />
                   </span>
-                  <h2>Aandachtspunten</h2>
+                  <h2>{t("attentionPointsLabel")}</h2>
                   <span className="pill num">{report.attentionPoints.length}</span>
                 </div>
                 <div className="stack">
@@ -228,7 +225,7 @@ export default function Home() {
           target="_blank"
           rel="noopener noreferrer"
           className="ghostbtn"
-          aria-label="Bekijk broncode op GitHub"
+          aria-label={t("githubAriaLabel")}
         >
           <Icon name="github" size={15} /> GitHub
         </a>
