@@ -1,5 +1,7 @@
 import type { AnnualStatementData, AttentionPoint } from "./types";
 import type { Language } from "./translations";
+import { translate } from "./translations";
+import { formatEuro } from "./format";
 
 const HEFFINGSVRIJ_VERMOGEN: Record<number, number> = {
   2021: 50000,
@@ -11,15 +13,6 @@ const HEFFINGSVRIJ_VERMOGEN: Record<number, number> = {
 
 function getThreshold(taxYear: number): number {
   return HEFFINGSVRIJ_VERMOGEN[taxYear] ?? 57000;
-}
-
-function formatEuro(amount: number): string {
-  return new Intl.NumberFormat("nl-NL", {
-    style: "currency",
-    currency: "EUR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
 }
 
 const RULE_TEXT = {
@@ -88,14 +81,10 @@ export function runRuleChecks(
   const threshold = getThreshold(taxYear);
   if (totalBox3 > threshold) {
     points.push({
-      title:
-        language === "en"
-          ? "Assets above tax-free threshold"
-          : "Vermogen boven heffingsvrij vermogen",
-      explanation:
-        language === "en"
-          ? `Based on the uploaded annual income statements, box 3 assets total approximately ${formatEuro(totalBox3)}, which exceeds the ${formatEuro(threshold)} exemption (for one person). Actual assets may be higher if not all annual income statements have been uploaded. Check whether the deemed return is correctly calculated in the tax return.`
-          : `Op basis van de geüploade jaaropgaves bedragen de box 3 activa circa ${formatEuro(totalBox3)}, wat de vrijstelling van ${formatEuro(threshold)} (voor één persoon) overstijgt. Het werkelijke vermogen kan hoger zijn als niet alle jaaropgaves zijn geüpload. Controleer of het fictief rendement correct is berekend in de aangifte.`,
+      title: translate("assetsAboveThresholdTitle", language),
+      explanation: translate("assetsAboveThresholdExplanation", language)
+        .replace("{total}", formatEuro(totalBox3))
+        .replace("{threshold}", formatEuro(threshold)),
     });
   }
 

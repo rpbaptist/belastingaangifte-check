@@ -29,7 +29,7 @@ export function buildAnalysisRequest(
         cache_control: { type: "ephemeral" },
       },
     ],
-    messages: [{ role: "user", content: buildUserMessage(amountMismatches, covered) }],
+    messages: [{ role: "user", content: buildUserMessage(amountMismatches, covered, language) }],
   };
 }
 

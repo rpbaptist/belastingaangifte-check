@@ -67,6 +67,20 @@ describe("buildAnalysisRequest", () => {
     expect(userContent).toContain("NL01TEST");
     expect(userContent).toContain("Saldo");
   });
+
+  it("includes Dutch prompt by default", () => {
+    const req = buildAnalysisRequest(noMismatches, noCovered, rules);
+    const system = Array.isArray(req.system) ? req.system : [];
+    const systemText = system.map((b) => ("text" in b ? b.text : "")).join("");
+    expect(systemText).toContain("Bedrag wijkt af");
+  });
+
+  it("includes English prompt when language is 'en'", () => {
+    const req = buildAnalysisRequest(noMismatches, noCovered, rules, "en");
+    const system = Array.isArray(req.system) ? req.system : [];
+    const systemText = system.map((b) => ("text" in b ? b.text : "")).join("");
+    expect(systemText).toContain("Amount differs");
+  });
 });
 
 describe("parseAnalysisResponse", () => {
@@ -75,9 +89,19 @@ describe("parseAnalysisResponse", () => {
     expect(() => parseAnalysisResponse(res)).toThrow("Analyse afgebroken");
   });
 
+  it("throws an English error on max_tokens stop when language is 'en'", () => {
+    const res = makeResponse({ stop_reason: "max_tokens" });
+    expect(() => parseAnalysisResponse(res, "en")).toThrow("too many entries");
+  });
+
   it("throws when there is no text block", () => {
     const res = makeResponse({});
     expect(() => parseAnalysisResponse(res)).toThrow("Geen reactie ontvangen");
+  });
+
+  it("throws an English error when there is no text block and language is 'en'", () => {
+    const res = makeResponse({});
+    expect(() => parseAnalysisResponse(res, "en")).toThrow("No response received");
   });
 
   it("throws on response that is not a JSON object", () => {
@@ -85,6 +109,11 @@ describe("parseAnalysisResponse", () => {
     // item fields are swallowed. The Zod error path triggers when raw is not an object.
     const res = makeResponse({ text: "null" });
     expect(() => parseAnalysisResponse(res)).toThrow("Analyse mislukt");
+  });
+
+  it("throws an English error on bad JSON when language is 'en'", () => {
+    const res = makeResponse({ text: "null" });
+    expect(() => parseAnalysisResponse(res, "en")).toThrow("Analysis failed");
   });
 
   it("returns attentionPoints on a valid response", () => {
