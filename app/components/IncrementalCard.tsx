@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Icon } from "../Icon";
 import { DropZone } from "./DropZone";
 import { AnalysisProgress } from "./AnalysisProgress";
+import { useTranslation } from "@/app/hooks/useTranslation";
 
 export function IncrementalCard({
   loading,
@@ -14,6 +15,7 @@ export function IncrementalCard({
   error: string | null;
   onSubmit: (files: File[]) => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const [files, setFiles] = useState<File[]>([]);
   const prevLoading = useRef(false);
 
@@ -32,22 +34,19 @@ export function IncrementalCard({
 
   return (
     <div className="icard">
-      <h2>Jaaropgave vergeten?</h2>
-      <p className="icard-desc">
-        Upload een vergeten jaaropgave. Alleen de nieuwe bestanden worden opnieuw verwerkt.
-      </p>
+      <h2>{t("forgotStatementTitle")}</h2>
+      <p className="icard-desc">{t("forgotStatementDesc")}</p>
       <form onSubmit={handleSubmit}>
         <DropZone
-          label="Aanvullende jaaropgaves"
-          hint="Sleep de vergeten PDF's hierheen, of klik om te bladeren"
+          label={t("additionalStatementsLabel")}
+          hint={t("additionalStatementsHint")}
           accept="application/pdf"
           multiple
           files={files}
           onFiles={(incoming) => setFiles((prev) => [...prev, ...incoming])}
         />
         <button className="btn alt" type="submit" disabled={!files.length || loading}>
-          {loading ? "Bezig met verwerken…" : "Analyseer aanvulling"}{" "}
-          <Icon name="arrow" size={16} />
+          {loading ? t("processing") : t("analyzeAddition")} <Icon name="arrow" size={16} />
         </button>
       </form>
       <AnalysisProgress loading={loading} />

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Icon } from "@/app/Icon";
+import { useTranslation } from "@/app/hooks/useTranslation";
 
 export function ApiKeyInput({
   value,
@@ -12,6 +13,7 @@ export function ApiKeyInput({
   onChange: (v: string) => void;
   isEnvKey: boolean;
 }) {
+  const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
 
   if (isEnvKey) return null;
@@ -31,9 +33,7 @@ export function ApiKeyInput({
         }}
       >
         <Icon name="shield" size={14} style={{ color: "var(--pos)", flexShrink: 0 }} />
-        <span style={{ fontSize: 12.5, color: "var(--ink-3)", flex: 1 }}>
-          API-sleutel ingesteld
-        </span>
+        <span style={{ fontSize: 12.5, color: "var(--ink-3)", flex: 1 }}>{t("apiKeySet")}</span>
         <button
           type="button"
           onClick={() => setEditing(true)}
@@ -47,7 +47,7 @@ export function ApiKeyInput({
             padding: 0,
           }}
         >
-          Wijzigen
+          {t("change")}
         </button>
       </div>
     );
@@ -67,11 +67,10 @@ export function ApiKeyInput({
           <label
             style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-2)", whiteSpace: "nowrap" }}
           >
-            Jouw Anthropic API-sleutel
+            {t("apiKeyLabel")}
           </label>
           <p style={{ fontSize: 11, color: "var(--ink-3)", margin: "2px 0 0" }}>
-            Wordt alleen in je browser sessie opgeslagen. Niet op de server. Gebruik een tijdelijke
-            of beperkte key.
+            {t("apiKeyHelp")}
           </p>
         </div>
         {editing && (
@@ -87,7 +86,7 @@ export function ApiKeyInput({
               padding: 0,
             }}
           >
-            Annuleren
+            {t("cancel")}
           </button>
         )}
       </div>

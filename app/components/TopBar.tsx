@@ -2,6 +2,8 @@
 
 import { Icon } from "@/app/Icon";
 import { useDemo } from "@/app/contexts/DemoContext";
+import { useLanguage } from "@/app/contexts/LanguageContext";
+import { useTranslation } from "@/app/hooks/useTranslation";
 
 export function TopBar({
   taxYear,
@@ -13,6 +15,8 @@ export function TopBar({
   onDemo?: () => void;
 }) {
   const isDemo = useDemo();
+  const { language, toggleLanguage } = useLanguage();
+  const { t } = useTranslation();
   return (
     <header className="topbar">
       <div className="topbar-inner">
@@ -24,13 +28,17 @@ export function TopBar({
             <div>
               {onReset ? (
                 <button className="brand-link" onClick={onReset}>
-                  <span className="wm">Aangifte Checker</span>
-                  {isDemo && <span className="demo-chip">Demo</span>}
+                  <span className="wm">{t("appTitle")}</span>
+                  {isDemo && <span className="demo-chip">{t("demoChip")}</span>}
                 </button>
               ) : (
-                <div className="wm">Aangifte Checker</div>
+                <div className="wm">{t("appTitle")}</div>
               )}
-              {taxYear && <div className="sub">Belastingjaar {taxYear}</div>}
+              {taxYear && (
+                <div className="sub">
+                  {t("taxYearPrefix")} {taxYear}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -38,24 +46,27 @@ export function TopBar({
         <div className="topbar-center">
           {onDemo && (
             <button className="topbar-demo" type="button" onClick={onDemo}>
-              Bekijk demo
+              {t("viewDemo")}
             </button>
           )}
         </div>
 
         <div className="topbar-right">
+          <button className="ghostbtn" type="button" onClick={toggleLanguage}>
+            {language === "nl" ? "EN" : "NL"}
+          </button>
           <a
             href="https://github.com/rpbaptist/belastingaangifte-check"
             target="_blank"
             rel="noopener noreferrer"
             className="ghostbtn github-topbar"
-            aria-label="Bekijk broncode op GitHub"
+            aria-label={t("githubAriaLabel")}
           >
             <Icon name="github" size={15} /> GitHub
           </a>
           {onReset && !isDemo && (
             <button className="ghostbtn" onClick={onReset}>
-              <Icon name="refresh" size={15} /> Opnieuw analyseren
+              <Icon name="refresh" size={15} /> {t("reanalyze")}
             </button>
           )}
         </div>
