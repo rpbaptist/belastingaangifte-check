@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslation } from "@/app/hooks/useTranslation";
+import type { TranslationKey } from "@/lib/translations";
 
 export type AnalysisStage = "reading" | "extracting" | "analysing";
 
-const STEPS: { id: AnalysisStage; label: string }[] = [
-  { id: "reading", label: "Documenten lezen" },
-  { id: "extracting", label: "Gegevens extraheren" },
-  { id: "analysing", label: "Vergelijken en analyseren" },
+const STEPS: { id: AnalysisStage; key: TranslationKey }[] = [
+  { id: "reading", key: "stepReading" },
+  { id: "extracting", key: "stepExtracting" },
+  { id: "analysing", key: "stepAnalysing" },
 ];
 
 const STAGE_ORDER: AnalysisStage[] = ["reading", "extracting", "analysing"];
@@ -17,6 +19,7 @@ function stageIndex(s: AnalysisStage) {
 }
 
 export function AnalysisProgress({ loading }: { loading: boolean }) {
+  const { t } = useTranslation();
   const [stage, setStage] = useState<AnalysisStage>("reading");
 
   useEffect(() => {
@@ -48,13 +51,13 @@ export function AnalysisProgress({ loading }: { loading: boolean }) {
               {i > 0 && <div className="lstep-sep" />}
               <div className={`lstep lstep-${state}`}>
                 <div className="lstep-dot" />
-                <span>{step.label}</span>
+                <span>{t(step.key)}</span>
               </div>
             </div>
           );
         })}
       </div>
-      <p className="loading-sub">Dit kan een paar minuten duren.</p>
+      <p className="loading-sub">{t("analysisTimeNotice")}</p>
     </div>
   );
 }

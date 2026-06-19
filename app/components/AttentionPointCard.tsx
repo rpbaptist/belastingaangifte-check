@@ -7,6 +7,7 @@ import { Icon } from "@/app/Icon";
 import type { AttentionPoint } from "@/lib/types";
 import { useDemo } from "@/app/contexts/DemoContext";
 import { useChatQuestion } from "@/app/hooks/useChatQuestion";
+import { useTranslation } from "@/app/hooks/useTranslation";
 import { formatMetadata } from "@/lib/format";
 
 const markdownComponents = {
@@ -36,6 +37,7 @@ export function AttentionPointCard({
   apiKey: string;
 }) {
   const isDemo = useDemo();
+  const { t, language } = useTranslation();
   const initialMessages = item.initialMessages ?? [];
   const [open, setOpen] = useState(initialMessages.length > 0);
   const [question, setQuestion] = useState("");
@@ -44,6 +46,7 @@ export function AttentionPointCard({
     item,
     taxYear,
     apiKey,
+    language,
     initialMessages
   );
 
@@ -55,14 +58,14 @@ export function AttentionPointCard({
 
   async function handleMoreDetail() {
     setOpen(true);
-    await sendQuestion("Geef een uitgebreidere uitleg over dit aandachtspunt.");
+    await sendQuestion(t("moreDetailQuestion"));
   }
 
   const toggleLabel = open
-    ? "Verberg gesprek"
+    ? t("hideConversation")
     : history.length > 0
-      ? "Bekijk gesprek"
-      : "Stel een vraag";
+      ? t("viewConversation")
+      : t("askQuestion");
 
   return (
     <div className={`acard${resolved ? " resolved" : ""}`}>
@@ -89,14 +92,14 @@ export function AttentionPointCard({
         </button>
         {history.length === 0 && (
           <button className="gbtn" onClick={handleMoreDetail} disabled={loading || isDemo}>
-            {loading ? "Bezig…" : "Meer uitleg"}
+            {loading ? t("busy") : t("moreDetail")}
           </button>
         )}
         <button
           className={`gbtn mute${resolved ? " on" : ""}`}
           onClick={() => setResolved((v) => !v)}
         >
-          <Icon name="check-circle" size={14} /> {resolved ? "Opgelost" : "Markeer als opgelost"}
+          <Icon name="check-circle" size={14} /> {resolved ? t("resolved") : t("markResolved")}
         </button>
       </div>
 
@@ -113,7 +116,7 @@ export function AttentionPointCard({
               )}
             </div>
           ))}
-          {loading && <div className="typing">Bezig met antwoorden…</div>}
+          {loading && <div className="typing">{t("answering")}</div>}
           {!isDemo && (
             <form className="chatin" onSubmit={handleSubmit}>
               <textarea
@@ -127,10 +130,16 @@ export function AttentionPointCard({
                     });
                   }
                 }}
-                placeholder={history.length > 0 ? "Vervolgvraag…" : "Typ je vraag…"}
+                placeholder={
+                  history.length > 0 ? t("followUpPlaceholder") : t("questionPlaceholder")
+                }
                 rows={1}
               />
-              <button type="submit" disabled={!question.trim() || loading} aria-label="Verstuur">
+              <button
+                type="submit"
+                disabled={!question.trim() || loading}
+                aria-label={t("sendAriaLabel")}
+              >
                 <Icon name="send" size={16} />
               </button>
             </form>
