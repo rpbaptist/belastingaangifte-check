@@ -16,7 +16,9 @@ describe("buildAnalyzerPrompt", () => {
 
   it("adds the English language directive when language is 'en'", () => {
     const prompt = buildAnalyzerPrompt("Some rules", "en");
-    expect(prompt).toContain("Write the `title` and `explanation` values in the output JSON in English");
+    expect(prompt).toContain(
+      "Write the `title` and `explanation` values in the output JSON in English"
+    );
   });
 
   it("does not add the language directive when language is 'nl'", () => {
@@ -49,12 +51,16 @@ describe("buildUserMessage", () => {
         jaaropgave: {
           statement: {
             institution: "Employer",
-            institutionType: "employer" as const,
+            institutionType: "other" as const,
             taxYear: 2024,
             accounts: [],
             metadata: {},
           },
-          account: { accountNumber: "NL01TEST", description: "Salary", amounts: { salary: { wage: 52000 } } },
+          account: {
+            accountNumber: "NL01TEST",
+            description: "Salary",
+            amounts: { salary: { wage: 52000 } },
+          },
         },
         amountStatement: 52000,
       },
@@ -72,12 +78,16 @@ describe("buildUserMessage", () => {
         jaaropgave: {
           statement: {
             institution: "Employer",
-            institutionType: "employer" as const,
+            institutionType: "other" as const,
             taxYear: 2024,
             accounts: [],
             metadata: {},
           },
-          account: { accountNumber: "NL01TEST", description: "Salary", amounts: { salary: { wage: 52000 } } },
+          account: {
+            accountNumber: "NL01TEST",
+            description: "Salary",
+            amounts: { salary: { wage: 52000 } },
+          },
         },
         amountStatement: 52000,
       },
