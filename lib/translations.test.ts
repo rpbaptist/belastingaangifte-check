@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { translate, formatTaxReturnProcessingError, formatExtractionFailed, formatAnalysisFailed } from "./translations";
+import {
+  translate,
+  formatTaxReturnProcessingError,
+  formatExtractionFailed,
+  formatAnalysisFailed,
+} from "./translations";
 
 describe("translate", () => {
   it("returns Dutch text for language 'nl'", () => {
@@ -23,7 +28,9 @@ describe("translate", () => {
   });
 
   it("returns assetsAboveThresholdTitle in both languages", () => {
-    expect(translate("assetsAboveThresholdTitle", "nl")).toBe("Vermogen boven heffingsvrij vermogen");
+    expect(translate("assetsAboveThresholdTitle", "nl")).toBe(
+      "Vermogen boven heffingsvrij vermogen"
+    );
     expect(translate("assetsAboveThresholdTitle", "en")).toBe("Assets above tax-free threshold");
   });
 
