@@ -77,4 +77,33 @@ describe("useAnalysis", () => {
 
     expect(firstSignal.aborted).toBe(true);
   });
+
+  it("does not clobber loading state when a stale aborted request settles after a newer one has started", async () => {
+    let rejectFirst!: (reason: unknown) => void;
+    const firstFetch = new Promise<Response>((_, reject) => {
+      rejectFirst = reject;
+    });
+    const secondFetch = new Promise<Response>(() => {});
+    const fetchMock = vi
+      .fn()
+      .mockImplementationOnce(() => firstFetch)
+      .mockImplementationOnce(() => secondFetch);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useAnalysis("test-key", "nl"));
+    const file = new File(["content"], "aangifte.pdf");
+
+    await act(async () => {
+      result.current.analyze(file, []);
+    });
+    expect(result.current.loading).toBe(true);
+
+    await act(async () => {
+      result.current.analyze(file, []);
+      rejectFirst(new DOMException("Aborted", "AbortError"));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(result.current.loading).toBe(true);
+  });
 });
