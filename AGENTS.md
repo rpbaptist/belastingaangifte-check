@@ -41,6 +41,22 @@ Default to continuing to the next step unless instructed otherwise.
 5. Use the imperative mood in the subject line
 6. Use the body to explain what and why vs. how
 
+### Code style
+
+- React components only render. Should not contain logic.
+- Route handlers (`app/api/*/route.ts`) delegate. Parse the request, call into
+  `src/*`, map the result to a response. Business logic, validation, and
+  error-to-status-code mapping belong in `src/*` where they're unit-testable, not
+  inline in the route file.
+- All DB writes go through `src/repositories/*`. No raw SQL with interpolated
+  table/column names outside a repository class.
+- Client components import and reuse server-defined types from `src/repositories/*`
+  (or wherever the type is defined) instead of hand-declaring a parallel local
+  `interface` for the same shape.
+- When one type is asked to represent two structurally different cases (e.g. a
+  legacy-imported record vs. a new-flow one), prefer a discriminated union over a
+  single type where half the fields are `| null` depending on which case you're in.
+
 # This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
