@@ -48,7 +48,7 @@ export function useAnalysis(apiKey: string, language: Language) {
       if (err instanceof DOMException && err.name === "AbortError") return;
       setError(err instanceof Error ? err.message : translate("clientUnknownError", language));
     } finally {
-      setLoading(false);
+      if (abortRef.current === controller) setLoading(false);
     }
   }
 
@@ -84,7 +84,7 @@ export function useAnalysis(apiKey: string, language: Language) {
         err instanceof Error ? err.message : translate("clientUnknownError", language)
       );
     } finally {
-      setIncrementalLoading(false);
+      if (abortRef.current === controller) setIncrementalLoading(false);
     }
   }
 
