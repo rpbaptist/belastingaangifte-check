@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     });
 
     const text = extractResponseText(response);
-    if (!text) {
+    if (text === undefined) {
       return NextResponse.json({ error: translate("noAnswerReceived", language) }, { status: 500 });
     }
 

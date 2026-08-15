@@ -27,4 +27,9 @@ describe("extractResponseText", () => {
     ] as unknown as Anthropic.Message["content"]);
     expect(extractResponseText(response)).toBeUndefined();
   });
+
+  it("returns an empty string rather than undefined for an empty text block", () => {
+    const response = makeResponse([{ type: "text", text: "", citations: null }]);
+    expect(extractResponseText(response)).toBe("");
+  });
 });
