@@ -5,7 +5,7 @@ describe("buildQuestionMessages", () => {
   it("builds a single user message with the context and question when there is no history", () => {
     const messages = buildQuestionMessages(
       "Moet ik dit opgeven?",
-      { title: "Hypotheekrente" },
+      { title: "Hypotheekrente", explanation: "Rente niet in aangifte" },
       2024,
       [],
       "nl"
@@ -15,7 +15,7 @@ describe("buildQuestionMessages", () => {
       {
         role: "user",
         content:
-          '## Aandachtspunt (belastingjaar 2024)\n\n{\n  "title": "Hypotheekrente"\n}\n\n## Vraag\n\nMoet ik dit opgeven?',
+          '## Aandachtspunt (belastingjaar 2024)\n\n{\n  "title": "Hypotheekrente",\n  "explanation": "Rente niet in aangifte"\n}\n\n## Vraag\n\nMoet ik dit opgeven?',
       },
     ]);
   });
@@ -28,7 +28,7 @@ describe("buildQuestionMessages", () => {
 
     const messages = buildQuestionMessages(
       "En wat nu?",
-      { title: "Hypotheekrente" },
+      { title: "Hypotheekrente", explanation: "Rente niet in aangifte" },
       2024,
       history,
       "nl"
@@ -38,7 +38,7 @@ describe("buildQuestionMessages", () => {
       {
         role: "user",
         content:
-          '## Aandachtspunt (belastingjaar 2024)\n\n{\n  "title": "Hypotheekrente"\n}\n\n## Vraag\n\nWat betekent dit?',
+          '## Aandachtspunt (belastingjaar 2024)\n\n{\n  "title": "Hypotheekrente",\n  "explanation": "Rente niet in aangifte"\n}\n\n## Vraag\n\nWat betekent dit?',
       },
       { role: "assistant", content: "Dit betekent dat..." },
       { role: "user", content: "En wat nu?" },
@@ -48,7 +48,7 @@ describe("buildQuestionMessages", () => {
   it("uses English headings when language is 'en'", () => {
     const messages = buildQuestionMessages(
       "Do I need to report this?",
-      { title: "x" },
+      { title: "x", explanation: "y" },
       2024,
       [],
       "en"
