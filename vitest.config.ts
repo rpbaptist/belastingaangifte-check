@@ -3,8 +3,8 @@ import path from "path";
 
 export default defineConfig({
   test: {
-    environment: "node",
-    include: ["lib/**/*.test.ts"],
+    environment: "jsdom",
+    include: ["lib/**/*.test.ts", "app/**/*.test.tsx"],
     exclude: ["node_modules/**", ".claude/**"],
   },
   resolve: {

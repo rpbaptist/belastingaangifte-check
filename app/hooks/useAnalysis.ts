@@ -18,6 +18,7 @@ export function useAnalysis(apiKey: string, language: Language) {
   useEffect(() => () => abortRef.current?.abort(), []);
 
   async function analyze(aangifte: File, jaaropgaves: File[]) {
+    abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
     setLoading(true);
@@ -53,6 +54,7 @@ export function useAnalysis(apiKey: string, language: Language) {
 
   async function analyzeIncremental(files: File[]): Promise<void> {
     if (!extractedData) return;
+    abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
     setIncrementalLoading(true);
