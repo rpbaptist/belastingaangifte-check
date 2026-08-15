@@ -2,7 +2,7 @@ import { extractAnnualStatement, extractTaxReturn } from "./extractor";
 import type { AnnualStatementData, ExtractionError, TaxReturnData } from "./types";
 import { isUserFacingError } from "./anthropic-error";
 import { createClient } from "./llm";
-import { translate, type Language } from "./translations";
+import { formatTaxReturnProcessingError, translate, type Language } from "./translations";
 
 type StatementInput = { data: string; filename: string };
 
@@ -14,6 +14,17 @@ export type ExtractionSessionResult =
       errors: ExtractionError[];
     }
   | { ok: false; message: string };
+
+export function formatSessionFailure(
+  fileName: string,
+  result: Extract<ExtractionSessionResult, { ok: false }>,
+  language: Language
+): { status: number; message: string } {
+  return {
+    status: 422,
+    message: formatTaxReturnProcessingError(fileName, result.message, language),
+  };
+}
 
 export async function runExtractionSession(
   taxReturnPdf: string,
