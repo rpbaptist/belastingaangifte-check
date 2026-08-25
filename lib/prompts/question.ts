@@ -1,3 +1,5 @@
+import type Anthropic from "@anthropic-ai/sdk";
+import type { AttentionPoint } from "../types";
 import type { Language } from "../translations";
 
 const QUESTION_SYSTEM_NL = `Je bent een Nederlandse belastingadviseur. Je beantwoordt vragen over aandachtspunten die zijn gevonden in een belastingaangifte-analyse.
@@ -20,4 +22,27 @@ Guidelines:
 
 export function buildQuestionSystem(language: Language = "nl"): string {
   return language === "en" ? QUESTION_SYSTEM_EN : QUESTION_SYSTEM_NL;
+}
+
+export function buildQuestionMessages(
+  question: string,
+  attentionPoint: AttentionPoint,
+  taxYear: number,
+  history: Array<{ role: "user" | "assistant"; content: string }>,
+  language: Language
+): Anthropic.MessageParam[] {
+  const contextHeading =
+    language === "en"
+      ? `Attention Point (tax year ${taxYear})`
+      : `Aandachtspunt (belastingjaar ${taxYear})`;
+  const questionHeading = language === "en" ? "Question" : "Vraag";
+  const context = `## ${contextHeading}\n\n${JSON.stringify(attentionPoint, null, 2)}`;
+
+  return history.length
+    ? [
+        { role: "user", content: `${context}\n\n## ${questionHeading}\n\n${history[0].content}` },
+        ...history.slice(1).map((m) => ({ role: m.role, content: m.content })),
+        { role: "user", content: question },
+      ]
+    : [{ role: "user", content: `${context}\n\n## ${questionHeading}\n\n${question}` }];
 }

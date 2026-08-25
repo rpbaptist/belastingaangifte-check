@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { classifyError } from "@/lib/anthropic-error";
 import type { QuestionRequest, QuestionResponse } from "@/lib/types";
-import { buildQuestionSystem } from "@/lib/prompts/question";
-import { createClient, QUESTION_MODEL } from "@/lib/llm";
+import { buildQuestionMessages, buildQuestionSystem } from "@/lib/prompts/question";
+import { createClient, extractResponseText, QUESTION_MODEL } from "@/lib/llm";
 import { translate, type Language } from "@/lib/translations";
-import type Anthropic from "@anthropic-ai/sdk";
 
 export const maxDuration = 60;
 
@@ -27,20 +26,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: translate("noQuestionReceived", language) }, { status: 400 });
   }
 
-  const contextHeading =
-    language === "en"
-      ? `Attention Point (tax year ${taxYear})`
-      : `Aandachtspunt (belastingjaar ${taxYear})`;
-  const questionHeading = language === "en" ? "Question" : "Vraag";
-  const context = `## ${contextHeading}\n\n${JSON.stringify(attentionPoint, null, 2)}`;
-
-  const messages: Anthropic.MessageParam[] = history.length
-    ? [
-        { role: "user", content: `${context}\n\n## ${questionHeading}\n\n${history[0].content}` },
-        ...history.slice(1).map((m) => ({ role: m.role, content: m.content })),
-        { role: "user", content: question },
-      ]
-    : [{ role: "user", content: `${context}\n\n## ${questionHeading}\n\n${question}` }];
+  const messages = buildQuestionMessages(question, attentionPoint, taxYear, history, language);
 
   try {
     const response = await client.messages.create({
@@ -52,12 +38,12 @@ export async function POST(request: NextRequest) {
       messages,
     });
 
-    const textBlock = response.content.find((b) => b.type === "text");
-    if (!textBlock || textBlock.type !== "text") {
+    const text = extractResponseText(response);
+    if (text === undefined) {
       return NextResponse.json({ error: translate("noAnswerReceived", language) }, { status: 500 });
     }
 
-    const result: QuestionResponse = { answer: textBlock.text };
+    const result: QuestionResponse = { answer: text };
     return NextResponse.json(result);
   } catch (err) {
     const { status, message } = classifyError(err, language);
