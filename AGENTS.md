@@ -25,13 +25,22 @@ For all new features and changes:
 - Create a GitHub issue with the plan.
 - Implement new issues on a new worktree.
 - When changing or adding new functionality, use `tdd` skill.
-- Before committing, use `qa` skill
+- Before committing, use `qa` skill. CI also runs `fallow` (see below) in
+  audit mode, so a local `npm run check:fallow` catches the same gate early.
 - Create logically grouped, atomic commits.
 - Update documentation according to changes made.
 - Create a PR and review it. Concise, only comment when something requires attention and is actionable.
 - Address small review issues directly. If larger or makes sense to follow up, create a new GitHub issues.
 
 Default to continuing to the next step unless instructed otherwise.
+
+### Static analysis
+
+[fallow](https://github.com/fallow-rs/fallow) runs in CI (`fallow audit`, gating
+only issues introduced by the current diff, not pre-existing debt). One-time
+local setup: run `npx fallow hooks install --target git` from the repo root
+(not a linked worktree — the installer doesn't support those) to also gate
+commits locally.
 
 ### Commit style
 
