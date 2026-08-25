@@ -28,7 +28,7 @@ export function buildUserMessage(
   return parts.join("\n");
 }
 
-export function buildAnalyzerPrompt(rules: string): string {
+export function buildAnalyzerPrompt(rules: string, retrievedContext: string = ""): string {
   return `You are a tax analyst specialized in Dutch tax law. The reconciliation between tax return and annual income statements has been done by code. You will receive the list of already-covered accounts — do NOT raise attentionPoints questioning whether those accounts appear in the tax return; that check is already done. Your job is to review amount mismatches and generate attentionPoints for anything a Dutch tax expert would flag.
 
 ## Amount mismatches
@@ -42,7 +42,7 @@ You will receive matched pairs where the tax return and annual income statement 
 
 ${rules}
 
-## Output
+${retrievedContext ? `## Official sources (Belastingdienst.nl, to support your judgment)\n\n${retrievedContext}\n\n` : ""}## Output
 
 Your response must be a single raw JSON object — nothing before the opening brace, nothing after the closing brace. No markdown fences, no prose, no explanation.
 

@@ -13,6 +13,10 @@ export function buildUserMessage(
   return builders[language].buildUserMessage(amountMismatches, covered);
 }
 
-export function buildAnalyzerPrompt(rules: string, language: Language = "nl"): string {
-  return builders[language].buildAnalyzerPrompt(rules);
+export function buildAnalyzerPrompt(
+  rules: string,
+  language: Language = "nl",
+  retrievedContext: string = ""
+): string {
+  return builders[language].buildAnalyzerPrompt(rules, retrievedContext);
 }
