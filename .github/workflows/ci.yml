@@ -8,8 +8,14 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -30,3 +36,9 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      - name: Fallow
+        uses: fallow-rs/fallow@v3
+        with:
+          command: audit
+          comment: true
