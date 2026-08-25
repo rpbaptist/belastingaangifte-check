@@ -73,16 +73,20 @@ async function scrapePage(page: SourcePage) {
   return chunkText({ url: page.url, title: page.title, text });
 }
 
-async function main() {
-  const client = createVoyageClient();
-  const allTextChunks: { sourceUrl: string; sourceTitle: string; text: string }[] = [];
+type TextChunk = { sourceUrl: string; sourceTitle: string; text: string };
+
+async function scrapeAllPages(): Promise<{
+  textChunks: TextChunk[];
+  chunksByTopic: Map<string, number>;
+}> {
+  const textChunks: TextChunk[] = [];
   const chunksByTopic = new Map<string, number>();
 
   for (const page of SOURCE_PAGES) {
     process.stdout.write(`Scraping ${page.url}... `);
     try {
       const chunks = await scrapePage(page);
-      allTextChunks.push(...chunks);
+      textChunks.push(...chunks);
       chunksByTopic.set(page.topic, (chunksByTopic.get(page.topic) ?? 0) + chunks.length);
       console.log(`${chunks.length} chunks`);
     } catch (err) {
@@ -91,15 +95,16 @@ async function main() {
     await sleep(FETCH_DELAY_MS);
   }
 
-  console.log("\nChunks per topic:");
-  for (const [topic, count] of chunksByTopic) {
-    console.log(`  ${topic}: ${count}`);
-  }
+  return { textChunks, chunksByTopic };
+}
 
-  console.log(`\nEmbedding ${allTextChunks.length} chunks via Voyage AI...`);
+async function embedAllChunks(
+  client: ReturnType<typeof createVoyageClient>,
+  textChunks: TextChunk[]
+): Promise<Chunk[]> {
   const chunks: Chunk[] = [];
-  for (let i = 0; i < allTextChunks.length; i += EMBED_BATCH_SIZE) {
-    const batch = allTextChunks.slice(i, i + EMBED_BATCH_SIZE);
+  for (let i = 0; i < textChunks.length; i += EMBED_BATCH_SIZE) {
+    const batch = textChunks.slice(i, i + EMBED_BATCH_SIZE);
     const embeddings = await client.embed(
       batch.map((c) => c.text),
       "document"
@@ -108,18 +113,39 @@ async function main() {
       chunks.push({ ...c, id: `${c.sourceUrl}#${i + j}`, embedding: embeddings[j] });
     });
     console.log(
-      `  embedded ${Math.min(i + EMBED_BATCH_SIZE, allTextChunks.length)}/${allTextChunks.length}`
+      `  embedded ${Math.min(i + EMBED_BATCH_SIZE, textChunks.length)}/${textChunks.length}`
     );
     await sleep(EMBED_BATCH_DELAY_MS);
   }
+  return chunks;
+}
 
+function logChunksByTopic(chunksByTopic: Map<string, number>) {
+  console.log("\nChunks per topic:");
+  for (const [topic, count] of chunksByTopic) {
+    console.log(`  ${topic}: ${count}`);
+  }
+}
+
+function writeCorpus(chunks: Chunk[], textChunks: TextChunk[]) {
   const outPath = path.join(process.cwd(), "lib", "rag", "corpus.json");
   writeFileSync(outPath, JSON.stringify(chunks, null, 2), "utf-8");
 
-  const totalChars = allTextChunks.reduce((sum, c) => sum + c.text.length, 0);
+  const totalChars = textChunks.reduce((sum, c) => sum + c.text.length, 0);
   console.log(
     `\nWrote ${chunks.length} chunks (${totalChars.toLocaleString()} chars) to ${outPath}`
   );
+}
+
+async function main() {
+  const client = createVoyageClient();
+  const { textChunks, chunksByTopic } = await scrapeAllPages();
+  logChunksByTopic(chunksByTopic);
+
+  console.log(`\nEmbedding ${textChunks.length} chunks via Voyage AI...`);
+  const chunks = await embedAllChunks(client, textChunks);
+
+  writeCorpus(chunks, textChunks);
 }
 
 main().catch((err) => {

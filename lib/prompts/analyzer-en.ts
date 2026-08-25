@@ -1,6 +1,6 @@
 import type { AmountMismatch } from "../categorizer";
 
-export function buildUserMessage(
+function buildUserMessage(
   amountMismatches: AmountMismatch[],
   covered: { accountNumber: string; institution: string }[]
 ): string {
@@ -28,7 +28,7 @@ export function buildUserMessage(
   return parts.join("\n");
 }
 
-export function buildAnalyzerPrompt(rules: string, retrievedContext: string = ""): string {
+function buildAnalyzerPrompt(rules: string, retrievedContext: string = ""): string {
   return `You are a tax analyst specialized in Dutch tax law. The reconciliation between tax return and annual income statements has been done by code. You will receive the list of already-covered accounts — do NOT raise attentionPoints questioning whether those accounts appear in the tax return; that check is already done. Your job is to review amount mismatches and generate attentionPoints for anything a Dutch tax expert would flag.
 
 ## Amount mismatches
@@ -61,3 +61,5 @@ If there are no attentionPoints to report, return: {"attentionPoints": []}
 
 Write the \`title\` and \`explanation\` values in the output JSON in English.`;
 }
+
+export const analyzerPromptsEn = { buildUserMessage, buildAnalyzerPrompt };
