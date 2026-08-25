@@ -73,4 +73,33 @@ describe("withRetry", () => {
     expect(result.ok).toBe(false);
     expect(fn).toHaveBeenCalledTimes(1);
   });
+
+  it("uses a custom isRetryable predicate when provided", async () => {
+    class CustomError extends Error {
+      constructor(public status: number) {
+        super("custom");
+      }
+    }
+    const fn = vi.fn().mockRejectedValueOnce(new CustomError(429)).mockResolvedValue("ok");
+
+    const promise = withRetry(fn, 4, (err) => err instanceof CustomError && err.status === 429);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(await promise).toBe("ok");
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not retry when the custom isRetryable predicate returns false", async () => {
+    class CustomError extends Error {
+      constructor(public status: number) {
+        super("custom");
+      }
+    }
+    const fn = vi.fn().mockRejectedValue(new CustomError(401));
+
+    const result = await settle(
+      withRetry(fn, 4, (err) => err instanceof CustomError && err.status === 429)
+    );
+    expect(result.ok).toBe(false);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
 });
