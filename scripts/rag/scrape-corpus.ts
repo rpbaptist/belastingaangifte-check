@@ -14,7 +14,10 @@ import type { Chunk } from "../../lib/rag/types";
 const USER_AGENT = "belastingaangifte-check-kennisbank-scraper/1.0";
 const FETCH_DELAY_MS = 450;
 const CACHE_DIR = path.join(process.cwd(), ".rag-scrape-cache");
-const EMBED_BATCH_SIZE = 100;
+// Kept well under Voyage's reduced new-account tier (10K TPM) as well as its standard
+// tier — a ~1000-char chunk is roughly 200-250 tokens, so 30 chunks stays under ~7.5K.
+const EMBED_BATCH_SIZE = 30;
+const EMBED_BATCH_DELAY_MS = 1000;
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -100,6 +103,10 @@ async function main() {
     batch.forEach((c, j) => {
       chunks.push({ ...c, id: `${c.sourceUrl}#${i + j}`, embedding: embeddings[j] });
     });
+    console.log(
+      `  embedded ${Math.min(i + EMBED_BATCH_SIZE, allTextChunks.length)}/${allTextChunks.length}`
+    );
+    await sleep(EMBED_BATCH_DELAY_MS);
   }
 
   const outPath = path.join(process.cwd(), "lib", "rag", "corpus.json");
