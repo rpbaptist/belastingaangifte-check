@@ -9,7 +9,8 @@
     "test": "NODE_OPTIONS=--no-deprecation vitest run",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "scrape:kennisbank": "tsx scripts/rag/scrape-corpus.ts"
+    "scrape:kennisbank": "tsx scripts/rag/scrape-corpus.ts",
+    "check:fallow": "fallow audit"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.99.0",
@@ -30,6 +31,7 @@
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.6",
     "eslint-config-prettier": "^10.1.8",
+    "fallow": "^3.18.0",
     "jsdom": "^30.0.1",
     "prettier": "^3.8.3",
     "tailwindcss": "^4",
