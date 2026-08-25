@@ -97,7 +97,7 @@ export const SOURCE_PAGES: SourcePage[] = [
 // Defensive guard: none of the curated URLs above should ever fall under these prefixes.
 // Checked against robots.txt at planning time — kept here so a future edit to the list
 // can't silently violate it.
-export const DISALLOWED_PATH_PREFIXES = [
+const DISALLOWED_PATH_PREFIXES = [
   "/config/",
   "/data/",
   "/monitor/",

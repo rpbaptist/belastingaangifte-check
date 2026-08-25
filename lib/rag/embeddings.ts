@@ -1,10 +1,10 @@
 import { withRetry } from "../utils";
 import type { EmbeddingClient } from "./types";
 
-export const EMBEDDING_MODEL = "voyage-4-lite";
-export const EMBEDDING_DIMENSIONS = 512;
+const EMBEDDING_MODEL = "voyage-4-lite";
+const EMBEDDING_DIMENSIONS = 512;
 
-export class VoyageApiError extends Error {
+class VoyageApiError extends Error {
   constructor(
     public status: number,
     message: string
