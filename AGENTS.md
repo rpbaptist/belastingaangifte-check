@@ -27,6 +27,7 @@ For all new features and changes:
 - When changing or adding new functionality, use `tdd` skill.
 - Before committing, use `qa` skill
 - Create logically grouped, atomic commits.
+- Update documentation according to changes made.
 - Create a PR and review it. Concise, only comment when something requires attention and is actionable.
 - Address small review issues directly. If larger or makes sense to follow up, create a new GitHub issues.
 
