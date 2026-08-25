@@ -46,3 +46,6 @@ next-env.d.ts
 
 # dev extraction cache
 .extracted/
+
+# fallow
+.fallow/
