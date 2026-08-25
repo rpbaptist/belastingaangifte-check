@@ -46,3 +46,6 @@ next-env.d.ts
 
 # dev extraction cache
 .extracted/
+
+# RAG scraper raw-HTML cache (dev iteration only — lib/rag/corpus.json itself is committed)
+.rag-scrape-cache/
