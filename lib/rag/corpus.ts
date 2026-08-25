@@ -21,12 +21,19 @@ let cached: VectorStore | null = null;
 export function getVectorStore(): VectorStore {
   if (cached) return cached;
 
+  const file = path.join(process.cwd(), "lib", "rag", "corpus.json");
   let chunks: z.infer<typeof CorpusSchema> = [];
-  try {
-    const file = path.join(process.cwd(), "lib", "rag", "corpus.json");
-    chunks = CorpusSchema.parse(JSON.parse(fs.readFileSync(file, "utf-8")));
-  } catch {
-    chunks = []; // corpus.json missing/corrupt — retrieval degrades to empty context
+
+  if (fs.existsSync(file)) {
+    // Missing corpus.json is an expected state (a fresh clone before the scraper has
+    // been run) and stays silent. A file that exists but fails to parse or validate is
+    // unexpected — e.g. a corrupted commit or a corpus.json/Chunk schema drift — and is
+    // worth a warning rather than degrading silently.
+    try {
+      chunks = CorpusSchema.parse(JSON.parse(fs.readFileSync(file, "utf-8")));
+    } catch (err) {
+      console.warn("Kennisbank corpus.json exists but could not be loaded:", err);
+    }
   }
 
   cached = new FileVectorStore(chunks);

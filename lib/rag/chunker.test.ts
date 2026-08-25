@@ -64,4 +64,20 @@ describe("chunkText", () => {
     const tailOfFirst = chunks[0].text.slice(-120);
     expect(chunks[1].text.startsWith(tailOfFirst)).toBe(true);
   });
+
+  it("does not duplicate the heading when the overlap tail is the heading itself", () => {
+    // A short heading immediately followed by a paragraph that alone overflows maxChars:
+    // the heading-only first chunk's overlap tail equals the heading, which must not be
+    // prefixed twice into the next chunk.
+    const chunks = chunkText(
+      {
+        url: "https://example.org/e",
+        title: "Korte kop",
+        text: `## Heading\n\n${"A".repeat(990)}`,
+      },
+      { maxChars: 1000, overlapChars: 120 }
+    );
+
+    expect(chunks[1].text.startsWith("## Heading\n\n## Heading")).toBe(false);
+  });
 });

@@ -8,6 +8,7 @@ import { createHash } from "crypto";
 import path from "path";
 import { chunkText } from "../../lib/rag/chunker";
 import { createVoyageClient } from "../../lib/rag/embeddings";
+import { sleep } from "../../lib/utils";
 import { isDisallowed, SOURCE_PAGES, type SourcePage } from "./source-pages";
 import type { Chunk } from "../../lib/rag/types";
 
@@ -18,10 +19,6 @@ const CACHE_DIR = path.join(process.cwd(), ".rag-scrape-cache");
 // tier — a ~1000-char chunk is roughly 200-250 tokens, so 30 chunks stays under ~7.5K.
 const EMBED_BATCH_SIZE = 30;
 const EMBED_BATCH_DELAY_MS = 1000;
-
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function cachePathFor(url: string): string {
   const hash = createHash("sha256").update(url).digest("hex");
@@ -79,17 +76,24 @@ async function scrapePage(page: SourcePage) {
 async function main() {
   const client = createVoyageClient();
   const allTextChunks: { sourceUrl: string; sourceTitle: string; text: string }[] = [];
+  const chunksByTopic = new Map<string, number>();
 
   for (const page of SOURCE_PAGES) {
     process.stdout.write(`Scraping ${page.url}... `);
     try {
       const chunks = await scrapePage(page);
       allTextChunks.push(...chunks);
+      chunksByTopic.set(page.topic, (chunksByTopic.get(page.topic) ?? 0) + chunks.length);
       console.log(`${chunks.length} chunks`);
     } catch (err) {
       console.log(`FAILED: ${err instanceof Error ? err.message : err}`);
     }
     await sleep(FETCH_DELAY_MS);
+  }
+
+  console.log("\nChunks per topic:");
+  for (const [topic, count] of chunksByTopic) {
+    console.log(`  ${topic}: ${count}`);
   }
 
   console.log(`\nEmbedding ${allTextChunks.length} chunks via Voyage AI...`);

@@ -46,7 +46,7 @@ export function chunkText(
       flush();
       const prefixParts = [];
       if (currentHeading && currentHeading !== paragraph) prefixParts.push(currentHeading);
-      if (overlap) prefixParts.push(overlap);
+      if (overlap && overlap !== currentHeading) prefixParts.push(overlap);
       prefixParts.push(paragraph);
       current = prefixParts.join("\n\n");
     } else {

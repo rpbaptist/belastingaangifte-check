@@ -99,7 +99,7 @@ export async function analyzeDocuments(
     let retrievedContext = "";
     try {
       const chunks = await retrieveKennisbankContext(amountMismatches);
-      retrievedContext = formatRetrievedContext(chunks);
+      retrievedContext = formatRetrievedContext(chunks, language);
     } catch (err) {
       console.warn("Kennisbank retrieval failed, continuing without official-source context:", err);
     }

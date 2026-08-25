@@ -1,4 +1,5 @@
 import type { AmountMismatch } from "../categorizer";
+import type { Language } from "../translations";
 import { createVoyageClient } from "./embeddings";
 import { getVectorStore } from "./corpus";
 import type { EmbeddingClient, ScoredChunk, VectorStore } from "./types";
@@ -14,10 +15,13 @@ export function buildRetrievalQuery(amountMismatches: AmountMismatch[]): string 
   return `Nederlandse belastingaangifte aandachtspunten: ${[...topics].join(", ")}`;
 }
 
-export function formatRetrievedContext(chunks: ScoredChunk[]): string {
+export function formatRetrievedContext(chunks: ScoredChunk[], language: Language = "nl"): string {
   if (chunks.length === 0) return "";
+  const sourceLabel = language === "en" ? "Source" : "Bron";
   return chunks
-    .map((c) => `### ${c.chunk.sourceTitle}\nBron: ${c.chunk.sourceUrl}\n\n${c.chunk.text}`)
+    .map(
+      (c) => `### ${c.chunk.sourceTitle}\n${sourceLabel}: ${c.chunk.sourceUrl}\n\n${c.chunk.text}`
+    )
     .join("\n\n---\n\n");
 }
 
@@ -30,6 +34,8 @@ export async function retrieveKennisbankContext(
   const query = buildRetrievalQuery(amountMismatches);
   const client = opts.embeddingClient ?? createVoyageClient();
   const [queryEmbedding] = await client.embed([query], "query");
+  if (!queryEmbedding) return [];
+
   const store = opts.store ?? getVectorStore();
   return store.search(queryEmbedding, opts.k ?? 5);
 }

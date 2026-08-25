@@ -94,6 +94,40 @@ describe("formatRetrievedContext", () => {
     expect(formatted).toContain("https://example.org/a");
     expect(formatted).toContain("Inhoud van de pagina.");
   });
+
+  it("uses the Dutch source label by default", () => {
+    const chunks: ScoredChunk[] = [
+      {
+        score: 0.9,
+        chunk: {
+          id: "https://example.org/a#0",
+          sourceUrl: "https://example.org/a",
+          sourceTitle: "Voorbeeldpagina",
+          text: "Inhoud.",
+        },
+      },
+    ];
+
+    expect(formatRetrievedContext(chunks)).toContain("Bron:");
+  });
+
+  it("uses the English source label when language is 'en'", () => {
+    const chunks: ScoredChunk[] = [
+      {
+        score: 0.9,
+        chunk: {
+          id: "https://example.org/a#0",
+          sourceUrl: "https://example.org/a",
+          sourceTitle: "Example page",
+          text: "Content.",
+        },
+      },
+    ];
+
+    const formatted = formatRetrievedContext(chunks, "en");
+    expect(formatted).toContain("Source:");
+    expect(formatted).not.toContain("Bron:");
+  });
 });
 
 describe("retrieveKennisbankContext", () => {
@@ -117,5 +151,18 @@ describe("retrieveKennisbankContext", () => {
 
     expect(results).toEqual([]);
     expect(embed).not.toHaveBeenCalled();
+  });
+
+  it("returns an empty array instead of crashing when the embedding client returns nothing", async () => {
+    const embed = vi.fn().mockResolvedValue([]);
+    const search = vi.fn();
+
+    const results = await retrieveKennisbankContext([makeMismatch()], {
+      embeddingClient: { embed },
+      store: { search },
+    });
+
+    expect(results).toEqual([]);
+    expect(search).not.toHaveBeenCalled();
   });
 });

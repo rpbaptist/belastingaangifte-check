@@ -1,5 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
 
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function isRetryableAnthropicError(err: unknown): boolean {
   return (
     err instanceof Anthropic.RateLimitError ||
@@ -18,7 +22,7 @@ export async function withRetry<T>(
     } catch (err) {
       if (isRetryable(err) && attempt < maxAttempts) {
         const jitter = Math.random() * 500;
-        await new Promise((r) => setTimeout(r, 1500 * attempt + jitter));
+        await sleep(1500 * attempt + jitter);
         continue;
       }
       throw err;
