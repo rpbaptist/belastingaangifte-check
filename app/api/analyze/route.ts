@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { runExtractionSession } from "@/lib/extraction-session";
+import { formatSessionFailure, runExtractionSession } from "@/lib/extraction-session";
 import { analyzeDocuments } from "@/lib/analyzer";
 import { classifyError } from "@/lib/anthropic-error";
 import { fileToBase64 } from "@/lib/file-utils";
-import { translate, formatTaxReturnProcessingError, type Language } from "@/lib/translations";
+import { translate, type Language } from "@/lib/translations";
 
 // Allow up to 300s — parallel extraction + analysis across many PDFs
 export const maxDuration = 300;
@@ -46,12 +46,8 @@ export async function POST(request: NextRequest) {
     const session = await runExtractionSession(taxReturnBase64, statements, apiKey, language);
 
     if (!session.ok) {
-      return NextResponse.json(
-        {
-          error: formatTaxReturnProcessingError(taxReturnFile.name, session.message, language),
-        },
-        { status: 422 }
-      );
+      const { status, message } = formatSessionFailure(taxReturnFile.name, session, language);
+      return NextResponse.json({ error: message }, { status });
     }
 
     const reportBase = await analyzeDocuments(

@@ -7,3 +7,8 @@ export const QUESTION_MODEL = "claude-haiku-4-5-20251001";
 export function createClient(apiKey?: string): Anthropic {
   return new Anthropic(apiKey ? { apiKey } : {});
 }
+
+export function extractResponseText(response: Anthropic.Message): string | undefined {
+  const block = response.content.find((b) => b.type === "text");
+  return block?.type === "text" ? block.text : undefined;
+}
