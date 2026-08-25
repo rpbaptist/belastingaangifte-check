@@ -15,6 +15,24 @@ const DEFAULT_OVERLAP_CHARS = 120;
 
 const HEADING_PATTERN = /^#{1,6}\s/;
 
+// Starts a new chunk carrying its owning heading and a tail of overlap from the
+// previous chunk, so the new chunk reads standalone — but never duplicates text
+// that's identical to the heading (e.g. a heading immediately followed by an
+// overflowing paragraph, where the "overlap" would just be the heading again).
+function buildChunkStart(
+  previousChunk: string,
+  heading: string,
+  paragraph: string,
+  overlapChars: number
+): string {
+  const overlap = previousChunk.slice(-overlapChars);
+  const prefixParts: string[] = [];
+  if (heading && heading !== paragraph) prefixParts.push(heading);
+  if (overlap && overlap !== heading) prefixParts.push(overlap);
+  prefixParts.push(paragraph);
+  return prefixParts.join("\n\n");
+}
+
 export function chunkText(
   doc: RawDocument,
   opts: { maxChars?: number; overlapChars?: number } = {}
@@ -42,13 +60,9 @@ export function chunkText(
 
     const candidate = current ? `${current}\n\n${paragraph}` : paragraph;
     if (current && candidate.length > maxChars) {
-      const overlap = current.slice(-overlapChars);
+      const nextStart = buildChunkStart(current, currentHeading, paragraph, overlapChars);
       flush();
-      const prefixParts = [];
-      if (currentHeading && currentHeading !== paragraph) prefixParts.push(currentHeading);
-      if (overlap && overlap !== currentHeading) prefixParts.push(overlap);
-      prefixParts.push(paragraph);
-      current = prefixParts.join("\n\n");
+      current = nextStart;
     } else {
       current = candidate;
     }

@@ -42,6 +42,8 @@ async function fetchHtml(url: string): Promise<string> {
 // headings become `#`-prefixed lines, paragraphs become blank-line-separated blocks.
 // The content selector is a best guess — verify against the live DOM and adjust if pages
 // come back empty or full of nav/footer noise.
+const HEADING_MARKERS: Record<string, string> = { h1: "# ", h2: "## ", h3: "### " };
+
 function extractText(html: string): string {
   const $ = load(html);
   $("nav, footer, script, style, aside, header").remove();
@@ -51,13 +53,9 @@ function extractText(html: string): string {
 
   const lines: string[] = [];
   root.find("h1, h2, h3, p, li").each((_, el) => {
-    const tag = el.tagName?.toLowerCase();
+    const tag = el.tagName?.toLowerCase() ?? "";
     const text = $(el).text().trim().replace(/\s+/g, " ");
-    if (!text) return;
-    if (tag === "h1") lines.push(`# ${text}`);
-    else if (tag === "h2") lines.push(`## ${text}`);
-    else if (tag === "h3") lines.push(`### ${text}`);
-    else lines.push(text);
+    if (text) lines.push(`${HEADING_MARKERS[tag] ?? ""}${text}`);
   });
 
   return lines.join("\n\n");
@@ -74,6 +72,30 @@ async function scrapePage(page: SourcePage) {
 }
 
 type TextChunk = { sourceUrl: string; sourceTitle: string; text: string };
+type ScrapeResult = { chunks: TextChunk[] } | { error: string };
+
+async function scrapeOnePage(page: SourcePage): Promise<ScrapeResult> {
+  try {
+    return { chunks: await scrapePage(page) };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+function recordScrapeResult(
+  page: SourcePage,
+  result: ScrapeResult,
+  textChunks: TextChunk[],
+  chunksByTopic: Map<string, number>
+) {
+  if ("error" in result) {
+    console.log(`FAILED: ${result.error}`);
+    return;
+  }
+  textChunks.push(...result.chunks);
+  chunksByTopic.set(page.topic, (chunksByTopic.get(page.topic) ?? 0) + result.chunks.length);
+  console.log(`${result.chunks.length} chunks`);
+}
 
 async function scrapeAllPages(): Promise<{
   textChunks: TextChunk[];
@@ -84,14 +106,8 @@ async function scrapeAllPages(): Promise<{
 
   for (const page of SOURCE_PAGES) {
     process.stdout.write(`Scraping ${page.url}... `);
-    try {
-      const chunks = await scrapePage(page);
-      textChunks.push(...chunks);
-      chunksByTopic.set(page.topic, (chunksByTopic.get(page.topic) ?? 0) + chunks.length);
-      console.log(`${chunks.length} chunks`);
-    } catch (err) {
-      console.log(`FAILED: ${err instanceof Error ? err.message : err}`);
-    }
+    const result = await scrapeOnePage(page);
+    recordScrapeResult(page, result, textChunks, chunksByTopic);
     await sleep(FETCH_DELAY_MS);
   }
 
