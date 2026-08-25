@@ -81,6 +81,26 @@ describe("buildAnalysisRequest", () => {
     const systemText = system.map((b) => ("text" in b ? b.text : "")).join("");
     expect(systemText).toContain("Amount differs");
   });
+
+  it("includes retrieved Kennisbank context in the system message when provided", () => {
+    const req = buildAnalysisRequest(
+      noMismatches,
+      noCovered,
+      rules,
+      "nl",
+      "### Voorbeeldbron\n\nOfficiële inhoud."
+    );
+    const system = Array.isArray(req.system) ? req.system : [];
+    const systemText = system.map((b) => ("text" in b ? b.text : "")).join("");
+    expect(systemText).toContain("Officiële inhoud.");
+  });
+
+  it("omits the Kennisbank section when no retrievedContext is passed", () => {
+    const req = buildAnalysisRequest(noMismatches, noCovered, rules);
+    const system = Array.isArray(req.system) ? req.system : [];
+    const systemText = system.map((b) => ("text" in b ? b.text : "")).join("");
+    expect(systemText).not.toContain("Officiële bronnen");
+  });
 });
 
 describe("parseAnalysisResponse", () => {

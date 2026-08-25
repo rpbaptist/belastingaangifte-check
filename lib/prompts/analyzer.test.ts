@@ -41,6 +41,30 @@ describe("buildAnalyzerPrompt", () => {
     expect(prompt).toContain("nothing before the opening brace");
     expect(prompt).toContain('{"attentionPoints": []}');
   });
+
+  it("includes the retrieved-context section in Dutch when provided", () => {
+    const prompt = buildAnalyzerPrompt("Some rules", "nl", "### Voorbeeldbron\n\nInhoud.");
+    expect(prompt).toContain("Officiële bronnen");
+    expect(prompt).toContain("Voorbeeldbron");
+  });
+
+  it("includes the retrieved-context section in English when provided", () => {
+    const prompt = buildAnalyzerPrompt("Some rules", "en", "### Example source\n\nContent.");
+    expect(prompt).toContain("Official sources");
+    expect(prompt).toContain("Example source");
+  });
+
+  it("omits the retrieved-context section when retrievedContext is empty", () => {
+    const promptNl = buildAnalyzerPrompt("Some rules", "nl", "");
+    const promptEn = buildAnalyzerPrompt("Some rules", "en", "");
+    expect(promptNl).not.toContain("Officiële bronnen");
+    expect(promptEn).not.toContain("Official sources");
+  });
+
+  it("omits the retrieved-context section when no retrievedContext is passed at all", () => {
+    const prompt = buildAnalyzerPrompt("Some rules", "nl");
+    expect(prompt).not.toContain("Officiële bronnen");
+  });
 });
 
 describe("buildUserMessage", () => {

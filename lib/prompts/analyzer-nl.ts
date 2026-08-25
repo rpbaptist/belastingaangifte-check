@@ -1,6 +1,6 @@
 import type { AmountMismatch } from "../categorizer";
 
-export function buildUserMessage(
+function buildUserMessage(
   amountMismatches: AmountMismatch[],
   covered: { accountNumber: string; institution: string }[]
 ): string {
@@ -28,7 +28,7 @@ export function buildUserMessage(
   return parts.join("\n");
 }
 
-export function buildAnalyzerPrompt(rules: string): string {
+function buildAnalyzerPrompt(rules: string, retrievedContext: string = ""): string {
   return `You bent een Nederlandse belastinganalist. De reconciliatie tussen aangifte en jaaropgave is door code uitgevoerd. Je ontvangt de lijst met al gedekte rekeningen — stel geen aandachtspunten op die in twijfel trekken of die rekeningen in de aangifte voorkomen; die controle is al gedaan. Jouw taak is om bedragsverschillen te beoordelen en aandachtspunten te genereren voor alles wat een Nederlandse belastingexpert zou aanmerken.
 
 ## Bedragsverschillen
@@ -42,7 +42,7 @@ Je ontvangt paren waarbij de aangifte en jaaropgave meer dan €1 van elkaar ver
 
 ${rules}
 
-## Uitvoer
+${retrievedContext ? `## Officiële bronnen (Belastingdienst.nl, ter ondersteuning van je oordeel)\n\n${retrievedContext}\n\n` : ""}## Uitvoer
 
 Je reactie moet een enkel ruw JSON-object zijn — niets voor de openingsaccolade, niets na de sluitingsaccolade. Geen markdown-fences, geen proza, geen uitleg.
 
@@ -59,3 +59,5 @@ Je reactie moet een enkel ruw JSON-object zijn — niets voor de openingsaccolad
 
 Als er geen aandachtspunten te rapporteren zijn, retourneer: {"attentionPoints": []}`;
 }
+
+export const analyzerPromptsNl = { buildUserMessage, buildAnalyzerPrompt };

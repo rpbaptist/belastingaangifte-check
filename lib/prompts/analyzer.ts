@@ -1,9 +1,9 @@
 import type { AmountMismatch } from "../categorizer";
 import type { Language } from "../translations";
-import * as nl from "./analyzer-nl";
-import * as en from "./analyzer-en";
+import { analyzerPromptsNl } from "./analyzer-nl";
+import { analyzerPromptsEn } from "./analyzer-en";
 
-const builders = { nl, en };
+const builders = { nl: analyzerPromptsNl, en: analyzerPromptsEn };
 
 export function buildUserMessage(
   amountMismatches: AmountMismatch[],
@@ -13,6 +13,10 @@ export function buildUserMessage(
   return builders[language].buildUserMessage(amountMismatches, covered);
 }
 
-export function buildAnalyzerPrompt(rules: string, language: Language = "nl"): string {
-  return builders[language].buildAnalyzerPrompt(rules);
+export function buildAnalyzerPrompt(
+  rules: string,
+  language: Language = "nl",
+  retrievedContext: string = ""
+): string {
+  return builders[language].buildAnalyzerPrompt(rules, retrievedContext);
 }

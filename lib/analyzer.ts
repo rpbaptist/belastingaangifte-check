@@ -11,13 +11,15 @@ import { buildAnalyzerPrompt, buildUserMessage } from "./prompts/analyzer";
 import { readAnalysisCache, writeAnalysisCache } from "./extraction-cache";
 import { ANALYSIS_MODEL, createClient } from "./llm";
 import { translate, formatAnalysisFailed, type Language } from "./translations";
+import { retrieveKennisbankContext, formatRetrievedContext } from "./rag/retrieval";
 import type Anthropic from "@anthropic-ai/sdk";
 
 export function buildAnalysisRequest(
   amountMismatches: AmountMismatch[],
   covered: { accountNumber: string; institution: string }[],
   rules: string,
-  language: Language = "nl"
+  language: Language = "nl",
+  retrievedContext: string = ""
 ): Anthropic.MessageCreateParamsNonStreaming {
   return {
     model: ANALYSIS_MODEL,
@@ -25,7 +27,7 @@ export function buildAnalysisRequest(
     system: [
       {
         type: "text",
-        text: buildAnalyzerPrompt(rules, language),
+        text: buildAnalyzerPrompt(rules, language, retrievedContext),
         cache_control: { type: "ephemeral" },
       },
     ],
@@ -93,8 +95,17 @@ export async function analyzeDocuments(
       path.join(process.cwd(), "rules", "aandachtspunten.md"),
       "utf-8"
     );
+
+    let retrievedContext = "";
+    try {
+      const chunks = await retrieveKennisbankContext(amountMismatches);
+      retrievedContext = formatRetrievedContext(chunks, language);
+    } catch (err) {
+      console.warn("Kennisbank retrieval failed, continuing without official-source context:", err);
+    }
+
     const response = await client.messages.create(
-      buildAnalysisRequest(amountMismatches, covered, rules, language)
+      buildAnalysisRequest(amountMismatches, covered, rules, language, retrievedContext)
     );
     llmPoints = parseAnalysisResponse(response, language);
 
