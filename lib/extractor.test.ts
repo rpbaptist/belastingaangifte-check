@@ -1,6 +1,25 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import Anthropic from "@anthropic-ai/sdk";
 import { withRetry } from "./utils";
+import { extractAnnualStatement, extractTaxReturn } from "./extractor";
+
+function makeResponse(overrides: Partial<Anthropic.Message> = {}): Anthropic.Message {
+  return {
+    id: "msg_test",
+    type: "message",
+    role: "assistant",
+    model: "claude-haiku-4-5-20251001",
+    stop_reason: "end_turn",
+    stop_sequence: null,
+    usage: { input_tokens: 10, output_tokens: 10 },
+    content: [],
+    ...overrides,
+  } as Anthropic.Message;
+}
+
+function makeClient(response: Anthropic.Message): Anthropic {
+  return { messages: { create: vi.fn().mockResolvedValue(response) } } as unknown as Anthropic;
+}
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -101,5 +120,21 @@ describe("withRetry", () => {
     );
     expect(result.ok).toBe(false);
     expect(fn).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("extractAnnualStatement / extractTaxReturn", () => {
+  it("throws a Dutch error when the annual statement response has no text block", async () => {
+    const client = makeClient(makeResponse());
+    await expect(extractAnnualStatement("pdf-base64", client)).rejects.toThrow(
+      "Geen reactie ontvangen bij verwerking van de jaaropgave"
+    );
+  });
+
+  it("throws an English error when the tax return response has no text block", async () => {
+    const client = makeClient(makeResponse());
+    await expect(extractTaxReturn("pdf-base64", client, "en")).rejects.toThrow(
+      "No response received while processing the tax return"
+    );
   });
 });

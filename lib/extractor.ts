@@ -6,7 +6,7 @@ import { parseLlmJson } from "./parse-llm-json";
 import { AnnualStatementSchema, TaxReturnSchema } from "./schemas";
 import { ANNUAL_STATEMENT_SYSTEM } from "./prompts/annual-statement";
 import { TAX_RETURN_SYSTEM } from "./prompts/tax-return";
-import { EXTRACTION_MODEL } from "./llm";
+import { EXTRACTION_MODEL, extractResponseText } from "./llm";
 import { withRetry } from "./utils";
 import { translate, formatExtractionFailed, type Language } from "./translations";
 
@@ -58,12 +58,12 @@ async function extract<T>(
   if (response.stop_reason === "max_tokens") {
     throw new Error(translate("extractionAbortedTooLarge", language));
   }
-  const textBlock = response.content.find((b) => b.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
+  const text = extractResponseText(response);
+  if (text === undefined) {
     throw new Error(translate(opts.noResponseErrorKey, language));
   }
 
-  const raw = parseLlmJson(textBlock.text);
+  const raw = parseLlmJson(text);
   try {
     const result = opts.schema.parse(raw);
     writeCache(pdfBase64, result);
