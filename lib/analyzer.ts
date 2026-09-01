@@ -9,7 +9,7 @@ import { runRuleChecks } from "./rule-checks";
 import { LLMAnalysisResponseSchema } from "./schemas";
 import { buildAnalyzerPrompt, buildUserMessage } from "./prompts/analyzer";
 import { readAnalysisCache, writeAnalysisCache } from "./extraction-cache";
-import { ANALYSIS_MODEL, createClient } from "./llm";
+import { ANALYSIS_MODEL, createClient, extractResponseText } from "./llm";
 import { translate, formatAnalysisFailed, type Language } from "./translations";
 import { retrieveKennisbankContext, formatRetrievedContext } from "./rag/retrieval";
 import type Anthropic from "@anthropic-ai/sdk";
@@ -43,12 +43,12 @@ export function parseAnalysisResponse(
     throw new Error(translate("analysisAbortedTooMany", language));
   }
 
-  const textBlock = response.content.find((b) => b.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
+  const text = extractResponseText(response);
+  if (text === undefined) {
     throw new Error(translate("noResponseDuringAnalysis", language));
   }
 
-  const raw = parseLlmJson(textBlock.text);
+  const raw = parseLlmJson(text);
   try {
     const { attentionPoints } = LLMAnalysisResponseSchema.parse(raw);
     return attentionPoints;
