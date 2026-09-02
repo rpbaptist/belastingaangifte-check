@@ -33,3 +33,4 @@ Hand-rolled RAG behind small interfaces, entirely in `lib/rag/`:
 - `lib/rag/corpus.json` requires manual regeneration and carries staleness risk; no automatic freshness check exists. Worth re-verifying each tax season.
 - A future Upstash (or other hosted store) migration touches only `lib/rag/vector-store.ts` and the scraper's write step — chunking, embedding, and query construction are unaffected.
 - If visible citations are wanted later, `AttentionPoint` would need a `source?: { title, url }` field validated against the actually-retrieved chunk set (never trust a free-text URL from the model).
+- `retrievedContext` is appended in a separate, uncached system block after the stable persona+rules prefix (`lib/analyzer.ts`, `buildAnalysisRequest`), so grounding-active runs still cache-hit against the stable prefix — only the retrieved-context and output-format tokens are paid fresh each time.
