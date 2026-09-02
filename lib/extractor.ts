@@ -9,8 +9,44 @@ import { TAX_RETURN_SYSTEM } from "./prompts/tax-return";
 import { EXTRACTION_MODEL } from "./llm";
 import { withRetry } from "./utils";
 import { translate, formatExtractionFailed, type Language } from "./translations";
+import { getPdfParserClient, type PdfParserClient } from "./pdf-parser-client";
 
 const MODEL = EXTRACTION_MODEL;
+
+/**
+ * Builds the extraction request content. Tries the Parser first (see
+ * tax-pdf-parser's CONTEXT.md): a successful parse sends the document as
+ * clean markdown, so Claude does semantic field-mapping over
+ * already-correctly-parsed text instead of also solving visual table
+ * layout. Any failure — no client configured, or a Parse failure — falls
+ * back to today's raw PDF document block, unchanged. This makes the
+ * Parser strictly additive: extraction can only get more reliable, never
+ * less, than it was before tax-pdf-parser existed.
+ */
+export async function resolveExtractionContent(
+  pdfBase64: string,
+  userPrompt: string,
+  parserClient: PdfParserClient | undefined
+): Promise<Anthropic.Messages.ContentBlockParam[]> {
+  if (parserClient) {
+    try {
+      const markdown = await parserClient.parse(Buffer.from(pdfBase64, "base64"));
+      return [
+        { type: "text", text: `Document content (parsed from PDF):\n\n${markdown}` },
+        { type: "text", text: userPrompt },
+      ];
+    } catch {
+      // Parse failure: fall through to the raw PDF path below.
+    }
+  }
+  return [
+    {
+      type: "document",
+      source: { type: "base64", media_type: "application/pdf", data: pdfBase64 },
+    } as Anthropic.DocumentBlockParam,
+    { type: "text", text: userPrompt },
+  ];
+}
 
 type ExtractOpts<T> = {
   systemPrompt: string;
@@ -35,23 +71,13 @@ async function extract<T>(
     }
   }
 
+  const content = await resolveExtractionContent(pdfBase64, opts.userPrompt, getPdfParserClient());
   const response = await withRetry(() =>
     client.messages.create({
       model: MODEL,
       max_tokens: opts.maxTokens,
       system: [{ type: "text", text: opts.systemPrompt, cache_control: { type: "ephemeral" } }],
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "document",
-              source: { type: "base64", media_type: "application/pdf", data: pdfBase64 },
-            } as Anthropic.DocumentBlockParam,
-            { type: "text", text: opts.userPrompt },
-          ],
-        },
-      ],
+      messages: [{ role: "user", content }],
     })
   );
 
