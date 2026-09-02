@@ -7,7 +7,11 @@ import { reconcile } from "./reconciler";
 import { categorize, type AmountMismatch } from "./categorizer";
 import { runRuleChecks } from "./rule-checks";
 import { LLMAnalysisResponseSchema } from "./schemas";
-import { buildAnalyzerPrompt, buildUserMessage } from "./prompts/analyzer";
+import {
+  buildAnalyzerPrompt,
+  buildAnalyzerPromptSuffix,
+  buildUserMessage,
+} from "./prompts/analyzer";
 import { readAnalysisCache, writeAnalysisCache } from "./extraction-cache";
 import { ANALYSIS_MODEL, createClient, extractResponseText } from "./llm";
 import { translate, formatAnalysisFailed, type Language } from "./translations";
@@ -27,8 +31,12 @@ export function buildAnalysisRequest(
     system: [
       {
         type: "text",
-        text: buildAnalyzerPrompt(rules, language, retrievedContext),
+        text: buildAnalyzerPrompt(rules, language),
         cache_control: { type: "ephemeral" },
+      },
+      {
+        type: "text",
+        text: buildAnalyzerPromptSuffix(retrievedContext, language),
       },
     ],
     messages: [{ role: "user", content: buildUserMessage(amountMismatches, covered, language) }],

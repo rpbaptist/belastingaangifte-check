@@ -28,7 +28,7 @@ function buildUserMessage(
   return parts.join("\n");
 }
 
-function buildAnalyzerPrompt(rules: string, retrievedContext: string = ""): string {
+function buildAnalyzerPrompt(rules: string): string {
   return `You are a tax analyst specialized in Dutch tax law. The reconciliation between tax return and annual income statements has been done by code. You will receive the list of already-covered accounts — do NOT raise attentionPoints questioning whether those accounts appear in the tax return; that check is already done. Your job is to review amount mismatches and generate attentionPoints for anything a Dutch tax expert would flag.
 
 ## Amount mismatches
@@ -40,9 +40,11 @@ You will receive matched pairs where the tax return and annual income statement 
 
 ## Additional attentionPoints rules
 
-${rules}
+${rules}`;
+}
 
-${retrievedContext ? `## Official sources (Belastingdienst.nl, to support your judgment)\n\n${retrievedContext}\n\n` : ""}## Output
+function buildAnalyzerPromptSuffix(retrievedContext: string = ""): string {
+  return `${retrievedContext ? `## Official sources (Belastingdienst.nl, to support your judgment)\n\n${retrievedContext}\n\n` : ""}## Output
 
 Your response must be a single raw JSON object — nothing before the opening brace, nothing after the closing brace. No markdown fences, no prose, no explanation.
 
@@ -62,4 +64,8 @@ If there are no attentionPoints to report, return: {"attentionPoints": []}
 Write the \`title\` and \`explanation\` values in the output JSON in English.`;
 }
 
-export const analyzerPromptsEn = { buildUserMessage, buildAnalyzerPrompt };
+export const analyzerPromptsEn = {
+  buildUserMessage,
+  buildAnalyzerPrompt,
+  buildAnalyzerPromptSuffix,
+};

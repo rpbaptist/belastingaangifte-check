@@ -37,10 +37,28 @@ describe("buildAnalysisRequest", () => {
     expect(systemText).toContain(rules);
   });
 
-  it("sets cache_control ephemeral on the system block", () => {
+  it("sets cache_control ephemeral only on the first system block", () => {
     const req = buildAnalysisRequest(noMismatches, noCovered, rules);
     const system = Array.isArray(req.system) ? req.system : [];
     expect(system[0]).toMatchObject({ cache_control: { type: "ephemeral" } });
+    expect(system[1]).not.toHaveProperty("cache_control");
+  });
+
+  it("keeps the cached block identical regardless of retrievedContext, moving it into the uncached second block", () => {
+    const withoutContext = buildAnalysisRequest(noMismatches, noCovered, rules);
+    const withContext = buildAnalysisRequest(
+      noMismatches,
+      noCovered,
+      rules,
+      "nl",
+      "### Voorbeeldbron\n\nOfficiële inhoud."
+    );
+    const systemWithout = Array.isArray(withoutContext.system) ? withoutContext.system : [];
+    const systemWith = Array.isArray(withContext.system) ? withContext.system : [];
+
+    expect(systemWithout[0]).toEqual(systemWith[0]);
+    expect("text" in systemWith[0] ? systemWith[0].text : "").not.toContain("Officiële inhoud.");
+    expect("text" in systemWith[1] ? systemWith[1].text : "").toContain("Officiële inhoud.");
   });
 
   it("serialises mismatches into the user message", () => {
