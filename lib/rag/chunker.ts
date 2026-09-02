@@ -15,6 +15,29 @@ const DEFAULT_OVERLAP_CHARS = 120;
 
 const HEADING_PATTERN = /^#{1,6}\s/;
 
+// Splits a paragraph longer than maxChars into fragments that fit within it, so
+// the main loop below never sees a single unit of text it can't bound. Cuts at
+// the whitespace nearest to maxChars (never past it) to avoid breaking a word;
+// falls back to a hard cut at exactly maxChars when no whitespace is in range —
+// sentence-aware splitting would need a dependency or a hand-rolled sentence
+// splitter, for a fallback path the current corpus never even exercises.
+function splitOversizedParagraph(paragraph: string, maxChars: number): string[] {
+  if (paragraph.length <= maxChars) return [paragraph];
+
+  const fragments: string[] = [];
+  let rest = paragraph;
+  while (rest.length > maxChars) {
+    const window = rest.slice(0, maxChars);
+    const whitespaceMatches = [...window.matchAll(/\s/g)];
+    const cut = whitespaceMatches.at(-1)?.index ?? maxChars;
+    fragments.push(rest.slice(0, cut).trim());
+    rest = rest.slice(cut).trim();
+  }
+  fragments.push(rest);
+
+  return fragments.filter((f) => f.length > 0);
+}
+
 // Starts a new chunk carrying its owning heading and a tail of overlap from the
 // previous chunk, so the new chunk reads standalone — but never duplicates text
 // that's identical to the heading (e.g. a heading immediately followed by an
@@ -43,7 +66,8 @@ export function chunkText(
   const paragraphs = doc.text
     .split(/\n\s*\n/)
     .map((p) => p.trim())
-    .filter((p) => p.length > 0);
+    .filter((p) => p.length > 0)
+    .flatMap((p) => splitOversizedParagraph(p, maxChars));
 
   const chunks: TextChunk[] = [];
   let current = "";
