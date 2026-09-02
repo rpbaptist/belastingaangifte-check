@@ -1,69 +1,96 @@
 import { describe, expect, it } from "vitest";
-import { buildAnalyzerPrompt, buildUserMessage } from "./analyzer";
+import { buildAnalyzerPrompt, buildAnalyzerPromptSuffix, buildUserMessage } from "./analyzer";
 
 describe("buildAnalyzerPrompt", () => {
-  it("includes the Dutch example when language is 'nl'", () => {
-    const prompt = buildAnalyzerPrompt("Some rules", "nl");
-    expect(prompt).toContain("Bedrag wijkt af");
-    expect(prompt).toContain("Hypotheekverstrekker");
-  });
-
-  it("includes the English example when language is 'en'", () => {
-    const prompt = buildAnalyzerPrompt("Some rules", "en");
-    expect(prompt).toContain("Amount differs");
-    expect(prompt).toContain("Mortgage provider");
-  });
-
-  it("adds the English language directive when language is 'en'", () => {
-    const prompt = buildAnalyzerPrompt("Some rules", "en");
-    expect(prompt).toContain(
-      "Write the `title` and `explanation` values in the output JSON in English"
-    );
-  });
-
-  it("does not add the language directive when language is 'nl'", () => {
-    const prompt = buildAnalyzerPrompt("Some rules", "nl");
-    expect(prompt).not.toContain("Write the `title` and `explanation` values");
-  });
-
   it("includes the rules in the prompt", () => {
     const prompt = buildAnalyzerPrompt("Flag anything over €10.000.");
     expect(prompt).toContain("Flag anything over €10.000.");
   });
 
+  it("uses the Dutch persona when language is 'nl'", () => {
+    const prompt = buildAnalyzerPrompt("Some rules", "nl");
+    expect(prompt).toContain("Nederlandse belastinganalist");
+  });
+
+  it("uses the English persona when language is 'en'", () => {
+    const prompt = buildAnalyzerPrompt("Some rules", "en");
+    expect(prompt).toContain("tax analyst specialized in Dutch tax law");
+  });
+
   it("defaults to Dutch when no language is provided", () => {
     const prompt = buildAnalyzerPrompt("Some rules");
-    expect(prompt).toContain("Bedrag wijkt af");
+    expect(prompt).toContain("Nederlandse belastinganalist");
+  });
+
+  it("never includes the output-format section", () => {
+    const prompt = buildAnalyzerPrompt("Some rules", "en");
+    expect(prompt).not.toContain("nothing before the opening brace");
+  });
+
+  it("never includes the retrieved-context section", () => {
+    const prompt = buildAnalyzerPrompt("Some rules", "nl");
+    expect(prompt).not.toContain("Officiële bronnen");
+  });
+});
+
+describe("buildAnalyzerPromptSuffix", () => {
+  it("includes the Dutch example when language is 'nl'", () => {
+    const suffix = buildAnalyzerPromptSuffix("", "nl");
+    expect(suffix).toContain("Bedrag wijkt af");
+    expect(suffix).toContain("Hypotheekverstrekker");
+  });
+
+  it("includes the English example when language is 'en'", () => {
+    const suffix = buildAnalyzerPromptSuffix("", "en");
+    expect(suffix).toContain("Amount differs");
+    expect(suffix).toContain("Mortgage provider");
+  });
+
+  it("adds the English language directive when language is 'en'", () => {
+    const suffix = buildAnalyzerPromptSuffix("", "en");
+    expect(suffix).toContain(
+      "Write the `title` and `explanation` values in the output JSON in English"
+    );
+  });
+
+  it("does not add the language directive when language is 'nl'", () => {
+    const suffix = buildAnalyzerPromptSuffix("", "nl");
+    expect(suffix).not.toContain("Write the `title` and `explanation` values");
+  });
+
+  it("defaults to Dutch when no language is provided", () => {
+    const suffix = buildAnalyzerPromptSuffix("");
+    expect(suffix).toContain("Bedrag wijkt af");
   });
 
   it("requires raw JSON output", () => {
-    const prompt = buildAnalyzerPrompt("", "en");
-    expect(prompt).toContain("nothing before the opening brace");
-    expect(prompt).toContain('{"attentionPoints": []}');
+    const suffix = buildAnalyzerPromptSuffix("", "en");
+    expect(suffix).toContain("nothing before the opening brace");
+    expect(suffix).toContain('{"attentionPoints": []}');
   });
 
   it("includes the retrieved-context section in Dutch when provided", () => {
-    const prompt = buildAnalyzerPrompt("Some rules", "nl", "### Voorbeeldbron\n\nInhoud.");
-    expect(prompt).toContain("Officiële bronnen");
-    expect(prompt).toContain("Voorbeeldbron");
+    const suffix = buildAnalyzerPromptSuffix("### Voorbeeldbron\n\nInhoud.", "nl");
+    expect(suffix).toContain("Officiële bronnen");
+    expect(suffix).toContain("Voorbeeldbron");
   });
 
   it("includes the retrieved-context section in English when provided", () => {
-    const prompt = buildAnalyzerPrompt("Some rules", "en", "### Example source\n\nContent.");
-    expect(prompt).toContain("Official sources");
-    expect(prompt).toContain("Example source");
+    const suffix = buildAnalyzerPromptSuffix("### Example source\n\nContent.", "en");
+    expect(suffix).toContain("Official sources");
+    expect(suffix).toContain("Example source");
   });
 
   it("omits the retrieved-context section when retrievedContext is empty", () => {
-    const promptNl = buildAnalyzerPrompt("Some rules", "nl", "");
-    const promptEn = buildAnalyzerPrompt("Some rules", "en", "");
-    expect(promptNl).not.toContain("Officiële bronnen");
-    expect(promptEn).not.toContain("Official sources");
+    const suffixNl = buildAnalyzerPromptSuffix("", "nl");
+    const suffixEn = buildAnalyzerPromptSuffix("", "en");
+    expect(suffixNl).not.toContain("Officiële bronnen");
+    expect(suffixEn).not.toContain("Official sources");
   });
 
   it("omits the retrieved-context section when no retrievedContext is passed at all", () => {
-    const prompt = buildAnalyzerPrompt("Some rules", "nl");
-    expect(prompt).not.toContain("Officiële bronnen");
+    const suffix = buildAnalyzerPromptSuffix(undefined, "nl");
+    expect(suffix).not.toContain("Officiële bronnen");
   });
 });
 
