@@ -1,0 +1,5 @@
+# opencode plugin deps (auto-generated when plugins are added)
+node_modules
+package.json
+package-lock.json
+bun.lock

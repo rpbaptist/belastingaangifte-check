@@ -1,0 +1,53 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "opencode/muse-spark-1.2-contributor-free",
+  "small_model": "opencode/muse-spark-1.2-contributor-free",
+  "default_agent": "build",
+  "instructions": ["AGENTS.md", "CONTEXT.md", "docs/adr/decisions.md"],
+  "references": {
+    "context": {
+      "path": "./CONTEXT.md",
+      "description": "Domain glossary - use exact terms: Belastingaangifte, Jaaropgave, Gedekt, Jaaropgave ontbreekt, Niet ingevuld in aangifte, Aandachtspunt, Box 1/2/3, Extraction, Reconciliation, Categorization, Analysis, Kennisbank"
+    },
+    "adr": {
+      "path": "./docs/adr",
+      "description": "Architecture decisions - flag contradictions before overriding"
+    }
+  },
+  "skills": {
+    "paths": ["./.opencode/skills", "~/.agents/skills"]
+  },
+  "permission": {
+    "bash": {
+      "git status*": "allow",
+      "git diff*": "allow",
+      "git log*": "allow",
+      "git branch*": "allow",
+      "gh issue*": "allow",
+      "gh pr*": "allow",
+      "npm test*": "allow",
+      "npm run check:fallow*": "allow",
+      "npm run lint*": "allow",
+      "npx tsc*": "allow",
+      "npx fallow*": "allow",
+      "ls*": "allow",
+      "cat*": "allow",
+      "git push*": "ask",
+      "git reset --hard*": "deny",
+      "git clean -f*": "deny",
+      "rm -rf*": "deny",
+      "*": "ask"
+    },
+    "external_directory": {
+      "~/secrets/**": "deny"
+    }
+  },
+  "compaction": {
+    "auto": true,
+    "tail_turns": 15
+  },
+  "tool_output": {
+    "max_lines": 200,
+    "max_bytes": 8192
+  }
+}
