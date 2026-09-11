@@ -78,11 +78,17 @@ export function isMidYearClosedMortgage(account: AccountData): boolean {
   return m.interestPaid / m.remainingDebt < 0.03;
 }
 
-function dedupeBy<T>(arr: T[], key: (item: T) => string): T[] {
+// Collapses rows that are fully identical (an extraction artifact), never rows that merely
+// share a key. Two positions with the same account and field but different amounts (e.g. the
+// bank and broker components of one ASN Themabeleggen holding) are real and both survive.
+function collapseExactDuplicates<T>(arr: T[], label: string): T[] {
   const seen = new Set<string>();
   return arr.filter((item) => {
-    const k = key(item);
-    if (seen.has(k)) return false;
+    const k = JSON.stringify(item);
+    if (seen.has(k)) {
+      console.warn(`categorize: collapsed duplicate ${label} row`, item);
+      return false;
+    }
     seen.add(k);
     return true;
   });
@@ -130,9 +136,9 @@ export function categorize(matchResult: MatchResult): CategorizationResult {
     }));
 
   return {
-    covered: dedupeBy(covered, (c) => `${c.accountNumber}|${c.field}`),
-    missingStatement: dedupeBy(missingStatement, (m) => `${m.accountNumber}|${m.field}`),
-    notFilledIn: dedupeBy(notFilledIn, (n) => `${n.accountNumber}|${n.description}`),
+    covered: collapseExactDuplicates(covered, "covered"),
+    missingStatement: collapseExactDuplicates(missingStatement, "missingStatement"),
+    notFilledIn: collapseExactDuplicates(notFilledIn, "notFilledIn"),
     amountMismatches,
   };
 }

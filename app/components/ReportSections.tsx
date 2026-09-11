@@ -128,9 +128,9 @@ export function CoveredSection({ items }: { items: CoveredItem[] }) {
       count={items.length}
       note={t("coveredNote")}
     >
-      {items.map((c) => (
+      {items.map((c, i) => (
         <Row
-          key={c.accountNumber + "|" + c.field}
+          key={i}
           tone="pos"
           f={c.field}
           m={`${c.institution}${c.accountNumber ? ` · ${c.accountNumber}` : ""}`}
@@ -152,9 +152,9 @@ export function MissingStatementSection({ items }: { items: MissingStatementItem
       count={items.length}
       note={t("missingStatementNote")}
     >
-      {items.map((c) => (
+      {items.map((c, i) => (
         <Row
-          key={c.accountNumber + "|" + c.field}
+          key={i}
           tone="warn"
           f={c.field}
           m={`${t("boxPrefix")} ${c.box}${c.accountNumber ? ` · ${c.accountNumber}` : ""}`}
@@ -176,9 +176,9 @@ export function NotFilledInSection({ items }: { items: NotFilledInItem[] }) {
       count={items.length}
       note={t("notFilledInNote")}
     >
-      {items.map((c) => (
+      {items.map((c, i) => (
         <Row
-          key={`${c.accountNumber}|${c.description}`}
+          key={i}
           tone="info"
           f={c.description}
           m={`${c.institution}${c.accountNumber ? ` · ${c.accountNumber}` : ""}`}

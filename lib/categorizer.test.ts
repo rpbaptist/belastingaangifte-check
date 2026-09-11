@@ -118,7 +118,7 @@ describe("categorize — notFilledIn deduplication", () => {
     expect(descriptions).toContain("Spaarrekening");
   });
 
-  it("deduplicates two entries with the same accountNumber AND same description", () => {
+  it("deduplicates two entries that are fully identical (accountNumber, description AND amount)", () => {
     const makeAccountEntry = (accountNumber: string, description: string, balance: number) => ({
       accountNumber,
       description,
@@ -146,6 +146,85 @@ describe("categorize — notFilledIn deduplication", () => {
     );
 
     expect(result.notFilledIn).toHaveLength(1);
+  });
+
+  it("keeps two entries with the same accountNumber and description but different amounts", () => {
+    // Regression for #99: same accountNumber+field can legitimately carry two amounts
+    // (e.g. an ASN Themabeleggen holding's bank and broker components).
+    const makeAccountEntry = (accountNumber: string, description: string, balance: number) => ({
+      accountNumber,
+      description,
+      amounts: { bank: { balance } },
+    });
+
+    const statement: AnnualStatementData = {
+      institution: "ASN",
+      institutionType: "bank",
+      taxYear: 2024,
+      metadata: {},
+      accounts: [
+        makeAccountEntry("NL29ASNB8844339390", "ASN Themabeleggen", 1071),
+        makeAccountEntry("NL29ASNB8844339390", "ASN Themabeleggen", 134),
+      ],
+    };
+
+    const result = categorize(
+      makeMatchResult({
+        onlyInJaaropgave: [
+          { statement, account: statement.accounts[0] },
+          { statement, account: statement.accounts[1] },
+        ],
+      })
+    );
+
+    expect(result.notFilledIn).toHaveLength(2);
+    const amounts = result.notFilledIn.map((n) => n.amount);
+    expect(amounts).toContain(1071);
+    expect(amounts).toContain(134);
+  });
+});
+
+// ─── row-count preservation (regression for #99) ───────────────────────────
+
+describe("categorize — row counts are preserved", () => {
+  it("keeps two matched pairs on the same account+field with different amounts", () => {
+    // Same shape as the ASN Themabeleggen case: two matched positions on one account,
+    // same field name, different amounts. Both must survive to `covered`.
+    const statement = makeStatement("ASN", "broker", "NL29ASNB8844339390", {
+      bank: { balance: 1072 },
+      broker: { balance: 135 },
+    });
+    const entryBank = makeEntry("ASN Themabeleggen", 1071, "NL29ASNB8844339390");
+    const entryBroker = makeEntry("ASN Themabeleggen", 134, "NL29ASNB8844339390");
+
+    const result = categorize(
+      makeMatchResult({
+        matched: [
+          { aangifte: entryBank, jaaropgave: { statement, account: statement.accounts[0] } },
+          { aangifte: entryBroker, jaaropgave: { statement, account: statement.accounts[0] } },
+        ],
+      })
+    );
+
+    expect(result.covered).toHaveLength(2);
+  });
+
+  it("input row count equals output row count across covered + amountMismatches", () => {
+    const statement = makeStatement("ASN", "broker", "NL29ASNB8844339390", {
+      bank: { balance: 1072 },
+      broker: { balance: 135 },
+    });
+    const entryBank = makeEntry("ASN Themabeleggen", 1071, "NL29ASNB8844339390");
+    const entryBroker = makeEntry("ASN Themabeleggen", 134, "NL29ASNB8844339390");
+
+    const matched = [
+      { aangifte: entryBank, jaaropgave: { statement, account: statement.accounts[0] } },
+      { aangifte: entryBroker, jaaropgave: { statement, account: statement.accounts[0] } },
+    ];
+
+    const result = categorize(makeMatchResult({ matched }));
+
+    expect(result.covered.length + result.amountMismatches.length).toBe(matched.length);
   });
 });
 
