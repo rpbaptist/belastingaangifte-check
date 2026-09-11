@@ -5,17 +5,32 @@
 **Belastingaangifte**
 The Dutch income tax return filed with the Belastingdienst. Single document per tax year. Source of truth for comparison. Amounts are rounded to full euros (no cents). Displayed as 'Tax Return' in the English UI.
 
+**Bewijsstuk**
+A supporting document uploaded alongside the aangifte to substantiate an entry in it. Jaaropgave, notarisafrekening, WOZ-beschikking and makelaarsnota are kinds of bewijsstuk. Multiple bewijsstukken may be uploaded per session. Displayed as 'Supporting Document' in the English UI.
+
 **Jaaropgave**
-An annual statement issued by a financial institution (bank, broker, mortgage provider) summarising a taxpayer's financial position or transactions in a given year. Multiple jaaropgaves may be uploaded per session. Displayed as 'Annual Income Statement' in the English UI.
+A bewijsstuk issued by a financial institution, summarising a taxpayer's position or transactions in a given year. The most common kind. Displayed as 'Annual Income Statement' in the English UI.
+
+**Notarisafrekening**
+A bewijsstuk drawn up by a notary settling the sale or purchase of a home. Carries the verkoopopbrengst, the aflossing of any geldlening, and the notariskosten.
+
+**WOZ-beschikking**
+A bewijsstuk issued by the gemeente stating a property's WOZ value for a given year.
+
+**Makelaarsnota**
+A bewijsstuk issued by an estate agent for courtage and related selling costs.
 
 **Institution**
-The financial institution that issued a jaaropgave. Detected automatically from PDF content. Classified as one of: `bank`, `broker`, `mortgage`, `other`.
+The party that issued a bewijsstuk — a bank, broker, mortgage provider, notary, gemeente or estate agent. Detected from document content.
 
 **Rekeningnummer**
-Account number (IBAN or broker account ID) used as the primary key for matching a jaaropgave entry to an aangifte entry. Displayed as 'Account Number' in the English UI.
+Account number (IBAN or broker account ID) used as the matching key for account-bearing bewijsstukken only. Property bewijsstukken carry no rekeningnummer and are matched on the kind of amount instead. Displayed as 'Account Number' in the English UI.
+
+**Afronding**
+The filer's discretion to round an amount to whole euros in either direction when completing the aangifte. The Belastingdienst prescribes whole euros but not the direction, so an aangifte amount may sit one euro either side of the jaaropgave figure without being an error. Not a property of the Belastingdienst, and not predictable from the amount alone.
 
 **Gedekt**
-A matched item where the aangifte and jaaropgave share the same rekeningnummer and their amounts match (after rounding both to full euros). Displayed as 'Covered' in the English UI.
+A matched item where the aangifte and jaaropgave share the same rekeningnummer and their amounts agree once afronding is allowed for. Displayed as 'Covered' in the English UI.
 
 **Jaaropgave ontbreekt**
 An item present in the aangifte for which no corresponding jaaropgave was uploaded. Displayed as 'Annual Income Statement Missing' in the English UI.
