@@ -30,3 +30,12 @@ The LLM receives only amount mismatches and annual statements for context. See [
 - The analyser prompt is shorter and the LLM does less rule-following
 - Original formatted account numbers are preserved in all displayed output
 - A future extraction type must implement its account numbers as plain strings for `normalize` to handle
+
+## Amendment (ADR 0008 era)
+
+Rekeningnummer is the matching key for **account-bearing bewijsstukken only** — jaaropgaves
+from a bank, broker or mortgage provider. Property bewijsstukken (notarisafrekening,
+WOZ-beschikking, makelaarsnota) carry no account of their own; the only IBAN on such a
+page is typically a payment reference, and treating it as the row's identity produced a
+false pair between a notary settlement and the taxpayer's own betaalrekening. These
+documents never enter account matching and are matched on the kind of amount instead.
