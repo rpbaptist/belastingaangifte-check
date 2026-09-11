@@ -1,133 +1,106 @@
 # Extraction logic over instructions
 
 Date: 2026-09-11
-Status: proposed
-Companion: #96 (tax-pdf-parser pre-process)
+Status: revised after grilling session
+Tracking: #98. Related: #99 (dedupe regression), #96 (parser — rejected via #97)
 
 ## Context
 
 `lib/extractor.ts` sends each PDF as a native document block to
-`claude-haiku-4-5-20251001`, then `parseLlmJson` + Zod parse + dev cache
-write. No business-rule check exists between schema parse and cache.
+`claude-haiku-4-5-20251001`, then `parseLlmJson` + Zod parse + dev cache write. No
+business-rule check exists between schema parse and cache.
 
-Prompts carry brittle heuristics:
+Prompts carry brittle heuristics with no executable test surface:
+`lib/prompts/annual-statement.ts` (~57 lines) holds an IBAN 18-char re-read rule, a
+DEGIRO exactly-two-accounts hack, the 1-januari vs 31-december balance date, broker
+cash+portfolio, wage/AO synonym lists. `lib/prompts/tax-return.ts` (~25 lines) holds IBAN
+reconstruction across line breaks and a mortgage Nummer pattern.
 
-- `lib/prompts/annual-statement.ts` (~57 lines): IBAN 18-char re-read rule,
-  DEGIRO exactly-two-accounts hack, 1-januari vs 31-december balance date,
-  broker cash+portfolio same-entry rule, wage/AO synonym lists, dividend
-  semantics, sign preservation.
-- `lib/prompts/tax-return.ts` (~25 lines): IBAN reconstruction across line
-  breaks, DEGIRO multi-column concat, mortgage Nummer pattern, wage
-  per-employer split, completeness rule.
+ADR 0002 moved account matching to code; ADR 0004 moved categorization and rule checks.
+Extraction prompts are next.
 
-Failure mode: Extraction maps a value to the wrong field key (for example
-`dutchDividendTax` vs `foreignWithholdingTax`, cash vs portfolio). Wrong
-keys then mismatch downstream in Reconciliation (`lib/reconciler.ts`) and
-Categorization (`lib/categorizer.ts`, `FIELD_AMOUNT_OVERRIDES` in
-`lib/field-mapping.ts`). Fix belongs before Reconciliation, not in it.
+**The parser premise is withdrawn.** PR #97 closed unmerged — the parser adds nothing when
+a PDF lacks clearly defined tables. There is no markdown path.
 
-Trajectory: ADR 0002 moved account matching to code, ADR 0004 moved
-categorization and rule checks to code. Extraction prompts are next.
+## What measurement changed
 
-## Glossary gap
+`reconcile()` + `categorize()` replayed over the 11 cached extractions in `.extracted/`:
 
-`CONTEXT.md` defines Extraction, Reconciliation, Categorization, Analysis.
-It names no post-schema deterministic check. Proposed term on
-implementation: **Validation** — deterministic check of extracted data
-after Zod parse (IBAN checksum, sign, taxYear plausibility, balance-date
-filtering, broker merge). Distinct from Reconciliation and Categorization.
-Update `CONTEXT.md` inline when implemented.
+- Key-picking is correct on 10/10 jaaropgaves. The original failure hypothesis — wrong
+  field keys — is not supported for that category. It fails on property documents (1/1),
+  where no prompt vocabulary exists.
+- ±1 amount gaps are **afronding**: the filer may round to whole euros in either
+  direction. Not an extraction error, and not predictable.
+- Duplicate-looking rows are distinct positions. `dedupeBy` discards one — 33 matched
+  pairs become 32, and a real €134 holding leaves the report. Tracked as #99.
 
-## Decision
+## Glossary
 
-Add pure post-extraction Validation layer. Slim prompts to field
-definitions only. Single targeted self-correction retry in `extractor.ts`.
+Added to `CONTEXT.md`: **Bewijsstuk** (umbrella for supporting documents, with jaaropgave
+as one kind), **Notarisafrekening**, **WOZ-beschikking**, **Makelaarsnota**, **Afronding**.
+**Institution** widened beyond financial institutions. **Rekeningnummer** narrowed to
+account-bearing bewijsstukken. **Validation** enters as the deterministic check between
+Zod parse and cache.
 
-Interface (synthesis of 3 design-an-interface options: deep 2-method,
-pluggable pipeline, happy-path optimized — hybrid adopted):
+## Decisions
 
-```ts
-// lib/extraction-validator.ts — pure, no Anthropic import
-type IssueCode =
-  | "iban.length" | "iban.checksum"
-  | "taxYear.implausible"
-  | "balance.endOfYear"
-  | "broker.split" | "amount.sign"
-  | "duplicate.account" | "field.unknown";
-interface Issue {
-  code: IssueCode;
-  severity: "fixed" | "warning" | "error";
-  path: string;
-  message: string;
-  retryable: boolean;
-  before?: unknown;
-  after?: unknown;
-}
-interface ValidationResult<T> {
-  data: T;
-  issues: Issue[];
-  retry: { hint: string; paths: string[] } | null;
-  ok: boolean;
-}
-export function validateAnnualStatement(
-  d: AnnualStatementData
-): ValidationResult<AnnualStatementData>;
-export function validateTaxReturn(d: TaxReturnData): ValidationResult<TaxReturnData>;
-```
+1. Validation **reports**; callers mutate — ADR 0008. Rules propose corrections on the
+   issue (`before`/`after`); applying them is an explicit named transform. The
+   corrected-`data` shape was rejected because `dedupeBy` is already that pattern.
+2. **No self-correction retry.** Flag only. A flagged wrong IBAN beats a plausible
+   fabrication produced under correction pressure.
+3. **Afronding tolerance stays** at blanket ±1.
+4. **Preserve cents** — `n()` stops rounding; `formatEuro` already truncates. Enables
+   later tightening to `floor(exact) ≤ aangifte ≤ ceil(exact)`.
+5. **Policy transforms run after cache read.** Cache holds the faithful extraction.
+   Prompt hash folded into the cache key.
+6. **Property bewijsstukken are in scope**, uploaded when a home was sold.
+7. **Rekeningnummer keys account-bearing bewijsstukken only** — ADR 0002 amended. A
+   notarisafrekening's only IBAN is a payment reference.
+8. **`institutionType` is display-only.** Rabobank carries hypotheken under
+   `institutionType: "bank"`; interpretation keys off each account's own kinds.
+9. **Split contract, time-boxed.** Jaaropgaves keep model-chosen keys pending the eval;
+   property documents get a closed kind union now.
 
-Hidden rule groups (ordered normalize, validate, correct): IBAN
-normalize + MOD97 (reuse `lib/account-normalizer.ts`), taxYear window,
-balance-date filter (reuse `categorize.isEndOfYearAccount`), broker
-cash/portfolio split-merge, amount sign/rounding, duplicate detection,
-synonym-key remap. Retry orchestration stays in `lib/extractor.ts`
-(owns `withRetry` and cache policy). Internally a private `Rule[]`
-registry; no per-rule public API until rule count exceeds ~10.
+## Build steps
 
-`extract()` change: after `schema.parse`, validate. If `retry` non-null,
-one targeted retry (PDF + `Previous extraction failed validation: <hint>`),
-re-parse, re-validate. Cache only validated data. `withRetry` stays for
-429/5xx only.
-
-Orthogonal to #96: when parser active, markdown path feeds the same
-validator. Cache stays keyed on PDF hash either way.
-
-## Build steps (vertical slices)
-
-1. Validator skeleton + IBAN/taxYear/balance-date rules + unit tests
-   (fixtures from `.extracted/` stripped of PII). No LLM mocks.
-2. Broker/wage synonym + amount-sign rules + prompt slimming pass 1
-   (remove IBAN/balance-date/DEGIRO instructions, keep semantic
-   definitions).
-3. Retry orchestration in `lib/extractor.ts`; update `CONTEXT.md`
-   (Validation entry) and `docs/decisions.md`.
-4. Evaluation harness: golden fixtures for 6 provider types (ING, ASN,
-   DEGIRO/flatex, employer NL/EN, mortgage); regression gate on
-   `npm test`; manual spot-check on 2 unseen PDFs.
+1. Small fixes: `temperature: 0`; cents in `n()`; `isMidYearClosedMortgage` falls back to
+   `openingDebt` when `remainingDebt === 0`; prompt hash in the cache key.
+2. Eval harness — gates everything after. Coherent single-taxpayer synthetic set,
+   absolutely-positioned HTML printed once via `chromium --headless=new --print-to-pdf`,
+   PDFs committed. Never `<table>` — semantic tables produce a clean text layer that real
+   bank PDFs lack, so such fixtures pass while real documents fail. Aangifte first.
+   Anonymised JSON fixtures for the CI tier; real PDFs gitignored. Run against current
+   code first for the before-number.
+3. Policy to code, prompts slimmed: `selectAsOf()`, per-account broker interpretation,
+   IBAN MOD97.
+4. `lib/extraction-validator.ts` (reporting only) + issues section in the report.
+5. Property bewijsstukken: closed kind union, own prompt, never in account matching.
 
 ## Out of scope
 
-Lambda itself (#96), OCR, Analysis prompt changes, hosted vector DB swap.
+Parser Lambda (#96), OCR, Analysis prompt changes, hosted vector DB swap, Kennisbank
+chunker (#93, #95). Eigenwoningreserve stays unmodelled.
 
 ## Verification
 
-- `npm test` passes; new validator tests green.
-- Fixture tests assert corrected `data` equals golden; `issues` audit
-  trail reviewed.
-- Induced validation error triggers one retry then recovers; persistent
-  error surfaces via `formatExtractionFailed`.
-- `app/api/analyze` multipart contract unchanged (ADR 0005).
-- `npm run check:fallow` clean before commit.
+`npm test` green; fixture replay asserts bucket contents **and row counts** — #99 survived
+a 513-line suite because nothing compared cardinality. `npm run eval:extraction` against
+synthetic, then real PDFs. Multipart contract unchanged (ADR 0005). `npm run check:fallow`
+clean.
 
 ## Risks
 
-- Over-correction silencing real mismatch: mitigate via
-  fixed/warning/error severity + before/after audit.
-- Retry cost: capped at 1, only on error + retryable.
-- Prompt slimming regresses unseen layout: mitigate with harness, keep
-  fallback document-block path.
+Prompt slimming regresses an unseen layout — mitigated by eval-first sequencing. Two
+contracts coexist until the eval resolves the split. Synthetic fixtures cover only the
+layouts deliberately encoded; the gitignored real-PDF tier catches the rest.
+
+## Deferred
+
+Observation contract for jaaropgaves (decided by step 2's number); tightening the afronding
+tolerance; property identity matching via address or WOZ-objectnummer.
 
 ## ADR note
 
-No contradiction with ADR 0002/0004 (extends them). Flag to reopen
-ADR 0003 (Haiku for Extraction): markdown path via parser may change the
-cost/quality tradeoff; re-evaluate model choice after harness.
+New ADR 0008. ADR 0002 amended. ADR 0003's reopening is withdrawn as originally framed —
+revisit model choice on eval evidence, not on a parser that no longer exists.
