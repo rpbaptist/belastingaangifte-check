@@ -45,6 +45,7 @@ describe("categorize — basic assembly", () => {
     expect(result.missingStatement).toHaveLength(0);
     expect(result.notFilledIn).toHaveLength(0);
     expect(result.amountMismatches).toHaveLength(0);
+    expect(result.duplicateRowsCollapsed).toHaveLength(0);
   });
 
   it("maps onlyInAangifte to missingStatement", () => {
@@ -83,6 +84,32 @@ describe("categorize — basic assembly", () => {
 });
 
 // ─── notFilledIn deduplication ──────────────────────────────────────────────
+
+describe("categorize — missingStatement deduplication", () => {
+  it("keeps two onlyInAangifte entries with the same accountNumber+field but different amounts", () => {
+    // Regression for #99: mirrors the ASN Themabeleggen case in the missingStatement array.
+    const entryBank = makeEntry("ASN Themabeleggen", 1071, "NL29ASNB8844339390");
+    const entryBroker = makeEntry("ASN Themabeleggen", 134, "NL29ASNB8844339390");
+
+    const result = categorize(
+      makeMatchResult({ onlyInAangifte: [entryBank, entryBroker] })
+    );
+
+    expect(result.missingStatement).toHaveLength(2);
+    const amounts = result.missingStatement.map((m) => m.amount);
+    expect(amounts).toContain(1071);
+    expect(amounts).toContain(134);
+  });
+
+  it("collapses two fully identical onlyInAangifte entries and reports the collapse", () => {
+    const entry = makeEntry("Saldo bank", 5000, "NL00TEST0000000001");
+    const result = categorize(makeMatchResult({ onlyInAangifte: [entry, { ...entry }] }));
+
+    expect(result.missingStatement).toHaveLength(1);
+    expect(result.duplicateRowsCollapsed).toHaveLength(1);
+    expect(result.duplicateRowsCollapsed[0].label).toBe("missingStatement");
+  });
+});
 
 describe("categorize — notFilledIn deduplication", () => {
   it("keeps two entries with the same accountNumber but different descriptions", () => {
@@ -146,6 +173,8 @@ describe("categorize — notFilledIn deduplication", () => {
     );
 
     expect(result.notFilledIn).toHaveLength(1);
+    expect(result.duplicateRowsCollapsed).toHaveLength(1);
+    expect(result.duplicateRowsCollapsed[0].label).toBe("notFilledIn");
   });
 
   it("keeps two entries with the same accountNumber and description but different amounts", () => {

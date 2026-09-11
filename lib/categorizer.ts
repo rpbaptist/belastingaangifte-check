@@ -59,11 +59,17 @@ export type AmountMismatch = {
   amountStatement: number;
 };
 
+export type DuplicateRowCollapsed = {
+  label: "covered" | "missingStatement" | "notFilledIn";
+  row: CoveredItem | MissingStatementItem | NotFilledInItem;
+};
+
 export type CategorizationResult = {
   covered: CoveredItem[];
   missingStatement: MissingStatementItem[];
   notFilledIn: NotFilledInItem[];
   amountMismatches: AmountMismatch[];
+  duplicateRowsCollapsed: DuplicateRowCollapsed[];
 };
 
 export function isEndOfYearAccount(statement: AnnualStatementData, account: AccountData): boolean {
@@ -81,12 +87,17 @@ export function isMidYearClosedMortgage(account: AccountData): boolean {
 // Collapses rows that are fully identical (an extraction artifact), never rows that merely
 // share a key. Two positions with the same account and field but different amounts (e.g. the
 // bank and broker components of one ASN Themabeleggen holding) are real and both survive.
-function collapseExactDuplicates<T>(arr: T[], label: string): T[] {
+// Every collapse is reported on `collapsed` rather than dropped silently.
+function collapseExactDuplicates<T extends CoveredItem | MissingStatementItem | NotFilledInItem>(
+  arr: T[],
+  label: DuplicateRowCollapsed["label"],
+  collapsed: DuplicateRowCollapsed[]
+): T[] {
   const seen = new Set<string>();
   return arr.filter((item) => {
     const k = JSON.stringify(item);
     if (seen.has(k)) {
-      console.warn(`categorize: collapsed duplicate ${label} row`, item);
+      collapsed.push({ label, row: item });
       return false;
     }
     seen.add(k);
@@ -135,10 +146,17 @@ export function categorize(matchResult: MatchResult): CategorizationResult {
       amount: primaryDisplayAmount(account.amounts),
     }));
 
+  const duplicateRowsCollapsed: DuplicateRowCollapsed[] = [];
+
   return {
-    covered: collapseExactDuplicates(covered, "covered"),
-    missingStatement: collapseExactDuplicates(missingStatement, "missingStatement"),
-    notFilledIn: collapseExactDuplicates(notFilledIn, "notFilledIn"),
+    covered: collapseExactDuplicates(covered, "covered", duplicateRowsCollapsed),
+    missingStatement: collapseExactDuplicates(
+      missingStatement,
+      "missingStatement",
+      duplicateRowsCollapsed
+    ),
+    notFilledIn: collapseExactDuplicates(notFilledIn, "notFilledIn", duplicateRowsCollapsed),
     amountMismatches,
+    duplicateRowsCollapsed,
   };
 }
