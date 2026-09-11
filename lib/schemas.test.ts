@@ -55,30 +55,30 @@ describe("TaxReturnSchema", () => {
     expect(() => TaxReturnSchema.parse(bad)).toThrow();
   });
 
-  it("rounds entry amount with cents to nearest integer", () => {
+  it("preserves cents on entry amounts", () => {
     const result = TaxReturnSchema.parse({
       ...validTaxReturn,
       entries: [{ ...validTaxReturn.entries[0], amount: 3080.67 }],
     });
-    expect(result.entries[0].amount).toBe(3081);
+    expect(result.entries[0].amount).toBe(3080.67);
   });
 
-  it("rounds negative float amounts", () => {
+  it("preserves cents on negative float amounts", () => {
     const result = TaxReturnSchema.parse({
       ...validTaxReturn,
       entries: [{ ...validTaxReturn.entries[0], amount: -102.4 }],
     });
-    expect(result.entries[0].amount).toBe(-102);
+    expect(result.entries[0].amount).toBe(-102.4);
   });
 });
 
 describe("AnnualStatementSchema — amount coercion", () => {
-  it("rounds nested account amounts to integers", () => {
+  it("preserves cents on nested account amounts", () => {
     const result = AnnualStatementSchema.parse({
       ...validStatement,
       accounts: [{ ...validStatement.accounts[0], amounts: { bank: { balance: 3080.21 } } }],
     });
     const amounts = result.accounts[0].amounts as { bank: { balance: number } };
-    expect(amounts.bank.balance).toBe(3080);
+    expect(amounts.bank.balance).toBe(3080.21);
   });
 });
