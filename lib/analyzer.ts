@@ -28,6 +28,7 @@ export function buildAnalysisRequest(
   return {
     model: ANALYSIS_MODEL,
     max_tokens: 4096,
+    temperature: 0,
     system: [
       {
         type: "text",

@@ -26,7 +26,7 @@ async function extract<T>(
   client: Anthropic,
   language: Language
 ): Promise<T> {
-  const cached = readCache<T>(pdfBase64);
+  const cached = readCache<T>(pdfBase64, opts.systemPrompt);
   if (cached) {
     try {
       return opts.schema.parse(cached);
@@ -39,6 +39,7 @@ async function extract<T>(
     client.messages.create({
       model: MODEL,
       max_tokens: opts.maxTokens,
+      temperature: 0,
       system: [{ type: "text", text: opts.systemPrompt, cache_control: { type: "ephemeral" } }],
       messages: [
         {
@@ -66,7 +67,7 @@ async function extract<T>(
   const raw = parseLlmJson(text);
   try {
     const result = opts.schema.parse(raw);
-    writeCache(pdfBase64, result);
+    writeCache(pdfBase64, result, opts.systemPrompt);
     return result;
   } catch (err) {
     const msg =

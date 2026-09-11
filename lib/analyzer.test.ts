@@ -30,6 +30,11 @@ describe("buildAnalysisRequest", () => {
     expect(req.max_tokens).toBe(4096);
   });
 
+  it("pins temperature to zero", () => {
+    const req = buildAnalysisRequest(noMismatches, noCovered, rules);
+    expect(req.temperature).toBe(0);
+  });
+
   it("embeds rules in the system message", () => {
     const req = buildAnalysisRequest(noMismatches, noCovered, rules);
     const system = Array.isArray(req.system) ? req.system : [];
