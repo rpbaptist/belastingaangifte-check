@@ -1,7 +1,7 @@
 import { run, claudeCode, Output } from "@ai-hero/sandcastle";
 import { docker } from "@ai-hero/sandcastle/sandboxes/docker";
 import { execFileSync } from "node:child_process";
-import { z } from "zod";
+import { runReview } from "./review-lib.mts";
 
 // Invoked per-issue by loop.sh:
 //   ISSUE_NUMBER=42 ISSUE_TITLE="..." ISSUE_BODY="..." npx tsx .sandcastle/main.mts
@@ -23,7 +23,9 @@ const branch = `ralph/issue-${issueNumber}`;
 const result = await run({
   agent: claudeCode("claude-opus-4-8", { effort: "high" }),
   sandbox: docker({
-    mounts: [{ hostPath: "~/.npm", sandboxPath: "/home/agent/.npm", readonly: true }],
+    mounts: [
+      { hostPath: "~/.npm", sandboxPath: "/home/agent/.npm", readonly: true },
+    ],
   }),
   branchStrategy: { type: "branch", branch },
   promptFile: "./.sandcastle/prompt.md",
@@ -69,7 +71,7 @@ try {
       "--body",
       `${result.output || "No description provided."}\n\nCloses #${issueNumber}`,
     ],
-    { encoding: "utf-8" }
+    { encoding: "utf-8" },
   ).trim();
   console.log(`PR opened: ${prUrl}`);
   prNumber = prUrl.split("/").pop()!;
@@ -79,71 +81,9 @@ try {
 }
 
 // Self-review pass, per AGENTS.md: "Review the PR and leave findings as
-// comments. Address small review issues directly." Runs as a second,
-// separate sandbox iteration on the SAME branch/worktree (branchStrategy
-// reuses an existing branch rather than erroring). The diff is fetched
-// HERE on the host (broad gh session) and handed in via promptArgs, so the
-// sandbox never needs gh access at all — same host-only-credential
-// invariant as the build phase.
-const diff = execFileSync("gh", ["pr", "diff", prNumber], {
-  encoding: "utf-8",
-  maxBuffer: 10 * 1024 * 1024,
-});
+// comments. Address small review issues directly." Shared with review.mts
+// — see review-lib.mts.
+await runReview({ prNumber, issueNumber, branch: result.branch });
 
-const reviewSchema = z.object({
-  summary: z.string(),
-  comments: z.array(z.string()),
-  newIssues: z.array(z.object({ title: z.string(), body: z.string() })),
-});
-
-const reviewResult = await run({
-  agent: claudeCode("claude-opus-4-8", { effort: "high" }),
-  sandbox: docker({
-    mounts: [{ hostPath: "~/.npm", sandboxPath: "/home/agent/.npm", readonly: true }],
-  }),
-  branchStrategy: { type: "branch", branch }, // reuses the existing branch
-  promptFile: "./.sandcastle/prompt-review.md",
-  promptArgs: {
-    ISSUE_NUMBER: issueNumber,
-    PR_NUMBER: prNumber,
-    PR_DIFF: diff,
-  },
-  hooks: {
-    sandbox: {
-      onSandboxReady: [
-        { command: 'git config user.name "Ralph (belastingaangifte-check agent)"' },
-        { command: 'git config user.email "ralph-agent@users.noreply.github.com"' },
-        { command: "npm ci" },
-      ],
-    },
-  },
-  output: Output.object({
-    tag: "review_result",
-    schema: reviewSchema,
-    maxRetries: 1,
-  }),
-});
-
-if (reviewResult.commits.length > 0) {
-  execFileSync("git", ["push", "origin", result.branch], { stdio: "inherit" });
-  console.log(`Review pass pushed ${reviewResult.commits.length} more commit(s).`);
-}
-
-const { summary, comments, newIssues } = reviewResult.output;
-const commentBody = [summary, "", ...comments.map((c) => `- ${c}`)].join("\n");
-execFileSync("gh", ["pr", "comment", prNumber, "--body", commentBody], {
-  stdio: "inherit",
-});
-
-for (const issue of newIssues) {
-  execFileSync(
-    "gh",
-    ["issue", "create", "--title", issue.title, "--body", issue.body, "--label", "needs-triage"],
-    { stdio: "inherit" }
-  );
-}
-
-console.log(
-  `Success: ${result.branch}, ${result.commits.length + reviewResult.commits.length} commit(s), PR #${prNumber} reviewed (${newIssues.length} follow-up issue(s)).`
-);
+console.log(`Success: ${result.branch}, PR #${prNumber} built and reviewed.`);
 process.exit(0);
