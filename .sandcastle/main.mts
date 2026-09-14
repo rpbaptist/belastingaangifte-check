@@ -78,6 +78,27 @@ if (commitsAheadOfMaster === "0") {
   process.exit(1);
 }
 
+// Progress-note commits (see prompt.md "Resuming") exist so a restarted
+// run can skip re-exploration — they are not real work and must never
+// trigger a push/PR on their own. Only proceed once at least one commit
+// ahead of master isn't a progress note.
+const subjects = execFileSync(
+  "git",
+  ["log", "--format=%s", `master..refs/heads/${result.branch}`],
+  { encoding: "utf-8" },
+)
+  .trim()
+  .split("\n");
+const hasRealWork = subjects.some(
+  (s) => !s.startsWith(`Progress notes: issue #${issueNumber}`),
+);
+if (!hasRealWork) {
+  console.error(
+    `Only progress notes on ${result.branch}, no real work yet. Treating as blocked.`,
+  );
+  process.exit(1);
+}
+
 let prNumber: string;
 try {
   execFileSync("git", ["push", "-u", "origin", result.branch], {
