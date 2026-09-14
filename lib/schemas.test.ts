@@ -55,20 +55,20 @@ describe("TaxReturnSchema", () => {
     expect(() => TaxReturnSchema.parse(bad)).toThrow();
   });
 
-  it("preserves cents on entry amounts", () => {
+  it("rounds entry amounts to whole euros", () => {
     const result = TaxReturnSchema.parse({
       ...validTaxReturn,
       entries: [{ ...validTaxReturn.entries[0], amount: 3080.67 }],
     });
-    expect(result.entries[0].amount).toBe(3080.67);
+    expect(result.entries[0].amount).toBe(3081);
   });
 
-  it("preserves cents on negative float amounts", () => {
+  it("rounds negative float amounts to whole euros", () => {
     const result = TaxReturnSchema.parse({
       ...validTaxReturn,
       entries: [{ ...validTaxReturn.entries[0], amount: -102.4 }],
     });
-    expect(result.entries[0].amount).toBe(-102.4);
+    expect(result.entries[0].amount).toBe(-102);
   });
 });
 

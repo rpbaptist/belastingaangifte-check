@@ -1,7 +1,10 @@
 import { z } from "zod";
 import type { AccountAmounts } from "./types";
 
-// Cents are preserved through the schema; only display truncates to whole euros.
+// Cents are preserved through the schema for jaaropgave amounts (AccountAmountsSchema);
+// only display truncates to whole euros. Aangifte amounts (TaxReturnEntrySchema) are
+// still rounded — the Belastingdienst always reports whole euros, so a residual
+// fraction there is a hallucination, not signal (docs/decisions.md §4).
 const n = () => z.number();
 // LLM string fields: coerce null → "" so a missing value never crashes the parser
 const s = () =>
@@ -39,7 +42,7 @@ export const TaxReturnEntrySchema = z.object({
   box: z.enum(["1", "2", "3"]),
   field: z.string(),
   accountNumber: z.string().nullable(),
-  amount: z.number(),
+  amount: z.number().transform(Math.round),
 });
 
 export const TaxReturnSchema = z.object({
