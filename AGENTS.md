@@ -27,6 +27,8 @@ For all new features and changes:
 - When changing or adding new functionality, use `tdd` skill.
 - Create logically grouped, atomic commits.
 - Update documentation according to changes made.
+- Create the PR
+- Review the PR
 - Address small review issues directly. If larger or makes sense to follow up, create a new GitHub issues.
 
 Default to continuing to the next step unless instructed otherwise.
