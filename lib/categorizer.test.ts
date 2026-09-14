@@ -412,10 +412,39 @@ describe("categorize — mid-year closed mortgage", () => {
     expect(result.notFilledIn).toHaveLength(1);
   });
 
-  it("keeps a mortgage with zero remainingDebt in notFilledIn", () => {
-    // remainingDebt = 0 means the debt is fully repaid; filter does not apply
+  it("keeps a mortgage with zero remainingDebt and no opening debt in notFilledIn", () => {
+    // remainingDebt = 0 with no openingDebt to fall back on: the ratio cannot be
+    // judged, so the mortgage stays reported rather than being silently suppressed.
     const statement = makeStatement("Rabobank", "mortgage", "Nummer192658069", {
       mortgage: { interestPaid: 8400, remainingDebt: 0 },
+    });
+    const result = categorize(
+      makeMatchResult({ onlyInJaaropgave: [{ statement, account: statement.accounts[0] }] })
+    );
+    expect(result.notFilledIn).toHaveLength(1);
+  });
+
+  it("excludes a fully repaid mortgage (remainingDebt 0, opening debt present) from notFilledIn", () => {
+    // The worked example from the isMidYearClosedMortgage comment: €104 interest on
+    // an €89,956 opening debt that was fully repaid during the year (remainingDebt 0).
+    // This is the case #103 fixes — before the opening-debt fallback it stayed reported
+    // as a forgotten declaration. The tiny interest-to-debt ratio marks a mid-year
+    // discharge, not a filing omission.
+    const statement = makeStatement("Rabobank", "mortgage", "Nummer192658069", {
+      mortgage: { interestPaid: 104, remainingDebt: 0, openingDebt: 89956 },
+    });
+    const result = categorize(
+      makeMatchResult({ onlyInJaaropgave: [{ statement, account: statement.accounts[0] }] })
+    );
+    expect(result.notFilledIn).toHaveLength(0);
+  });
+
+  it("keeps a genuinely undeclared full-year mortgage (remainingDebt 0, high ratio) reported", () => {
+    // A mortgage repaid at year-end after running the full year still shows substantial
+    // interest relative to the opening debt (8.4%), so it is a real omission, not a
+    // mid-year discharge — it must remain in notFilledIn.
+    const statement = makeStatement("Rabobank", "mortgage", "Nummer192658069", {
+      mortgage: { interestPaid: 8400, remainingDebt: 0, openingDebt: 100000 },
     });
     const result = categorize(
       makeMatchResult({ onlyInJaaropgave: [{ statement, account: statement.accounts[0] }] })
@@ -487,10 +516,29 @@ describe("isMidYearClosedMortgage", () => {
     ).toBe(false);
   });
 
-  it("returns false when remainingDebt is zero (debt fully repaid)", () => {
+  it("returns false when remainingDebt is zero and no opening debt is available", () => {
+    // Nothing to judge the ratio against, so we cannot claim a mid-year discharge.
     expect(isMidYearClosedMortgage(makeAccount({ interestPaid: 8400, remainingDebt: 0 }))).toBe(
       false
     );
+  });
+
+  it("falls back to opening debt when remainingDebt is zero (fully repaid mid-year)", () => {
+    // €104 / €89,956 ≈ 0.12% — the worked example from the function comment.
+    expect(
+      isMidYearClosedMortgage(
+        makeAccount({ interestPaid: 104, remainingDebt: 0, openingDebt: 89956 })
+      )
+    ).toBe(true);
+  });
+
+  it("returns false when opening debt gives a high ratio (full-year mortgage repaid at year-end)", () => {
+    // €8,400 / €100,000 = 8.4% — genuine full-year interest, not a discharge.
+    expect(
+      isMidYearClosedMortgage(
+        makeAccount({ interestPaid: 8400, remainingDebt: 0, openingDebt: 100000 })
+      )
+    ).toBe(false);
   });
 
   it("returns false when interestPaid is zero", () => {
