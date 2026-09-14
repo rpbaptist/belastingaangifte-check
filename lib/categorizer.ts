@@ -59,10 +59,10 @@ export type AmountMismatch = {
   amountStatement: number;
 };
 
-export type DuplicateRowCollapsed = {
-  label: "covered" | "missingStatement" | "notFilledIn";
-  row: CoveredItem | MissingStatementItem | NotFilledInItem;
-};
+export type DuplicateRowCollapsed =
+  | { label: "covered"; row: CoveredItem }
+  | { label: "missingStatement"; row: MissingStatementItem }
+  | { label: "notFilledIn"; row: NotFilledInItem };
 
 export type CategorizationResult = {
   covered: CoveredItem[];
@@ -88,22 +88,48 @@ export function isMidYearClosedMortgage(account: AccountData): boolean {
 // share a key. Two positions with the same account and field but different amounts (e.g. the
 // bank and broker components of one ASN Themabeleggen holding) are real and both survive.
 // Every collapse is reported on `collapsed` rather than dropped silently.
+function collapseExactDuplicates<T extends CoveredItem>(
+  arr: T[],
+  label: "covered",
+  collapsed: DuplicateRowCollapsed[],
+  key: (item: T) => string
+): T[];
+function collapseExactDuplicates<T extends MissingStatementItem>(
+  arr: T[],
+  label: "missingStatement",
+  collapsed: DuplicateRowCollapsed[],
+  key: (item: T) => string
+): T[];
+function collapseExactDuplicates<T extends NotFilledInItem>(
+  arr: T[],
+  label: "notFilledIn",
+  collapsed: DuplicateRowCollapsed[],
+  key: (item: T) => string
+): T[];
 function collapseExactDuplicates<T extends CoveredItem | MissingStatementItem | NotFilledInItem>(
   arr: T[],
   label: DuplicateRowCollapsed["label"],
-  collapsed: DuplicateRowCollapsed[]
+  collapsed: DuplicateRowCollapsed[],
+  key: (item: T) => string
 ): T[] {
   const seen = new Set<string>();
   return arr.filter((item) => {
-    const k = JSON.stringify(item);
+    const k = key(item);
     if (seen.has(k)) {
-      collapsed.push({ label, row: item });
+      collapsed.push({ label, row: item } as DuplicateRowCollapsed);
       return false;
     }
     seen.add(k);
     return true;
   });
 }
+
+const coveredKey = (c: CoveredItem): string =>
+  `${c.field}|${c.accountNumber}|${c.institution}|${c.amountTaxReturn}|${c.amountStatement}`;
+const missingStatementKey = (m: MissingStatementItem): string =>
+  `${m.field}|${m.accountNumber}|${m.amount}|${m.box}`;
+const notFilledInKey = (n: NotFilledInItem): string =>
+  `${n.accountNumber}|${n.institution}|${n.description}|${n.amount}`;
 
 export function categorize(matchResult: MatchResult): CategorizationResult {
   const covered: CoveredItem[] = [];
@@ -149,13 +175,19 @@ export function categorize(matchResult: MatchResult): CategorizationResult {
   const duplicateRowsCollapsed: DuplicateRowCollapsed[] = [];
 
   return {
-    covered: collapseExactDuplicates(covered, "covered", duplicateRowsCollapsed),
+    covered: collapseExactDuplicates(covered, "covered", duplicateRowsCollapsed, coveredKey),
     missingStatement: collapseExactDuplicates(
       missingStatement,
       "missingStatement",
-      duplicateRowsCollapsed
+      duplicateRowsCollapsed,
+      missingStatementKey
     ),
-    notFilledIn: collapseExactDuplicates(notFilledIn, "notFilledIn", duplicateRowsCollapsed),
+    notFilledIn: collapseExactDuplicates(
+      notFilledIn,
+      "notFilledIn",
+      duplicateRowsCollapsed,
+      notFilledInKey
+    ),
     amountMismatches,
     duplicateRowsCollapsed,
   };
