@@ -45,8 +45,13 @@ function differingFields(expected: TaxReturnEntry, actual: TaxReturnEntry): Mism
   return differing;
 }
 
+// Short-circuits on the first difference (used in the hot pass-1 findIndex loop); the fuller
+// differingFields is only computed once a pair is confirmed as a mismatch, for the report.
 const isExact = (expected: TaxReturnEntry, actual: TaxReturnEntry): boolean =>
-  differingFields(expected, actual).length === 0;
+  expected.box === actual.box &&
+  expected.amount === actual.amount &&
+  normField(expected.field) === normField(actual.field) &&
+  normAccount(expected.accountNumber) === normAccount(actual.accountNumber);
 
 // Find the best still-unused actual row for a fixture row. Account number is the strongest
 // key (unique per row), so it wins; failing that, box+field pairs the row and the closest
