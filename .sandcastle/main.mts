@@ -56,10 +56,24 @@ const result = await run({
   output: Output.string({ tag: "pr_description" }),
 });
 
-// Trust nothing the agent self-reports beyond what Sandcastle itself
-// verified: real commits on the branch. No commits = blocked, regardless
-// of what the agent's output claims.
-if (result.commits.length === 0) {
+// Trust nothing the agent self-reports beyond what's actually on the
+// branch. result.commits is NOT "commits ahead of master" — Sandcastle
+// computes it against the worktree's HEAD at creation time, which for a
+// *resumed* branch (one that already had commits from an earlier,
+// interrupted run) is the branch's own prior tip, not master. So a
+// session that resumes already-finished work and correctly adds nothing
+// new always reports result.commits.length === 0, indistinguishable from
+// an agent that did nothing. See ralph-logs/issue-105-20260914-185112.log
+// for #105 getting wrongly blocked this way after finishing on an
+// earlier run and never getting pushed.
+//
+// Check commits ahead of master directly instead.
+const commitsAheadOfMaster = execFileSync(
+  "git",
+  ["rev-list", "--count", `master..refs/heads/${result.branch}`],
+  { encoding: "utf-8" },
+).trim();
+if (commitsAheadOfMaster === "0") {
   console.error(`No commits on ${result.branch}. Treating as blocked.`);
   process.exit(1);
 }
