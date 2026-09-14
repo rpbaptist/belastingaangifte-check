@@ -91,9 +91,7 @@ describe("categorize — missingStatement deduplication", () => {
     const entryBank = makeEntry("ASN Themabeleggen", 1071, "NL29ASNB8844339390");
     const entryBroker = makeEntry("ASN Themabeleggen", 134, "NL29ASNB8844339390");
 
-    const result = categorize(
-      makeMatchResult({ onlyInAangifte: [entryBank, entryBroker] })
-    );
+    const result = categorize(makeMatchResult({ onlyInAangifte: [entryBank, entryBroker] }));
 
     expect(result.missingStatement).toHaveLength(2);
     const amounts = result.missingStatement.map((m) => m.amount);
