@@ -23,9 +23,7 @@ const branch = `ralph/issue-${issueNumber}`;
 const result = await run({
   agent: claudeCode("claude-opus-4-8", { effort: "high" }),
   sandbox: docker({
-    mounts: [
-      { hostPath: "~/.npm", sandboxPath: "/home/agent/.npm", readonly: true },
-    ],
+    mounts: [{ hostPath: "~/.npm", sandboxPath: "/home/agent/.npm", readonly: true }],
   }),
   branchStrategy: { type: "branch", branch },
   promptFile: "./.sandcastle/prompt.md",
@@ -71,7 +69,7 @@ try {
       "--body",
       `${result.output || "No description provided."}\n\nCloses #${issueNumber}`,
     ],
-    { encoding: "utf-8" },
+    { encoding: "utf-8" }
   ).trim();
   console.log(`PR opened: ${prUrl}`);
   prNumber = prUrl.split("/").pop()!;
@@ -101,9 +99,7 @@ const reviewSchema = z.object({
 const reviewResult = await run({
   agent: claudeCode("claude-opus-4-8", { effort: "high" }),
   sandbox: docker({
-    mounts: [
-      { hostPath: "~/.npm", sandboxPath: "/home/agent/.npm", readonly: true },
-    ],
+    mounts: [{ hostPath: "~/.npm", sandboxPath: "/home/agent/.npm", readonly: true }],
   }),
   branchStrategy: { type: "branch", branch }, // reuses the existing branch
   promptFile: "./.sandcastle/prompt-review.md",
@@ -142,21 +138,12 @@ execFileSync("gh", ["pr", "comment", prNumber, "--body", commentBody], {
 for (const issue of newIssues) {
   execFileSync(
     "gh",
-    [
-      "issue",
-      "create",
-      "--title",
-      issue.title,
-      "--body",
-      issue.body,
-      "--label",
-      "needs-triage",
-    ],
-    { stdio: "inherit" },
+    ["issue", "create", "--title", issue.title, "--body", issue.body, "--label", "needs-triage"],
+    { stdio: "inherit" }
   );
 }
 
 console.log(
-  `Success: ${result.branch}, ${result.commits.length + reviewResult.commits.length} commit(s), PR #${prNumber} reviewed (${newIssues.length} follow-up issue(s)).`,
+  `Success: ${result.branch}, ${result.commits.length + reviewResult.commits.length} commit(s), PR #${prNumber} reviewed (${newIssues.length} follow-up issue(s)).`
 );
 process.exit(0);

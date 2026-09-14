@@ -35,8 +35,8 @@ Two additional labels, specific to the unattended RALPH loop (`loop.sh` +
 the five-role vocabulary above and are never applied by a human during
 triage — only by the loop itself.
 
-| Label                 | Meaning                                                                 |
-| ---------------------- | ------------------------------------------------------------------------ |
+| Label                  | Meaning                                                                 |
+| ---------------------- | ----------------------------------------------------------------------- |
 | `in-progress-by-agent` | The loop has claimed this issue and is actively working it in a sandbox |
 | `blocked-for-agent`    | A loop iteration failed; needs human inspection before retrying         |
 
