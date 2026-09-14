@@ -29,6 +29,17 @@ pick_issue() {
               | sort_by(.number) | .[0] // empty'
 }
 
+is_transient_failure() {
+  local log_file="$1"
+  # Transient infra signatures (not agent logic): git config.lock
+  # contention from bind-mounted .git/config between host + sandbox.
+  # See ralph-logs/issue-105-20260914-124532.log.
+  grep -q "could not lock config file" "$log_file" 2>/dev/null && return 0
+  grep -q "config\.lock" "$log_file" 2>/dev/null && return 0
+  grep -q "ExecError.*git config" "$log_file" 2>/dev/null && return 0
+  return 1
+}
+
 run_build_iteration() {
   local issue_json="$1"
   local n title body
@@ -43,6 +54,10 @@ run_build_iteration() {
   ts="$(date +%Y%m%d-%H%M%S)"
   log_file="$LOG_DIR/issue-${n}-${ts}.log"
 
+  # Proactive stale-lock cleanup before sandbox (host + sandbox share
+  # .git/config via bind mount — host git ops can leave config.lock).
+  rm -f .git/config.lock
+
   if ISSUE_NUMBER="$n" ISSUE_TITLE="$title" ISSUE_BODY="$body" \
        npx tsx .sandcastle/main.mts 2>&1 | tee "$log_file"; then
     # Also clear ready-for-agent: without this, a successfully completed
@@ -52,7 +67,21 @@ run_build_iteration() {
     gh issue edit "$n" --repo "$REPO" --remove-label in-progress-by-agent --remove-label ready-for-agent
   else
     echo "Iteration for issue #$n failed (see $log_file)."
-    gh issue edit "$n" --repo "$REPO" --remove-label in-progress-by-agent --add-label blocked-for-agent
+    if is_transient_failure "$log_file"; then
+      echo "Transient infra failure detected (git config.lock) — not marking blocked, will retry next iteration."
+      gh issue edit "$n" --repo "$REPO" --remove-label in-progress-by-agent
+      rm -f .git/config.lock
+      # Remove empty branch left by failed sandbox setup so next retry
+      # starts clean (no zero-commit branch to confuse verification).
+      if git rev-parse --verify "ralph/issue-$n" >/dev/null 2>&1; then
+        if git diff --quiet "master..ralph/issue-$n" 2>/dev/null; then
+          git branch -D "ralph/issue-$n" 2>/dev/null || true
+          git push origin --delete "ralph/issue-$n" 2>/dev/null || true
+        fi
+      fi
+    else
+      gh issue edit "$n" --repo "$REPO" --remove-label in-progress-by-agent --add-label blocked-for-agent
+    fi
   fi
 }
 
