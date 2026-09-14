@@ -3,9 +3,8 @@ import path from "path";
 import type { AnalysisReport, AnnualStatementData, AttentionPoint, TaxReturnData } from "./types";
 import { z } from "zod";
 import { parseLlmJson } from "./parse-llm-json";
-import { reconcile } from "./reconciler";
-import { categorize, type AmountMismatch, type DuplicateRowCollapsed } from "./categorizer";
-import { runRuleChecks } from "./rule-checks";
+import type { AmountMismatch } from "./categorizer";
+import { buildReport } from "./report";
 import { LLMAnalysisResponseSchema } from "./schemas";
 import {
   buildAnalyzerPrompt,
@@ -14,12 +13,7 @@ import {
 } from "./prompts/analyzer";
 import { readAnalysisCache, writeAnalysisCache } from "./extraction-cache";
 import { ANALYSIS_MODEL, createClient, extractResponseText } from "./llm";
-import {
-  translate,
-  formatAnalysisFailed,
-  formatDuplicateRowsCollapsed,
-  type Language,
-} from "./translations";
+import { translate, formatAnalysisFailed, type Language } from "./translations";
 import { retrieveKennisbankContext, formatRetrievedContext } from "./rag/retrieval";
 import type Anthropic from "@anthropic-ai/sdk";
 
@@ -72,17 +66,6 @@ export function parseAnalysisResponse(
   }
 }
 
-function buildDuplicateRowsAttentionPoint(
-  duplicateRowsCollapsed: DuplicateRowCollapsed[],
-  language: Language
-): AttentionPoint | null {
-  if (duplicateRowsCollapsed.length === 0) return null;
-  return {
-    title: translate("duplicateRowsCollapsedTitle", language),
-    explanation: formatDuplicateRowsCollapsed(duplicateRowsCollapsed.length, language),
-  };
-}
-
 export async function analyzeDocuments(
   taxReturn: TaxReturnData,
   annualStatements: AnnualStatementData[],
@@ -91,16 +74,12 @@ export async function analyzeDocuments(
 ): Promise<Omit<AnalysisReport, "extractionErrors">> {
   const client = createClient(apiKey);
 
-  const matchResult = reconcile(taxReturn, annualStatements);
-  const { covered, missingStatement, notFilledIn, amountMismatches, duplicateRowsCollapsed } =
-    categorize(matchResult);
-  const rulePoints = runRuleChecks(annualStatements, taxReturn.taxYear, language);
-  const duplicateRowsPoint = buildDuplicateRowsAttentionPoint(duplicateRowsCollapsed, language);
-  if (duplicateRowsPoint) rulePoints.push(duplicateRowsPoint);
+  const { taxYear, covered, missingStatement, notFilledIn, amountMismatches, rulePoints } =
+    buildReport(taxReturn, annualStatements, language);
 
   if (amountMismatches.length === 0) {
     return {
-      taxYear: taxReturn.taxYear,
+      taxYear,
       covered,
       missingStatement,
       notFilledIn,
@@ -149,7 +128,7 @@ export async function analyzeDocuments(
   }
 
   return {
-    taxYear: taxReturn.taxYear,
+    taxYear,
     covered,
     missingStatement,
     notFilledIn,
