@@ -8,23 +8,17 @@
 // Opt-in and offline from CI: it calls the Anthropic API (a real cost) and is never part of
 // `npm test`. Exits non-zero if any fixture has a mismatch, so it doubles as a pass/fail gate
 // when comparing a prompt change against the recorded baseline.
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { createClient } from "@/lib/llm";
 import { extractTaxReturn } from "@/lib/extractor";
 import { TaxReturnSchema } from "@/lib/schemas";
 import { diffTaxReturn, isPass, formatDiffReport } from "@/lib/eval/diff";
-
-const FIXTURES_DIR = path.join(process.cwd(), "eval", "fixtures");
+import { FIXTURES_DIR, listFixtures } from "@/lib/eval/fixtures";
 
 function selectFixtures(): string[] {
   const requested = process.argv.slice(2);
-  const all = existsSync(FIXTURES_DIR)
-    ? readdirSync(FIXTURES_DIR, { withFileTypes: true })
-        .filter((e) => e.isDirectory())
-        .map((e) => e.name)
-        .sort()
-    : [];
+  const all = listFixtures();
   if (requested.length === 0) return all;
 
   const unknown = requested.filter((name) => !all.includes(name));
@@ -42,6 +36,9 @@ async function runFixture(name: string, client: ReturnType<typeof createClient>)
     throw new Error(
       `Missing ${path.relative(process.cwd(), pdfPath)}. Run \`npm run eval:render\`.`
     );
+  }
+  if (!existsSync(expectedPath)) {
+    throw new Error(`Missing ${path.relative(process.cwd(), expectedPath)} for fixture ${name}.`);
   }
 
   const expected = TaxReturnSchema.parse(JSON.parse(readFileSync(expectedPath, "utf-8")));

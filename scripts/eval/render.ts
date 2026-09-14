@@ -8,10 +8,9 @@
 // absolutely-positioned run at its coordinate, so the resulting text layer has no column
 // delimiters — the property that makes these fixtures resemble real Belastingdienst PDFs.
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync } from "node:fs";
 import path from "node:path";
-
-const FIXTURES_DIR = path.join(process.cwd(), "eval", "fixtures");
+import { FIXTURES_DIR, listFixtures } from "@/lib/eval/fixtures";
 
 // Prefer the `weasyprint` binary; fall back to `python3 -m weasyprint` for installs that
 // only exposed the module (e.g. `pip install --user` without ~/.local/bin on PATH).
@@ -26,14 +25,6 @@ function resolveWeasyprint(): string[] {
     "WeasyPrint not found. Install it with `pipx install weasyprint` (or " +
       "`pip install --user weasyprint`) — see eval/README.md."
   );
-}
-
-function fixtureNames(): string[] {
-  if (!existsSync(FIXTURES_DIR)) return [];
-  return readdirSync(FIXTURES_DIR, { withFileTypes: true })
-    .filter((e) => e.isDirectory())
-    .map((e) => e.name)
-    .sort();
 }
 
 function render(command: string[], name: string): void {
@@ -55,7 +46,7 @@ function render(command: string[], name: string): void {
 
 function main(): void {
   const command = resolveWeasyprint();
-  const names = fixtureNames();
+  const names = listFixtures();
   if (names.length === 0) {
     console.log("No fixtures found under eval/fixtures/.");
     return;
