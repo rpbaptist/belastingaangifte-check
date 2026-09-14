@@ -2,7 +2,7 @@
 
 Extraction hardening needs a deterministic check between Zod parse and the cache write.
 We considered a validator that returns corrected data alongside its findings, and chose
-one that only reports: rules may *propose* a change as data on the issue (`before` /
+one that only reports: rules may _propose_ a change as data on the issue (`before` /
 `after`), but applying it is an explicit named transform the caller invokes. Silent
 correction is the failure mode we are trying to remove, not a tool we want to reach for.
 
