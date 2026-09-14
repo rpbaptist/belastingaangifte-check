@@ -1,7 +1,7 @@
 import { categorize, type AmountMismatch } from "./categorizer";
 import { reconcile } from "./reconciler";
 import { runRuleChecks } from "./rule-checks";
-import type { Language } from "./translations";
+import { translate, formatDuplicateRowsCollapsed, type Language } from "./translations";
 import type {
   AnnualStatementData,
   AttentionPoint,
@@ -32,8 +32,15 @@ export function buildReport(
   language: Language
 ): DeterministicReport {
   const matchResult = reconcile(taxReturn, annualStatements);
-  const { covered, missingStatement, notFilledIn, amountMismatches } = categorize(matchResult);
+  const { covered, missingStatement, notFilledIn, amountMismatches, duplicateRowsCollapsed } =
+    categorize(matchResult);
   const rulePoints = runRuleChecks(annualStatements, taxReturn.taxYear, language);
+  if (duplicateRowsCollapsed.length > 0) {
+    rulePoints.push({
+      title: translate("duplicateRowsCollapsedTitle", language),
+      explanation: formatDuplicateRowsCollapsed(duplicateRowsCollapsed.length, language),
+    });
+  }
 
   return {
     taxYear: taxReturn.taxYear,
