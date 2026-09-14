@@ -3,9 +3,8 @@ import path from "path";
 import type { AnalysisReport, AnnualStatementData, AttentionPoint, TaxReturnData } from "./types";
 import { z } from "zod";
 import { parseLlmJson } from "./parse-llm-json";
-import { reconcile } from "./reconciler";
-import { categorize, type AmountMismatch } from "./categorizer";
-import { runRuleChecks } from "./rule-checks";
+import type { AmountMismatch } from "./categorizer";
+import { buildReport } from "./report";
 import { LLMAnalysisResponseSchema } from "./schemas";
 import {
   buildAnalyzerPrompt,
@@ -75,13 +74,12 @@ export async function analyzeDocuments(
 ): Promise<Omit<AnalysisReport, "extractionErrors">> {
   const client = createClient(apiKey);
 
-  const matchResult = reconcile(taxReturn, annualStatements);
-  const { covered, missingStatement, notFilledIn, amountMismatches } = categorize(matchResult);
-  const rulePoints = runRuleChecks(annualStatements, taxReturn.taxYear, language);
+  const { taxYear, covered, missingStatement, notFilledIn, amountMismatches, rulePoints } =
+    buildReport(taxReturn, annualStatements, language);
 
   if (amountMismatches.length === 0) {
     return {
-      taxYear: taxReturn.taxYear,
+      taxYear,
       covered,
       missingStatement,
       notFilledIn,
@@ -130,7 +128,7 @@ export async function analyzeDocuments(
   }
 
   return {
-    taxYear: taxReturn.taxYear,
+    taxYear,
     covered,
     missingStatement,
     notFilledIn,
