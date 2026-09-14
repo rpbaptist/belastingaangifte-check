@@ -116,7 +116,7 @@ The analyst receives three pre-labelled buckets. Categorization (covered / missi
 
 **Decision:** The LLM analyst no longer categorizes the reconciliation output or evaluates deterministic rules. Two TypeScript steps replace this:
 
-1. `lib/categorizer.ts` (`categorize()`) — maps matched/unmatched buckets to covered, missingStatement, notFilledIn, and amountMismatches. Field-to-field amount mapping (e.g. aangifte "dividendbelasting" → jaaropgave `broker.dutchDividendTax`) is handled by a `FIELD_AMOUNT_OVERRIDES` lookup table.
+1. `lib/categorizer.ts` (`categorize()`) — maps matched/unmatched buckets to covered, missingStatement, notFilledIn, amountMismatches, and duplicateRowsCollapsed. Field-to-field amount mapping (e.g. aangifte "dividendbelasting" → jaaropgave `broker.dutchDividendTax`) is handled by a `FIELD_AMOUNT_OVERRIDES` lookup table. `duplicateRowsCollapsed` records rows dropped as fully-identical extraction artifacts (not amountMismatches — those are never collapsed) and is surfaced as an attention point, per ADR 0008.
 
 2. `lib/rule-checks.ts` (`runRuleChecks()`) — generates deterministic attention points from jaaropgave metadata: aflossingsvrij hypotheek, buitenlands dividend, and box 3 threshold check. These are prepended to LLM-generated attention points.
 

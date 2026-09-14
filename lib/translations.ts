@@ -221,6 +221,14 @@ export const translations = {
     nl: "Geen reactie ontvangen tijdens de analyse",
     en: "No response received during analysis",
   },
+  duplicateRowsCollapsedTitle: {
+    nl: "Dubbele posten samengevoegd",
+    en: "Duplicate entries collapsed",
+  },
+  duplicateRowsCollapsedExplanation: {
+    nl: "{count} volledig identieke post(en) kwamen dubbel voor in de geëxtraheerde gegevens en zijn samengevoegd tot één. Controleer of dit terecht is.",
+    en: "{count} fully identical entry/entries appeared twice in the extracted data and were collapsed into one. Check whether this is correct.",
+  },
 } as const;
 
 export type TranslationKey = keyof typeof translations;
@@ -245,4 +253,8 @@ export function formatExtractionFailed(message: string, language: Language): str
 
 export function formatAnalysisFailed(message: string, language: Language): string {
   return language === "en" ? `Analysis failed: ${message}` : `Analyse mislukt: ${message}`;
+}
+
+export function formatDuplicateRowsCollapsed(count: number, language: Language): string {
+  return translate("duplicateRowsCollapsedExplanation", language).replace("{count}", String(count));
 }
