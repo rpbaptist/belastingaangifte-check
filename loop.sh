@@ -9,7 +9,7 @@
 #   ./loop.sh                          # unlimited iterations (build: claude)
 #   ./loop.sh 20                       # cap at 20 iterations (build: claude)
 #   ./loop.sh --agent opencode         # use opencode for build, review stays claude
-#   ./loop.sh --agent opencode 20      # flag wins over RALPH_AGENT env, default claude
+#   ./loop.sh --agent opencode 20      # cap at 20 iterations, build: opencode
 
 set -euo pipefail
 
@@ -23,15 +23,9 @@ REPO="rpbaptist/belastingaangifte-check"
 LOG_DIR="$(pwd)/ralph-logs"
 mkdir -p "$LOG_DIR"
 
-# Build harness: flag wins over env, default claude. Review stays claude.
+# Build harness: flag-only, default claude. Review stays claude.
 AGENT="claude"
 MAX_ITER="0"
-# Env fallback (flag will override)
-if [[ -n "${RALPH_AGENT:-}" ]]; then
-  case "$RALPH_AGENT" in
-    claude|opencode) AGENT="$RALPH_AGENT" ;;
-  esac
-fi
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --agent)
@@ -45,7 +39,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --help|-h)
       echo "Usage: $0 [--agent claude|opencode] [MAX_ITER]"
-      echo "  --agent   Build harness for main.mts (default claude, flag wins over RALPH_AGENT env)"
+      echo "  --agent   Build harness for main.mts (default claude)"
       echo "  MAX_ITER  Cap iterations (default 0 = unlimited)"
       echo "  Review always runs via claude."
       exit 0
@@ -104,7 +98,7 @@ run_build_iteration() {
   # .git/config via bind mount — host git ops can leave config.lock).
   rm -f .git/config.lock
 
-  if RALPH_AGENT="$AGENT" RALPH_MODEL="${RALPH_MODEL:-}" ISSUE_NUMBER="$n" ISSUE_TITLE="$title" ISSUE_BODY="$body" \
+  if RALPH_AGENT="$AGENT" ISSUE_NUMBER="$n" ISSUE_TITLE="$title" ISSUE_BODY="$body" \
        npx tsx .sandcastle/main.mts 2>&1 | tee "$log_file"; then
     # Also clear ready-for-agent: without this, a successfully completed
     # issue stays eligible for re-selection forever, and the next
