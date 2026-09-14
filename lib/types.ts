@@ -20,7 +20,12 @@ export interface AccountAmounts {
     foreignDividend?: number;
     [key: string]: number | undefined;
   };
-  mortgage?: { interestPaid?: number; remainingDebt?: number; [key: string]: number | undefined };
+  mortgage?: {
+    interestPaid?: number;
+    openingDebt?: number;
+    remainingDebt?: number;
+    [key: string]: number | undefined;
+  };
   wage?: { taxableWage?: number; grossWage?: number; [key: string]: number | undefined };
   other?: {
     premiumPaid?: number;
