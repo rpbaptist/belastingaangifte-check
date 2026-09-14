@@ -256,8 +256,5 @@ export function formatAnalysisFailed(message: string, language: Language): strin
 }
 
 export function formatDuplicateRowsCollapsed(count: number, language: Language): string {
-  return translate("duplicateRowsCollapsedExplanation", language).replace(
-    "{count}",
-    String(count)
-  );
+  return translate("duplicateRowsCollapsedExplanation", language).replace("{count}", String(count));
 }
