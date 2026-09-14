@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "scrape:kennisbank": "tsx scripts/rag/scrape-corpus.ts",
-    "check:fallow": "fallow audit"
+    "check:fallow": "fallow audit",
+    "sandcastle": "npx tsx .sandcastle/main.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.99.0",
@@ -22,6 +23,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@ai-hero/sandcastle": "^0.12.0",
     "@tailwindcss/postcss": "^4",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^20",
