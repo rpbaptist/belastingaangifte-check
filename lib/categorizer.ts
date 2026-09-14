@@ -76,12 +76,17 @@ export function isEndOfYearAccount(statement: AnnualStatementData, account: Acco
   return account.description.toLowerCase().includes(`31 december ${statement.taxYear}`);
 }
 
-// A mortgage where interestPaid / remainingDebt < 3% was likely discharged mid-year
-// (e.g. €104 on €89,956 ≈ 0.1%). Not a filing omission — suppress from notFilledIn.
+// A mortgage where interest paid is a tiny fraction of the debt was likely discharged
+// mid-year (e.g. €104 on €89,956 ≈ 0.1%). Not a filing omission — suppress from
+// notFilledIn. A fully repaid mortgage reports a remaining debt of zero, so fall back
+// to the opening debt (schuld op 1 januari) so the ratio can still be judged; without
+// either debt figure there is nothing to judge against and we leave it reported.
 export function isMidYearClosedMortgage(account: AccountData): boolean {
   const m = account.amounts.mortgage;
-  if (!m?.interestPaid || !m.remainingDebt) return false;
-  return m.interestPaid / m.remainingDebt < 0.03;
+  if (!m?.interestPaid) return false;
+  const debt = m.remainingDebt || m.openingDebt;
+  if (!debt) return false;
+  return m.interestPaid / debt < 0.03;
 }
 
 // Collapses rows that are fully identical (an extraction artifact), never rows that merely
