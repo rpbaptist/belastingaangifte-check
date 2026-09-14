@@ -83,6 +83,48 @@ is_transient_failure() {
   return 1
 }
 
+# Session-limit hits used to retry immediately on every iteration with no
+# backoff, hammering the API for hours until the limit reset on its own
+# (see ralph-logs/issue-105-20260914-1534*.log — 6 retries in under 5 min).
+# Sleep until the stated reset time instead of spinning.
+wait_out_session_limit() {
+  local log_file="$1"
+  local FALLBACK_SECS=900
+  local MAX_SECS=21600 # 6h safety cap in case parsing goes wrong
+
+  local reset_str
+  reset_str="$(grep -o "resets [0-9]\{1,2\}:[0-9]\{2\}[ap]m (UTC)" "$log_file" 2>/dev/null \
+    | head -1 | sed -E 's/resets (.*) \(UTC\)/\1/')"
+
+  if [[ -z "$reset_str" ]]; then
+    echo "Session limit hit but reset time not found in log — sleeping ${FALLBACK_SECS}s."
+    sleep "$FALLBACK_SECS"
+    return
+  fi
+
+  local now_epoch target_epoch
+  now_epoch="$(date -u +%s)"
+  target_epoch="$(date -u -d "$reset_str UTC" +%s 2>/dev/null || echo "")"
+
+  if [[ -z "$target_epoch" ]]; then
+    echo "Session limit hit but reset time \"$reset_str\" didn't parse — sleeping ${FALLBACK_SECS}s."
+    sleep "$FALLBACK_SECS"
+    return
+  fi
+
+  if (( target_epoch <= now_epoch )); then
+    target_epoch="$(date -u -d "tomorrow $reset_str UTC" +%s)"
+  fi
+
+  local sleep_secs=$(( target_epoch - now_epoch + 60 )) # 60s buffer past reset
+  if (( sleep_secs > MAX_SECS )); then
+    sleep_secs="$MAX_SECS"
+  fi
+
+  echo "Session limit hit, resets $reset_str (UTC) — sleeping ${sleep_secs}s."
+  sleep "$sleep_secs"
+}
+
 run_build_iteration() {
   local issue_json="$1"
   local n title body
@@ -111,7 +153,10 @@ run_build_iteration() {
   else
     echo "Iteration for issue #$n failed (see $log_file)."
     if is_transient_failure "$log_file"; then
-      echo "Transient infra failure detected (git config.lock) — not marking blocked, will retry next iteration."
+      echo "Transient infra failure detected — not marking blocked, will retry."
+      if grep -q "hit your session limit" "$log_file" 2>/dev/null; then
+        wait_out_session_limit "$log_file"
+      fi
       gh issue edit "$n" --repo "$REPO" --remove-label in-progress-by-agent
       rm -f .git/config.lock
       # Remove empty branch left by failed sandbox setup so next retry
