@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type Anthropic from "@anthropic-ai/sdk";
-import { buildAnalysisRequest, parseAnalysisResponse } from "./analyzer";
+import { buildAnalysisRequest, parseAnalysisResponse, analyzeDocuments } from "./analyzer";
+import type { TaxReturnData } from "./types";
 
 const noMismatches: Parameters<typeof buildAnalysisRequest>[0] = [];
 const noCovered: Parameters<typeof buildAnalysisRequest>[1] = [];
@@ -22,6 +23,24 @@ function makeResponse(
     ...rest,
   } as Anthropic.Message;
 }
+
+describe("analyzeDocuments — duplicate rows collapsed", () => {
+  it("surfaces duplicateRowsCollapsed as an attention point instead of discarding it", async () => {
+    const taxReturn: TaxReturnData = {
+      taxYear: 2024,
+      entries: [
+        { box: "3", field: "Saldo bank en spaarrekeningen", accountNumber: null, amount: 100 },
+        { box: "3", field: "Saldo bank en spaarrekeningen", accountNumber: null, amount: 100 },
+      ],
+    };
+
+    const report = await analyzeDocuments(taxReturn, [], "fake-api-key");
+
+    expect(report.missingStatement).toHaveLength(1);
+    expect(report.attentionPoints).toHaveLength(1);
+    expect(report.attentionPoints[0].title).toBe("Dubbele posten samengevoegd");
+  });
+});
 
 describe("buildAnalysisRequest", () => {
   it("uses the expected model and max_tokens", () => {
