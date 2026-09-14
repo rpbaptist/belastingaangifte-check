@@ -28,8 +28,11 @@ USER ${AGENT_UID}:${AGENT_GID}
 # Install Claude Code CLI
 RUN curl -fsSL https://claude.ai/install.sh | bash
 
-# Add Claude to PATH
-ENV PATH="/home/agent/.local/bin:$PATH"
+# Install opencode CLI (for --agent opencode, review stays claude)
+RUN curl -fsSL https://opencode.ai/install | bash || npm install -g opencode-ai || true
+
+# Add Claude + opencode to PATH
+ENV PATH="/home/agent/.opencode/bin:/home/agent/.local/bin:$PATH"
 
 WORKDIR /home/agent
 

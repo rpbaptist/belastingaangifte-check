@@ -6,8 +6,10 @@
 # label it, run main.mts, read its exit code, relabel.
 #
 # Usage:
-#   ./loop.sh          # unlimited iterations
-#   ./loop.sh 20        # cap at 20 iterations
+#   ./loop.sh                          # unlimited iterations (build: claude)
+#   ./loop.sh 20                       # cap at 20 iterations (build: claude)
+#   ./loop.sh --agent opencode         # use opencode for build, review stays claude
+#   ./loop.sh --agent opencode 20      # flag wins over RALPH_AGENT env, default claude
 
 set -euo pipefail
 
@@ -17,10 +19,54 @@ set -euo pipefail
 # an interrupt actually stop the script.
 trap 'echo; echo "Interrupted — stopping loop."; exit 130' INT TERM
 
-MAX_ITER="${1:-0}"
 REPO="rpbaptist/belastingaangifte-check"
 LOG_DIR="$(pwd)/ralph-logs"
 mkdir -p "$LOG_DIR"
+
+# Build harness: flag wins over env, default claude. Review stays claude.
+AGENT="claude"
+MAX_ITER="0"
+# Env fallback (flag will override)
+if [[ -n "${RALPH_AGENT:-}" ]]; then
+  case "$RALPH_AGENT" in
+    claude|opencode) AGENT="$RALPH_AGENT" ;;
+  esac
+fi
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --agent)
+      if [[ -z "${2:-}" ]]; then echo "Missing value for --agent" >&2; exit 2; fi
+      AGENT="$2"
+      shift 2
+      ;;
+    --agent=*)
+      AGENT="${1#*=}"
+      shift
+      ;;
+    --help|-h)
+      echo "Usage: $0 [--agent claude|opencode] [MAX_ITER]"
+      echo "  --agent   Build harness for main.mts (default claude, flag wins over RALPH_AGENT env)"
+      echo "  MAX_ITER  Cap iterations (default 0 = unlimited)"
+      echo "  Review always runs via claude."
+      exit 0
+      ;;
+    [0-9]*)
+      MAX_ITER="$1"
+      shift
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      exit 2
+      ;;
+  esac
+done
+case "$AGENT" in
+  claude|opencode) ;;
+  *)
+    echo "Unknown build harness \"$AGENT\" (supported: claude|opencode)" >&2
+    exit 2
+    ;;
+esac
 
 pick_issue() {
   gh issue list --repo "$REPO" --label ready-for-agent \
@@ -58,7 +104,7 @@ run_build_iteration() {
   # .git/config via bind mount — host git ops can leave config.lock).
   rm -f .git/config.lock
 
-  if ISSUE_NUMBER="$n" ISSUE_TITLE="$title" ISSUE_BODY="$body" \
+  if RALPH_AGENT="$AGENT" RALPH_MODEL="${RALPH_MODEL:-}" ISSUE_NUMBER="$n" ISSUE_TITLE="$title" ISSUE_BODY="$body" \
        npx tsx .sandcastle/main.mts 2>&1 | tee "$log_file"; then
     # Also clear ready-for-agent: without this, a successfully completed
     # issue stays eligible for re-selection forever, and the next
@@ -101,7 +147,7 @@ while :; do
     break
   fi
 
-  echo "=== Ralph iteration $i ==="
+  echo "=== Ralph iteration $i (build: $AGENT, review: claude) ==="
   issue_json="$(pick_issue)"
 
   if [[ -n "$issue_json" ]]; then
