@@ -10,6 +10,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "scrape:kennisbank": "tsx scripts/rag/scrape-corpus.ts",
+    "eval:render": "tsx scripts/eval/render.ts",
+    "eval": "tsx scripts/eval/run.ts",
     "check:fallow": "fallow audit",
     "sandcastle": "npx tsx .sandcastle/main.mts"
   },
