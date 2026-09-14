@@ -23,10 +23,9 @@ const branch = `ralph/issue-${issueNumber}`;
 
 const buildHarness = (process.env.RALPH_AGENT ??
   "claude") as BuildHarness;
-const buildModel = process.env.RALPH_MODEL ?? undefined;
 
 const result = await run({
-  agent: getBuildAgent(buildHarness, buildModel),
+  agent: getBuildAgent(buildHarness),
   sandbox: docker({
     mounts: [
       { hostPath: "~/.npm", sandboxPath: "/home/agent/.npm", readonly: true },
