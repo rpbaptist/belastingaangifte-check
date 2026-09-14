@@ -42,8 +42,13 @@ this shape:
 </review_result>
 ```
 
-`comments` covers everything you looked at, including things you fixed
-directly. `newIssues` is only for things deliberately left unfixed. Both
-arrays may be empty.
+Per `AGENTS.md`: only add a comment for something that may require action —
+a fix you made, a risk worth flagging, a genuine judgment call. Do not add
+a comment just to confirm something was checked and found fine ("verified
+X, no change needed") — that's noise, not a finding. If everything you
+looked at was already correct, `comments` should be empty and `summary`
+alone should say so. `newIssues` is only for things deliberately left
+unfixed. Both arrays may be empty — an empty `comments` array on a clean
+diff is the expected, correct output, not a failure to find something.
 
 Then output `<promise>COMPLETE</promise>`.
