@@ -28,7 +28,7 @@ For all new features and changes:
 - Create logically grouped, atomic commits.
 - Update documentation according to changes made.
 - Create the PR
-- Review the PR and leave findings as comments. Address small review issues directly. If larger or makes sense to follow up, create a new GitHub issues.
+- Review the PR and leave findings as comments. Address small review issues directly. If larger or makes sense to follow up, create a new GitHub issues. Only add comments for issues or other findings which may require action. 
 
 Default to continuing to the next step unless instructed otherwise.
 
