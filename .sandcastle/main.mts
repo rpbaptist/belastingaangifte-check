@@ -37,8 +37,14 @@ const result = await run({
   hooks: {
     sandbox: {
       onSandboxReady: [
-        { command: 'git config user.name "Ralph (belastingaangifte-check agent)"' },
-        { command: 'git config user.email "ralph-agent@users.noreply.github.com"' },
+        {
+          command:
+            'for i in 1 2 3 4 5; do rm -f .git/config.lock; git config user.name "Ralph (belastingaangifte-check agent)" && break || { ec=$?; if [ "$i" -eq 5 ]; then echo "git config user.name failed after 5 attempts (exit $ec)"; exit $ec; fi; echo "git config user.name failed (attempt $i/5, exit $ec) — retrying..."; sleep $((i*2)); }; done',
+        },
+        {
+          command:
+            'for i in 1 2 3 4 5; do rm -f .git/config.lock; git config user.email "ralph-agent@users.noreply.github.com" && break || { ec=$?; if [ "$i" -eq 5 ]; then echo "git config user.email failed after 5 attempts (exit $ec)"; exit $ec; fi; echo "git config user.email failed (attempt $i/5, exit $ec) — retrying..."; sleep $((i*2)); }; done',
+        },
         { command: "npm ci" },
       ],
     },
