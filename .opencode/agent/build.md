@@ -16,6 +16,7 @@ Load `AGENTS.md`, `CONTEXT.md`, and `docs/adr/decisions.md` via instructions. Fo
 - Create logically grouped atomic commits per commit style (70 char subject, imperative mood, blank line before body).
 
 Code style invariants (from `AGENTS.md`):
+
 - React components only render. No logic in components.
 - Route handlers `app/api/*/route.ts` delegate to `src/*`. No business logic inline.
 - All DB writes via `src/repositories/*`. No raw SQL with interpolated names outside repository class.
