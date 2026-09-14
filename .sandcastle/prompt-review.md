@@ -10,6 +10,23 @@ sandbox — the worktree has your prior commits already.
 
 {{PR_DIFF}}
 
+# Pending comments on this PR
+
+{{PENDING_COMMENTS}}
+
+These are comments left since your last review pass (or, if this is the
+first pass, all comments so far) — a mix of your own prior findings and
+anything a human reviewer added. If this section says "(none)", skip this
+part entirely.
+
+For each pending comment that isn't already marked as something you
+yourself resolved:
+- If it asks for a change: make it (fix + commit), same rules as below.
+- If it asks a question or raises a concern you can resolve by
+  investigating: investigate, then address it in your `comments` output.
+- If it's out of scope for this PR: don't fix it — file it via `newIssues`
+  instead, same as any other larger finding.
+
 # Task
 
 Review this diff against the coding standards and workflow in `AGENTS.md`
@@ -26,6 +43,16 @@ discriminated unions over dual-null shapes, etc.) plus general correctness.
   issue instead — do not touch the code for it.
 - If the diff looks correct as-is, say so. Don't invent findings to seem
   thorough.
+
+# Currently open issues
+
+{{OPEN_ISSUES}}
+
+Before filing anything via `newIssues`, check this list. If an open issue
+already substantially covers the same finding, do NOT file a duplicate —
+reference the existing issue number in your `comments` output instead
+("already tracked as #N"). Only add to `newIssues` when nothing open
+already covers it.
 
 # Done
 
