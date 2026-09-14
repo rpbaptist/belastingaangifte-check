@@ -32,6 +32,7 @@ export async function POST(request: NextRequest) {
     const response = await client.messages.create({
       model: QUESTION_MODEL,
       max_tokens: 1024,
+      temperature: 0,
       system: [
         { type: "text", text: buildQuestionSystem(language), cache_control: { type: "ephemeral" } },
       ],

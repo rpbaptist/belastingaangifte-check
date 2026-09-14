@@ -124,6 +124,22 @@ describe("withRetry", () => {
 });
 
 describe("extractAnnualStatement / extractTaxReturn", () => {
+  it("pins temperature to zero for annual statement extraction", async () => {
+    const client = makeClient(makeResponse());
+    const create = client.messages.create as unknown as ReturnType<typeof vi.fn>;
+    await expect(extractAnnualStatement("pdf-base64", client)).rejects.toThrow();
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(create.mock.calls[0][0]).toMatchObject({ temperature: 0 });
+  });
+
+  it("pins temperature to zero for tax return extraction", async () => {
+    const client = makeClient(makeResponse());
+    const create = client.messages.create as unknown as ReturnType<typeof vi.fn>;
+    await expect(extractTaxReturn("pdf-base64", client)).rejects.toThrow();
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(create.mock.calls[0][0]).toMatchObject({ temperature: 0 });
+  });
+
   it("throws a Dutch error when the annual statement response has no text block", async () => {
     const client = makeClient(makeResponse());
     await expect(extractAnnualStatement("pdf-base64", client)).rejects.toThrow(

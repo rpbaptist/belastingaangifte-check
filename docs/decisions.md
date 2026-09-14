@@ -43,7 +43,7 @@ The analyst receives three pre-labelled buckets. Categorization (covered / missi
 
 **Decision:** When comparing a matched aangifte amount to its jaaropgave counterpart, classify the pair as covered if `Math.abs(aangifte - statement) <= 1`. Larger differences surface as amount mismatches for the LLM to review.
 
-**Why:** The Belastingdienst always rounds aangifte amounts to full euros. Jaaropgaves may show cents. After rounding the jaaropgave amount, a residual ±€1 difference can remain depending on how each institution rounds (e.g. banker's rounding vs truncation). The ±€1 band absorbs this without masking meaningful mismatches.
+**Why:** The Belastingdienst always rounds aangifte amounts to full euros; that rounding is enforced in `TaxReturnEntrySchema`. Jaaropgave amounts keep their cents through the schema (`AccountAmountsSchema`), so a residual ±€1 difference can remain against the rounded aangifte figure depending on how each institution rounds (e.g. banker's rounding vs truncation). The ±€1 band absorbs this without masking meaningful mismatches.
 
 **Implementation:** Applied in `lib/categorizer.ts` for covered/mismatch classification, and in `lib/reconciler.ts` for secondary amount-based matching.
 
