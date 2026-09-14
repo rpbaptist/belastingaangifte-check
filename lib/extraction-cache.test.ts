@@ -11,6 +11,9 @@ describe("extraction cache", () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "extraction-cache-test-"));
     process.chdir(tmpDir);
     vi.stubEnv("NODE_ENV", "development");
+    // CACHE_DIR is computed from process.cwd() at import time, so a module
+    // cached from a previous test would still point at that test's deleted tmpDir.
+    vi.resetModules();
   });
 
   afterEach(() => {
