@@ -77,6 +77,9 @@ is_transient_failure() {
   grep -q "could not lock config file" "$log_file" 2>/dev/null && return 0
   grep -q "config\.lock" "$log_file" 2>/dev/null && return 0
   grep -q "ExecError.*git config" "$log_file" 2>/dev/null && return 0
+  # Claude session limit — resets on its own, not an agent/issue problem.
+  # See ralph-logs/issue-{106,107,108,109}-20260914-*.log.
+  grep -q "hit your session limit" "$log_file" 2>/dev/null && return 0
   return 1
 }
 
