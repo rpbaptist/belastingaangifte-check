@@ -1,7 +1,8 @@
-import { run, claudeCode, Output } from "@ai-hero/sandcastle";
+import { run, Output } from "@ai-hero/sandcastle";
 import { docker } from "@ai-hero/sandcastle/sandboxes/docker";
 import { execFileSync } from "node:child_process";
 import { runReview } from "./review-lib.mts";
+import { getBuildAgent, type BuildHarness } from "./harness.mts";
 
 // Invoked per-issue by loop.sh:
 //   ISSUE_NUMBER=42 ISSUE_TITLE="..." ISSUE_BODY="..." npx tsx .sandcastle/main.mts
@@ -20,8 +21,12 @@ const issueTitle = process.env.ISSUE_TITLE ?? `issue #${issueNumber}`;
 
 const branch = `ralph/issue-${issueNumber}`;
 
+const buildHarness = (process.env.RALPH_AGENT ??
+  "claude") as BuildHarness;
+const buildModel = process.env.RALPH_MODEL ?? undefined;
+
 const result = await run({
-  agent: claudeCode("claude-opus-4-8", { effort: "high" }),
+  agent: getBuildAgent(buildHarness, buildModel),
   sandbox: docker({
     mounts: [
       { hostPath: "~/.npm", sandboxPath: "/home/agent/.npm", readonly: true },
