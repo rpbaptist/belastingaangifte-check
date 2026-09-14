@@ -23,12 +23,13 @@ export type DeterministicReport = {
 /**
  * Deterministic report seam: Reconciliation, Categorization and rule checks
  * behind one pure call. No network calls, no environment reads, no LLM —
- * Analysis stays in `analyzeDocuments`.
+ * Analysis stays in `analyzeDocuments`. Deterministic for a given `language`;
+ * `rulePoints` titles vary across languages.
  */
 export function buildReport(
   taxReturn: TaxReturnData,
   annualStatements: AnnualStatementData[],
-  language: Language = "nl"
+  language: Language
 ): DeterministicReport {
   const matchResult = reconcile(taxReturn, annualStatements);
   const { covered, missingStatement, notFilledIn, amountMismatches } = categorize(matchResult);
