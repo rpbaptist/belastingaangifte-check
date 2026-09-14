@@ -20,7 +20,7 @@ For all new features and changes:
   mode is not a substitute, even if it produced a design doc or a plan file —
   run `grill-with-docs` explicitly regardless of whether plan mode was used.
 - use `to-spec`
-- use `to-tickets`
+- use `to-tickets`, when result is only one ticket, update existing ticket.
 - use `implement`
 - use `code-review`
 - Implement new issues on a new worktree.
