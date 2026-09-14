@@ -10,9 +10,17 @@ import type { Language } from "./translations";
 const CACHE_DIR = path.join(process.cwd(), ".extracted");
 
 // The system prompt joins the key so an edited prompt invalidates the cache
-// without the PDF itself changing.
+// without the PDF itself changing. A NUL separator prevents a pdf/prompt split
+// at different offsets from colliding on the same hash (e.g. "ab"+"cd" vs "abc"+"d").
+// Changing this delimiter orphans existing .extracted/ cache entries; harmless,
+// they just miss once and get rewritten.
 function cacheKey(pdfBase64: string, systemPrompt: string): string {
-  return crypto.createHash("sha256").update(pdfBase64).update(systemPrompt).digest("hex");
+  return crypto
+    .createHash("sha256")
+    .update(pdfBase64)
+    .update("\0")
+    .update(systemPrompt)
+    .digest("hex");
 }
 
 export function readCache<T>(pdfBase64: string, systemPrompt: string): T | null {
