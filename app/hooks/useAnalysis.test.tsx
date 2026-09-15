@@ -40,6 +40,7 @@ describe("useAnalysis", () => {
         covered: [],
         missingStatement: [],
         notFilledIn: [],
+        findings: [],
         attentionPoints: [],
         extractionErrors: [],
       },

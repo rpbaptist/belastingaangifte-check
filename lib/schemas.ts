@@ -79,11 +79,28 @@ const AttentionPointSchema = z.object({
   accountNumber: s().optional(),
 });
 
+const FindingSchema = z.object({
+  kind: z.enum([
+    "unresolvedAmount",
+    "taxYearMismatch",
+    "signContradiction",
+    "duplicateRow",
+    "unknownAmountKind",
+  ]),
+  title: s(),
+  detail: s(),
+  institution: s().optional(),
+  accountNumber: s().optional(),
+  field: s().optional(),
+  proposedCorrection: z.object({ before: n().nullable(), after: n().nullable() }).optional(),
+});
+
 export const AnalysisReportSchema = z.object({
   taxYear: z.number().int(),
   covered: z.array(CoveredItemSchema),
   missingStatement: z.array(MissingStatementItemSchema),
   notFilledIn: z.array(NotFilledInItemSchema),
+  findings: z.array(FindingSchema),
   attentionPoints: z.array(AttentionPointSchema),
 });
 
