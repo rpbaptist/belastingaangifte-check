@@ -145,11 +145,19 @@ is_transient_failure() {
   grep -q "config\.lock" "$log_file" 2>/dev/null && return 0
   grep -q "ExecError.*git config" "$log_file" 2>/dev/null && return 0
   # Claude session limit — resets on its own, not an agent/issue problem.
-  # Case-insensitive: this text comes from the CLI, not us, and a wording
-  # tweak there shouldn't silently stop matching. See
-  # ralph-logs/issue-{106,107,108,109}-20260914-*.log.
-  grep -qi "hit your session limit" "$log_file" 2>/dev/null && return 0
+  # See ralph-logs/issue-{106,107,108,109}-20260914-*.log.
+  is_session_limit "$log_file" && return 0
   return 1
+}
+
+# Whether a log shows a Claude session-limit exit. Shared by
+# is_transient_failure and run_build_iteration's session-limit branch so
+# the two never drift apart on the match string. Case-insensitive: this
+# text comes from the CLI, not us, and a wording tweak there shouldn't
+# silently stop matching.
+is_session_limit() {
+  local log_file="$1"
+  grep -qi "hit your session limit" "$log_file" 2>/dev/null
 }
 
 # Session-limit hits used to retry immediately on every iteration with no
@@ -201,6 +209,12 @@ wait_out_session_limit() {
 # rather than checkout, so it never touches the host's own working tree
 # or index — this can run at any point without disturbing whatever
 # branch the host currently has checked out.
+#
+# Only updates the local ref — never pushes to origin. That's consistent
+# with main.mts's push gate, which already refuses to push a branch
+# whose only commits are progress notes. Anything reading commit history
+# to detect these notes (e.g. #121's anomaly check) must read local
+# refs, not the remote.
 write_progress_note() {
   local n="$1" log_file="$2"
   local branch="ralph/issue-$n"
@@ -246,8 +260,8 @@ EOF
   local commit_sha
   commit_sha="$(GIT_AUTHOR_NAME="${GIT_AUTHOR_NAME:-Ralph (belastingaangifte-check agent)}" \
     GIT_AUTHOR_EMAIL="${GIT_AUTHOR_EMAIL:-ralph-agent@users.noreply.github.com}" \
-    GIT_COMMITTER_NAME="${GIT_AUTHOR_NAME:-Ralph (belastingaangifte-check agent)}" \
-    GIT_COMMITTER_EMAIL="${GIT_AUTHOR_EMAIL:-ralph-agent@users.noreply.github.com}" \
+    GIT_COMMITTER_NAME="${GIT_COMMITTER_NAME:-Ralph (belastingaangifte-check agent)}" \
+    GIT_COMMITTER_EMAIL="${GIT_COMMITTER_EMAIL:-ralph-agent@users.noreply.github.com}" \
     git commit-tree "$tree_sha" -p "$parent_sha" -m "Progress notes: issue #$n")"
   git update-ref "refs/heads/$branch" "$commit_sha"
 }
@@ -281,7 +295,7 @@ run_build_iteration() {
     echo "Iteration for issue #$n failed (see $log_file)."
     if is_transient_failure "$log_file"; then
       echo "Transient infra failure detected — not marking blocked, will retry."
-      if grep -qi "hit your session limit" "$log_file" 2>/dev/null; then
+      if is_session_limit "$log_file"; then
         write_progress_note "$n" "$log_file"
         wait_out_session_limit "$log_file"
       fi
