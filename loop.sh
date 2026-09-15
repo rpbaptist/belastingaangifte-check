@@ -62,11 +62,78 @@ case "$AGENT" in
     ;;
 esac
 
+# Issues created by to-tickets carry a "## Blocked by" section listing
+# prerequisite issues as "- #NNN (reason)" bullets. Print the numbers.
+extract_blockers() {
+  local body="$1"
+  awk '/^## Blocked by/{f=1; next} /^## /{f=0} f' <<<"$body" \
+    | grep -oE '#[0-9]+' | tr -d '#' | sort -un
+}
+
+# Of an issue's blockers, print only those still open.
+open_blockers() {
+  local body="$1" n state
+  for n in $(extract_blockers "$body"); do
+    state="$(gh issue view "$n" --repo "$REPO" --json state -q '.state' 2>/dev/null || echo "")"
+    [[ "$state" == "OPEN" ]] && echo "$n"
+  done
+}
+
+# Dependency gate: a ready-for-agent issue whose blockers aren't closed
+# yet is not actually ready, whatever its label says (see
+# docs/agents/triage-labels.md). Relabel it blocked instead of claiming
+# it, with a comment naming the open blockers, and re-check on every
+# loop iteration via promote_unblocked_issues so it comes back on its own
+# once they close.
+block_on_dependency() {
+  local n="$1" open_list="$2" fmt
+  fmt="$(sed 's/^/#/' <<<"$open_list" | paste -sd, -)"
+  gh issue edit "$n" --repo "$REPO" \
+    --remove-label ready-for-agent --remove-label in-progress-by-agent \
+    --add-label blocked
+  gh issue comment "$n" --repo "$REPO" --body "Blocked: dependency issue(s) $fmt are still open. The loop will not pick this up until they're closed — re-labeled \`blocked\` (was \`ready-for-agent\`). It'll be re-labeled \`ready-for-agent\` automatically once they close. (loop.sh dependency gate)"
+  echo "Issue #$n has open blocker(s) $fmt — labeled blocked, deferring." >&2
+}
+
+# Runs once per outer loop iteration, before picking. Anything labeled
+# blocked whose blockers have all closed since the last check goes back
+# to ready-for-agent on its own — no human needs to notice and flip it.
+promote_unblocked_issues() {
+  local blocked_json n body still_open
+  blocked_json="$(gh issue list --repo "$REPO" --label blocked \
+    --json number,body --limit 50)"
+  while IFS= read -r issue_json; do
+    [[ -z "$issue_json" ]] && continue
+    n="$(jq -r '.number' <<<"$issue_json")"
+    body="$(jq -r '.body' <<<"$issue_json")"
+    still_open="$(open_blockers "$body")"
+    if [[ -z "$still_open" ]]; then
+      gh issue edit "$n" --repo "$REPO" --remove-label blocked --add-label ready-for-agent
+      gh issue comment "$n" --repo "$REPO" --body "Unblocked: all dependency issues are now closed. Re-labeled \`ready-for-agent\`. (loop.sh dependency gate)"
+      echo "Issue #$n unblocked — dependencies closed, back to ready-for-agent." >&2
+    fi
+  done < <(jq -c '.[]' <<<"$blocked_json")
+}
+
 pick_issue() {
-  gh issue list --repo "$REPO" --label ready-for-agent \
+  local candidates n body still_open
+  candidates="$(gh issue list --repo "$REPO" --label ready-for-agent \
     --json number,title,body,labels --limit 50 \
-    | jq -r '[.[] | select([.labels[].name] | (index("in-progress-by-agent") or index("blocked-for-agent")) | not)]
-              | sort_by(.number) | .[0] // empty'
+    | jq -c '[.[] | select([.labels[].name] | (index("in-progress-by-agent") or index("blocked-for-agent")) | not)]
+              | sort_by(.number) | .[]')"
+
+  while IFS= read -r issue_json; do
+    [[ -z "$issue_json" ]] && continue
+    n="$(jq -r '.number' <<<"$issue_json")"
+    body="$(jq -r '.body' <<<"$issue_json")"
+    still_open="$(open_blockers "$body")"
+    if [[ -n "$still_open" ]]; then
+      block_on_dependency "$n" "$still_open"
+      continue
+    fi
+    echo "$issue_json"
+    return
+  done < <(jq -c '.[]' <<<"$candidates")
 }
 
 is_transient_failure() {
@@ -190,6 +257,7 @@ while :; do
   fi
 
   echo "=== Ralph iteration $i (build: $AGENT, review: claude) ==="
+  promote_unblocked_issues
   issue_json="$(pick_issue)"
 
   if [[ -n "$issue_json" ]]; then
