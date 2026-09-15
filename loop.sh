@@ -146,8 +146,18 @@ is_transient_failure() {
   grep -q "ExecError.*git config" "$log_file" 2>/dev/null && return 0
   # Claude session limit — resets on its own, not an agent/issue problem.
   # See ralph-logs/issue-{106,107,108,109}-20260914-*.log.
-  grep -q "hit your session limit" "$log_file" 2>/dev/null && return 0
+  is_session_limit "$log_file" && return 0
   return 1
+}
+
+# Whether a log shows a Claude session-limit exit. Shared by
+# is_transient_failure and run_build_iteration's session-limit branch so
+# the two never drift apart on the match string. Case-insensitive: this
+# text comes from the CLI, not us, and a wording tweak there shouldn't
+# silently stop matching.
+is_session_limit() {
+  local log_file="$1"
+  grep -qi "hit your session limit" "$log_file" 2>/dev/null
 }
 
 # Session-limit hits used to retry immediately on every iteration with no
@@ -192,6 +202,70 @@ wait_out_session_limit() {
   sleep "$sleep_secs"
 }
 
+# Writes a minimal progress note directly onto ralph/issue-N (creating it
+# from master first if the sandbox never got that far) so the next
+# attempt's "Resuming" prompt path finds it via git log/git show and
+# skips re-exploration. Uses plumbing (read-tree/commit-tree/update-ref)
+# rather than checkout, so it never touches the host's own working tree
+# or index — this can run at any point without disturbing whatever
+# branch the host currently has checked out.
+#
+# Only updates the local ref — never pushes to origin. That's consistent
+# with main.mts's push gate, which already refuses to push a branch
+# whose only commits are progress notes. Anything reading commit history
+# to detect these notes (e.g. #121's anomaly check) must read local
+# refs, not the remote.
+write_progress_note() {
+  local n="$1" log_file="$2"
+  local branch="ralph/issue-$n"
+  local note_path=".sandcastle/progress/issue-${n}.md"
+
+  local base_ref
+  if git rev-parse --verify "refs/heads/$branch" >/dev/null 2>&1; then
+    base_ref="refs/heads/$branch"
+  else
+    base_ref="refs/heads/master"
+  fi
+  local parent_sha
+  parent_sha="$(git rev-parse "$base_ref")"
+
+  local reset_str
+  reset_str="$(grep -io "resets [0-9]\{1,2\}:[0-9]\{2\}[ap]m (UTC)" "$log_file" 2>/dev/null | head -1)"
+  [[ -z "$reset_str" ]] && reset_str="reset time not found in log"
+
+  local note_content
+  note_content="$(cat <<EOF
+# Progress — issue #$n — $(date -u +"%Y-%m-%d %H:%M UTC")
+
+Session-limit hit, $reset_str.
+Log: $log_file
+
+Resume: this note only confirms a session-limit retry happened. Check
+\`git log --oneline\` / \`git show\` on this branch for any real prior
+work before re-exploring the issue from scratch.
+EOF
+)"
+
+  local tmp_index
+  tmp_index="$(mktemp)"
+  rm -f "$tmp_index"
+  GIT_INDEX_FILE="$tmp_index" git read-tree "$parent_sha"
+  local blob_sha
+  blob_sha="$(printf '%s\n' "$note_content" | git hash-object -w --stdin)"
+  GIT_INDEX_FILE="$tmp_index" git update-index --add --cacheinfo "100644,$blob_sha,$note_path"
+  local tree_sha
+  tree_sha="$(GIT_INDEX_FILE="$tmp_index" git write-tree)"
+  rm -f "$tmp_index"
+
+  local commit_sha
+  commit_sha="$(GIT_AUTHOR_NAME="${GIT_AUTHOR_NAME:-Ralph (belastingaangifte-check agent)}" \
+    GIT_AUTHOR_EMAIL="${GIT_AUTHOR_EMAIL:-ralph-agent@users.noreply.github.com}" \
+    GIT_COMMITTER_NAME="${GIT_COMMITTER_NAME:-Ralph (belastingaangifte-check agent)}" \
+    GIT_COMMITTER_EMAIL="${GIT_COMMITTER_EMAIL:-ralph-agent@users.noreply.github.com}" \
+    git commit-tree "$tree_sha" -p "$parent_sha" -m "Progress notes: issue #$n")"
+  git update-ref "refs/heads/$branch" "$commit_sha"
+}
+
 run_build_iteration() {
   local issue_json="$1"
   local n title body
@@ -221,7 +295,8 @@ run_build_iteration() {
     echo "Iteration for issue #$n failed (see $log_file)."
     if is_transient_failure "$log_file"; then
       echo "Transient infra failure detected — not marking blocked, will retry."
-      if grep -q "hit your session limit" "$log_file" 2>/dev/null; then
+      if is_session_limit "$log_file"; then
+        write_progress_note "$n" "$log_file"
         wait_out_session_limit "$log_file"
       fi
       gh issue edit "$n" --repo "$REPO" --remove-label in-progress-by-agent
@@ -248,21 +323,30 @@ run_plan_iteration() {
   exit 0
 }
 
-i=0
-while :; do
-  i=$((i + 1))
-  if [[ "$MAX_ITER" != "0" && "$i" -gt "$MAX_ITER" ]]; then
-    echo "Reached max iterations ($MAX_ITER). Stopping."
-    break
-  fi
+main() {
+  local i=0
+  while :; do
+    i=$((i + 1))
+    if [[ "$MAX_ITER" != "0" && "$i" -gt "$MAX_ITER" ]]; then
+      echo "Reached max iterations ($MAX_ITER). Stopping."
+      break
+    fi
 
-  echo "=== Ralph iteration $i (build: $AGENT, review: claude) ==="
-  promote_unblocked_issues
-  issue_json="$(pick_issue)"
+    echo "=== Ralph iteration $i (build: $AGENT, review: claude) ==="
+    promote_unblocked_issues
+    issue_json="$(pick_issue)"
 
-  if [[ -n "$issue_json" ]]; then
-    run_build_iteration "$issue_json"
-  else
-    run_plan_iteration
-  fi
-done
+    if [[ -n "$issue_json" ]]; then
+      run_build_iteration "$issue_json"
+    else
+      run_plan_iteration
+    fi
+  done
+}
+
+# Guard so tests can `source` this file (to call functions like
+# is_transient_failure or write_progress_note directly) without kicking
+# off the live loop.
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main "$@"
+fi
