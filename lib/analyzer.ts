@@ -75,8 +75,15 @@ export async function analyzeDocuments(
 ): Promise<Omit<AnalysisReport, "extractionErrors">> {
   const client = createClient(apiKey);
 
-  const { taxYear, covered, missingStatement, notFilledIn, amountMismatches, rulePoints } =
-    buildReport(taxReturn, annualStatements, language);
+  const {
+    taxYear,
+    covered,
+    missingStatement,
+    notFilledIn,
+    amountMismatches,
+    findings,
+    rulePoints,
+  } = buildReport(taxReturn, annualStatements, language);
 
   if (amountMismatches.length === 0) {
     return {
@@ -84,6 +91,7 @@ export async function analyzeDocuments(
       covered,
       missingStatement,
       notFilledIn,
+      findings,
       attentionPoints: rulePoints,
     };
   }
@@ -133,6 +141,7 @@ export async function analyzeDocuments(
     covered,
     missingStatement,
     notFilledIn,
+    findings,
     attentionPoints: [...rulePoints, ...llmPoints],
   };
 }

@@ -67,8 +67,31 @@ export interface AnalysisReport {
   covered: CoveredItem[];
   missingStatement: MissingStatementItem[];
   notFilledIn: NotFilledInItem[];
+  findings: Finding[];
   attentionPoints: AttentionPoint[];
   extractionErrors: ExtractionError[];
+}
+
+// The kinds of thing the deterministic Validation layer can fail to read. Distinct from
+// an aandachtspunt: a finding says the tool could not read something, not something about
+// the filer's tax position. See ADR 0008 — the check reports, it never repairs.
+export type FindingKind =
+  | "unresolvedAmount" // a matched pair whose bewijsstuk amount could not be resolved
+  | "taxYearMismatch" // a bewijsstuk covering a different tax year than the aangifte
+  | "signContradiction" // an amount whose sign contradicts its kind (a magnitude gone negative)
+  | "duplicateRow" // rows identical in every field, collapsed to one
+  | "unknownAmountKind"; // an amount of a kind nothing downstream understands
+
+export interface Finding {
+  kind: FindingKind;
+  title: string;
+  detail: string;
+  institution?: string;
+  accountNumber?: string;
+  field?: string;
+  // ADR 0008: a rule may carry a proposed correction as data. Applying it is a separate,
+  // named, individually-tested transform — never something the check itself does.
+  proposedCorrection?: { before: number | null; after: number | null };
 }
 
 export interface CoveredItem {

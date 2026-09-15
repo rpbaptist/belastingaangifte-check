@@ -2,13 +2,14 @@ import { Icon } from "@/app/Icon";
 import type {
   AnalysisReport,
   CoveredItem,
+  Finding,
   MissingStatementItem,
   NotFilledInItem,
 } from "@/lib/types";
 import { formatEuro } from "@/lib/format";
 import { useTranslation } from "@/app/hooks/useTranslation";
 
-type Tone = "pos" | "warn" | "info" | "attn";
+type Tone = "pos" | "warn" | "info" | "attn" | "find";
 
 export function SummaryBoxes({ report }: { report: AnalysisReport }) {
   const { t } = useTranslation();
@@ -39,6 +40,13 @@ export function SummaryBoxes({ report }: { report: AnalysisReport }) {
       count: report.notFilledIn.length,
       label: t("notFilledInSummaryLabel"),
       href: "#section-niet-ingevuld",
+    },
+    {
+      tone: "find",
+      icon: "shield",
+      count: report.findings.length,
+      label: t("findingsSummaryLabel"),
+      href: "#section-bevindingen",
     },
     {
       tone: "attn",
@@ -160,6 +168,29 @@ export function MissingStatementSection({ items }: { items: MissingStatementItem
           m={`${t("boxPrefix")} ${c.box}${c.accountNumber ? ` · ${c.accountNumber}` : ""}`}
           a={formatEuro(c.amount)}
         />
+      ))}
+    </Section>
+  );
+}
+
+export function FindingsSection({ items }: { items: Finding[] }) {
+  const { t } = useTranslation();
+  return (
+    <Section
+      id="section-bevindingen"
+      tone="find"
+      icon="shield"
+      title={t("findingsLabel")}
+      count={items.length}
+      note={t("findingsNote")}
+    >
+      {items.map((f, i) => (
+        <div key={`${f.kind}|${f.field ?? ""}|${i}`} className="irow tone-find">
+          <div className="label-col">
+            <div className="f">{f.title}</div>
+            <div className="m">{f.detail}</div>
+          </div>
+        </div>
       ))}
     </Section>
   );
