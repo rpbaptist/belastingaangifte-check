@@ -271,9 +271,21 @@ EOF
 # the candidate list — a sandbox run can take a long time, and the label
 # set on GitHub is the only state this check can trust to still be
 # accurate (see is_session_limit_anomaly).
+#
+# A `gh` failure (network blip, auth) and a genuine "label not present"
+# both return 1 here, so callers fail safe (e.g. is_session_limit_anomaly
+# treats either as "not an anomaly", never wrongly blocking an issue over
+# a transient API hiccup) — but a `gh` failure specifically is echoed to
+# stderr first, so it still shows up in the run's log instead of being
+# silently indistinguishable from "no such label".
 issue_has_label() {
   local n="$1" label="$2"
-  gh issue view "$n" --repo "$REPO" --json labels -q '.labels[].name' 2>/dev/null | grep -qx "$label"
+  local labels_output
+  if ! labels_output="$(gh issue view "$n" --repo "$REPO" --json labels -q '.labels[].name' 2>&1)"; then
+    echo "Warning: gh issue view failed for #$n while checking for label \"$label\" — treating as absent: $labels_output" >&2
+    return 1
+  fi
+  grep -qx "$label" <<<"$labels_output"
 }
 
 # Count of "Progress notes: issue #N" commits on ralph/issue-N ahead of

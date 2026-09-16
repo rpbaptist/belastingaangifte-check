@@ -285,4 +285,37 @@ describe("session-limit anomaly detection (#121)", () => {
       )
     ).toBe(true);
   });
+
+  it("issue_has_label treats a gh failure as absent but warns instead of failing silently", () => {
+    writeFileSync(
+      path.join(stubBinDir, "gh"),
+      [
+        "#!/usr/bin/env bash",
+        'if [[ "$1 $2" == "issue view" ]]; then',
+        '  echo "gh: connection reset" >&2',
+        "  exit 1",
+        "fi",
+        "exit 0",
+      ].join("\n")
+    );
+    execFileSync("chmod", ["+x", path.join(stubBinDir, "gh")]);
+
+    let stderr = "";
+    let exitCode = 0;
+    try {
+      execFileSync(
+        "bash",
+        ["-c", `source "${path.resolve(__dirname, "loop.sh")}"; issue_has_label 64 session-limit-seen`],
+        { cwd: repoDir, encoding: "utf-8", env: { ...process.env, PATH: `${stubBinDir}:${process.env.PATH}` } }
+      );
+    } catch (err: unknown) {
+      const execErr = err as { status: number; stderr: string };
+      exitCode = execErr.status;
+      stderr = execErr.stderr;
+    }
+
+    expect(exitCode).toBe(1); // fails safe: treated as label absent
+    expect(stderr).toContain('Warning: gh issue view failed for #64 while checking for label "session-limit-seen"');
+    expect(stderr).toContain("connection reset");
+  });
 });
