@@ -19,15 +19,11 @@ function git(args: string[], cwd = repoDir) {
 
 function runLoopFn(fn: string, cwd = repoDir) {
   const loopShPath = path.resolve(__dirname, "loop.sh");
-  return execFileSync(
-    "bash",
-    ["-c", `source "${loopShPath}"; ${fn}`],
-    {
-      cwd,
-      encoding: "utf-8",
-      env: { ...process.env, PATH: `${stubBinDir}:${process.env.PATH}` },
-    },
-  );
+  return execFileSync("bash", ["-c", `source "${loopShPath}"; ${fn}`], {
+    cwd,
+    encoding: "utf-8",
+    env: { ...process.env, PATH: `${stubBinDir}:${process.env.PATH}` },
+  });
 }
 
 beforeEach(() => {
@@ -42,10 +38,7 @@ beforeEach(() => {
   stubBinDir = mkdtempSync(path.join(tmpdir(), "gh-stub-"));
   // Tests in this file don't exercise gh-calling paths yet; stub exists
   // so PATH is consistent as more behaviors are added.
-  writeFileSync(
-    path.join(stubBinDir, "gh"),
-    "#!/usr/bin/env bash\nexit 0\n",
-  );
+  writeFileSync(path.join(stubBinDir, "gh"), "#!/usr/bin/env bash\nexit 0\n");
   execFileSync("chmod", ["+x", path.join(stubBinDir, "gh")]);
 });
 
@@ -59,7 +52,7 @@ describe("write_progress_note", () => {
     const logFile = path.join(repoDir, "attempt.log");
     writeFileSync(
       logFile,
-      "some agent output\nYou've hit your session limit · resets 11:50am (UTC)\n",
+      "some agent output\nYou've hit your session limit · resets 11:50am (UTC)\n"
     );
 
     runLoopFn(`write_progress_note 42 "${logFile}"`);
@@ -70,10 +63,7 @@ describe("write_progress_note", () => {
     const log = git(["log", "--format=%s", "ralph/issue-42"]);
     expect(log.trim().split("\n")[0]).toBe("Progress notes: issue #42");
 
-    const noteContent = git([
-      "show",
-      "ralph/issue-42:.sandcastle/progress/issue-42.md",
-    ]);
+    const noteContent = git(["show", "ralph/issue-42:.sandcastle/progress/issue-42.md"]);
     expect(noteContent).toContain("11:50am (UTC)");
     expect(noteContent).toContain(logFile);
   });
@@ -86,10 +76,7 @@ describe("write_progress_note", () => {
     git(["checkout", "-q", "master"]);
 
     const logFile = path.join(repoDir, "attempt2.log");
-    writeFileSync(
-      logFile,
-      "You've hit your session limit · resets 3:15pm (UTC)\n",
-    );
+    writeFileSync(logFile, "You've hit your session limit · resets 3:15pm (UTC)\n");
 
     runLoopFn(`write_progress_note 7 "${logFile}"`);
 
@@ -112,16 +99,13 @@ describe("run_build_iteration on a session-limit failure", () => {
       path.join(stubBinDir, "npx"),
       [
         "#!/usr/bin/env bash",
-        "echo \"agent output\"",
-        "echo \"You've hit your session limit \\xc2\\xb7 resets 11:50am (UTC)\"",
+        'echo "agent output"',
+        'echo "You\'ve hit your session limit \\xc2\\xb7 resets 11:50am (UTC)"',
         "exit 1",
-      ].join("\n"),
+      ].join("\n")
     );
     execFileSync("chmod", ["+x", path.join(stubBinDir, "npx")]);
-    writeFileSync(
-      path.join(stubBinDir, "sleep"),
-      "#!/usr/bin/env bash\nexit 0\n",
-    );
+    writeFileSync(path.join(stubBinDir, "sleep"), "#!/usr/bin/env bash\nexit 0\n");
     execFileSync("chmod", ["+x", path.join(stubBinDir, "sleep")]);
 
     // ralph/issue-55 already exists with zero commits ahead of master —
@@ -144,11 +128,7 @@ describe("run_build_iteration on a session-limit failure", () => {
     const log = git(["log", "--format=%s", "ralph/issue-55"]);
     expect(log.trim().split("\n")[0]).toBe("Progress notes: issue #55");
 
-    const commitCount = git([
-      "rev-list",
-      "--count",
-      "master..ralph/issue-55",
-    ]).trim();
+    const commitCount = git(["rev-list", "--count", "master..ralph/issue-55"]).trim();
     expect(commitCount).toBe("1");
   });
 });
@@ -158,9 +138,7 @@ describe("session-limit detection", () => {
     const logFile = path.join(repoDir, "cased.log");
     writeFileSync(logFile, "You've Hit Your SESSION LIMIT · resets 9:00am (UTC)\n");
 
-    const output = runLoopFn(
-      `is_transient_failure "${logFile}" && echo MATCHED || echo NO_MATCH`,
-    );
+    const output = runLoopFn(`is_transient_failure "${logFile}" && echo MATCHED || echo NO_MATCH`);
     expect(output.trim()).toBe("MATCHED");
   });
 });
