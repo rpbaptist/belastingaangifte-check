@@ -266,6 +266,64 @@ EOF
   git update-ref "refs/heads/$branch" "$commit_sha"
 }
 
+# Whether issue N currently carries a given label on the tracker. Real
+# lookup, not the possibly-stale labels captured when pick_issue built
+# the candidate list — a sandbox run can take a long time, and the label
+# set on GitHub is the only state this check can trust to still be
+# accurate (see is_session_limit_anomaly).
+#
+# A `gh` failure (network blip, auth) and a genuine "label not present"
+# both return 1 here, so callers fail safe (e.g. is_session_limit_anomaly
+# treats either as "not an anomaly", never wrongly blocking an issue over
+# a transient API hiccup) — but a `gh` failure specifically is echoed to
+# stderr first, so it still shows up in the run's log instead of being
+# silently indistinguishable from "no such label".
+issue_has_label() {
+  local n="$1" label="$2"
+  local labels_output
+  if ! labels_output="$(gh issue view "$n" --repo "$REPO" --json labels -q '.labels[].name' 2>&1)"; then
+    echo "Warning: gh issue view failed for #$n while checking for label \"$label\" — treating as absent: $labels_output" >&2
+    return 1
+  fi
+  grep -qx "$label" <<<"$labels_output"
+}
+
+# Count of "Progress notes: issue #N" commits on ralph/issue-N ahead of
+# master — the exact detection source #121 specifies. Zero if the branch
+# doesn't exist locally at all (the state-loss case this exists to catch).
+progress_note_count() {
+  local n="$1" branch="ralph/issue-$n"
+  if ! git rev-parse --verify "refs/heads/$branch" >/dev/null 2>&1; then
+    echo 0
+    return
+  fi
+  git log --oneline --grep="Progress notes: issue #$n" "master..$branch" 2>/dev/null | wc -l | tr -d ' '
+}
+
+# True when this session-limit hit is the second (or later) in a row for
+# issue N (the `session-limit-seen` label already present, applied on a
+# prior hit) but the progress note that hit should have left behind is
+# gone. write_progress_note only updates a local, unpushed ref (see its
+# comment), so this can only happen if local RALPH-host state was lost
+# between attempts — a host restart/redeploy/disk reset, or someone
+# deleting the branch. Not reachable via write_progress_note itself
+# failing: that runs under `set -euo pipefail` and would crash loop.sh
+# outright rather than leave this silently undetected.
+is_session_limit_anomaly() {
+  local n="$1"
+  issue_has_label "$n" "session-limit-seen" || return 1
+  [[ "$(progress_note_count "$n")" -eq 0 ]]
+}
+
+# Comment posted when is_session_limit_anomaly trips. Broken out so it
+# can be asserted on directly without invoking gh.
+session_limit_anomaly_comment() {
+  local n="$1"
+  cat <<EOF
+Blocked: session limit hit twice in a row for this issue, and the progress note from the first hit is no longer on \`ralph/issue-$n\` (likely local RALPH-host state was reset). Re-labeled \`blocked-for-agent\` instead of retrying blind. A human should check \`ralph-logs/\` if still present, then re-label \`ready-for-agent\` to resume. (loop.sh anomaly detector)
+EOF
+}
+
 run_build_iteration() {
   local issue_json="$1"
   local n title body
@@ -290,12 +348,21 @@ run_build_iteration() {
     # issue stays eligible for re-selection forever, and the next
     # iteration re-picks it, finds nothing new to commit, and reports a
     # false "blocked" failure. Success means done, not queue-again.
-    gh issue edit "$n" --repo "$REPO" --remove-label in-progress-by-agent --remove-label ready-for-agent
+    gh issue edit "$n" --repo "$REPO" --remove-label in-progress-by-agent --remove-label ready-for-agent --remove-label session-limit-seen
   else
     echo "Iteration for issue #$n failed (see $log_file)."
-    if is_transient_failure "$log_file"; then
+    if is_session_limit "$log_file" && is_session_limit_anomaly "$n"; then
+      echo "Session-limit anomaly detected — no surviving progress note after a repeat hit, blocking for human review."
+      gh issue edit "$n" --repo "$REPO" \
+        --remove-label in-progress-by-agent --remove-label session-limit-seen \
+        --add-label blocked-for-agent
+      gh issue comment "$n" --repo "$REPO" --body "$(session_limit_anomaly_comment "$n")"
+    elif is_transient_failure "$log_file"; then
       echo "Transient infra failure detected — not marking blocked, will retry."
       if is_session_limit "$log_file"; then
+        if ! issue_has_label "$n" "session-limit-seen"; then
+          gh issue edit "$n" --repo "$REPO" --add-label session-limit-seen
+        fi
         write_progress_note "$n" "$log_file"
         wait_out_session_limit "$log_file"
       fi
