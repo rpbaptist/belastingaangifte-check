@@ -39,12 +39,12 @@ Four additional labels, specific to the unattended RALPH loop (`loop.sh` +
 the five-role vocabulary above and are never applied by a human during
 triage — only by the loop itself.
 
-| Label                  | Meaning                                                                    |
-| ---------------------- | --------------------------------------------------------------------------- |
-| `blocked`               | A `## Blocked by` issue is still open; not actually ready yet             |
-| `in-progress-by-agent` | The loop has claimed this issue and is actively working it in a sandbox   |
-| `blocked-for-agent`    | A loop iteration failed; needs human inspection before retrying           |
-| `session-limit-seen`   | This issue already survived one Claude session-limit hit                 |
+| Label                  | Meaning                                                                 |
+| ---------------------- | ----------------------------------------------------------------------- |
+| `blocked`              | A `## Blocked by` issue is still open; not actually ready yet           |
+| `in-progress-by-agent` | The loop has claimed this issue and is actively working it in a sandbox |
+| `blocked-for-agent`    | A loop iteration failed; needs human inspection before retrying         |
+| `session-limit-seen`   | This issue already survived one Claude session-limit hit                |
 
 `session-limit-seen` backs the anomaly detector in `is_session_limit_anomaly`
 (`loop.sh`): the host-side progress note a session-limit hit leaves on

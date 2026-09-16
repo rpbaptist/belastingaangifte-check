@@ -33,7 +33,7 @@ state lost" any better than the git ref it would be checking instead.
   the local progress-note commit count.** Chosen. The label survives host loss because
   it isn't stored on the host. Added on an issue's first session-limit hit; on a
   second hit, if the label is present but `git log --grep="Progress notes: issue #N"
-  master..ralph/issue-N` is empty, that mismatch is exactly the state-loss signature —
+master..ralph/issue-N` is empty, that mismatch is exactly the state-loss signature —
   `loop.sh` relabels `blocked-for-agent` and stops retrying instead of spinning
   blind. Cleared again on success so a later reopen starts clean.
 - **Push the progress note to origin instead of keeping it local-only.** Rejected:

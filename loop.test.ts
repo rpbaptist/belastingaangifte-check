@@ -262,11 +262,7 @@ describe("session-limit anomaly detection (#121)", () => {
   it("success path clears session-limit-seen alongside the other labels", () => {
     writeFileSync(
       path.join(stubBinDir, "npx"),
-      [
-        "#!/usr/bin/env bash",
-        'echo "sandbox succeeded"',
-        "exit 0",
-      ].join("\n")
+      ["#!/usr/bin/env bash", 'echo "sandbox succeeded"', "exit 0"].join("\n")
     );
     execFileSync("chmod", ["+x", path.join(stubBinDir, "npx")]);
 
@@ -305,8 +301,15 @@ describe("session-limit anomaly detection (#121)", () => {
     try {
       execFileSync(
         "bash",
-        ["-c", `source "${path.resolve(__dirname, "loop.sh")}"; issue_has_label 64 session-limit-seen`],
-        { cwd: repoDir, encoding: "utf-8", env: { ...process.env, PATH: `${stubBinDir}:${process.env.PATH}` } }
+        [
+          "-c",
+          `source "${path.resolve(__dirname, "loop.sh")}"; issue_has_label 64 session-limit-seen`,
+        ],
+        {
+          cwd: repoDir,
+          encoding: "utf-8",
+          env: { ...process.env, PATH: `${stubBinDir}:${process.env.PATH}` },
+        }
       );
     } catch (err: unknown) {
       const execErr = err as { status: number; stderr: string };
@@ -315,7 +318,9 @@ describe("session-limit anomaly detection (#121)", () => {
     }
 
     expect(exitCode).toBe(1); // fails safe: treated as label absent
-    expect(stderr).toContain('Warning: gh issue view failed for #64 while checking for label "session-limit-seen"');
+    expect(stderr).toContain(
+      'Warning: gh issue view failed for #64 while checking for label "session-limit-seen"'
+    );
     expect(stderr).toContain("connection reset");
   });
 });
