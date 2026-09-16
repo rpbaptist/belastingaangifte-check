@@ -34,7 +34,7 @@ read by the gate and the issue will be claimed regardless of open blockers.
 
 ## RALPH-loop labels
 
-Three additional labels, specific to the unattended RALPH loop (`loop.sh` +
+Four additional labels, specific to the unattended RALPH loop (`loop.sh` +
 `.sandcastle/`), sit downstream of `ready-for-agent`. They are not part of
 the five-role vocabulary above and are never applied by a human during
 triage — only by the loop itself.
@@ -44,6 +44,18 @@ triage — only by the loop itself.
 | `blocked`               | A `## Blocked by` issue is still open; not actually ready yet             |
 | `in-progress-by-agent` | The loop has claimed this issue and is actively working it in a sandbox   |
 | `blocked-for-agent`    | A loop iteration failed; needs human inspection before retrying           |
+| `session-limit-seen`   | This issue already survived one Claude session-limit hit                 |
+
+`session-limit-seen` backs the anomaly detector in `is_session_limit_anomaly`
+(`loop.sh`): the host-side progress note a session-limit hit leaves on
+`ralph/issue-N` only updates a local, unpushed git ref, so it doesn't
+survive the host's local state being lost (restart, redeploy, disk reset,
+a deleted branch). The label lives on GitHub instead, so it does survive.
+A second session-limit hit with the label already present but no surviving
+progress-note commit means local state was lost between attempts — the
+loop relabels `blocked-for-agent` instead of retrying blind. The label is
+added on an issue's first session-limit hit and cleared again once the
+issue succeeds, so a later reopen of the same issue number starts clean.
 
 State machine: at the top of every iteration the loop re-checks every
 `blocked` issue's `## Blocked by` list and promotes it back to
