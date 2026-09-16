@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync, mkdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -24,6 +24,52 @@ function runLoopFn(fn: string, cwd = repoDir) {
     encoding: "utf-8",
     env: { ...process.env, PATH: `${stubBinDir}:${process.env.PATH}` },
   });
+}
+
+// Replaces the stub `gh` with one that logs every invocation's argv (one
+// line per call) to a file the test can assert against, and answers
+// `gh issue view ... --json labels -q '.labels[].name'` with a
+// caller-supplied label list — everything else is a silent no-op, same
+// as the default stub.
+function stubGhWithCallLog(labels: string[] = []): { callLogPath: string } {
+  const callLogPath = path.join(repoDir, "gh-calls.log");
+  const labelsLine = labels.join("\\n");
+  writeFileSync(
+    path.join(stubBinDir, "gh"),
+    [
+      "#!/usr/bin/env bash",
+      `echo "$@" >> "${callLogPath}"`,
+      'if [[ "$1 $2" == "issue view" ]]; then',
+      `  printf '${labelsLine}\\n'`,
+      "fi",
+      "exit 0",
+    ].join("\n")
+  );
+  execFileSync("chmod", ["+x", path.join(stubBinDir, "gh")]);
+  return { callLogPath };
+}
+
+function stubSessionLimitNpx() {
+  writeFileSync(
+    path.join(stubBinDir, "npx"),
+    [
+      "#!/usr/bin/env bash",
+      'echo "agent output"',
+      'echo "You\'ve hit your session limit \\xc2\\xb7 resets 11:50am (UTC)"',
+      "exit 1",
+    ].join("\n")
+  );
+  execFileSync("chmod", ["+x", path.join(stubBinDir, "npx")]);
+  writeFileSync(path.join(stubBinDir, "sleep"), "#!/usr/bin/env bash\nexit 0\n");
+  execFileSync("chmod", ["+x", path.join(stubBinDir, "sleep")]);
+}
+
+function readCallLog(callLogPath: string): string[] {
+  try {
+    return readFileSync(callLogPath, "utf-8").trim().split("\n").filter(Boolean);
+  } catch {
+    return [];
+  }
 }
 
 beforeEach(() => {
@@ -140,5 +186,103 @@ describe("session-limit detection", () => {
 
     const output = runLoopFn(`is_transient_failure "${logFile}" && echo MATCHED || echo NO_MATCH`);
     expect(output.trim()).toBe("MATCHED");
+  });
+});
+
+describe("session-limit anomaly detection (#121)", () => {
+  it("first-ever session-limit hit: labels session-limit-seen, writes note, does not block", () => {
+    const { callLogPath } = stubGhWithCallLog([]); // no labels on the issue yet
+    stubSessionLimitNpx();
+
+    const issueJson = JSON.stringify({ number: 60, title: "Test issue", body: "body" });
+    const issueJsonPath = path.join(repoDir, "issue.json");
+    writeFileSync(issueJsonPath, issueJson);
+
+    runLoopFn(`run_build_iteration "$(cat '${issueJsonPath}')"`);
+
+    const calls = readCallLog(callLogPath);
+    expect(calls.some((c) => c.includes("--add-label session-limit-seen"))).toBe(true);
+    expect(calls.some((c) => c.includes("blocked-for-agent"))).toBe(false);
+
+    const commitCount = git(["rev-list", "--count", "master..ralph/issue-60"]).trim();
+    expect(commitCount).toBe("1");
+  });
+
+  it("second hit with the prior note still present: continues normally, no block", () => {
+    // Simulate the first hit already having happened: branch exists with
+    // one progress-note commit, and the label is already on the issue.
+    runLoopFn(
+      `write_progress_note 61 "${(() => {
+        const f = path.join(repoDir, "first-attempt.log");
+        writeFileSync(f, "You've hit your session limit · resets 11:50am (UTC)\n");
+        return f;
+      })()}"`
+    );
+
+    const { callLogPath } = stubGhWithCallLog(["session-limit-seen", "in-progress-by-agent"]);
+    stubSessionLimitNpx();
+
+    const issueJson = JSON.stringify({ number: 61, title: "Test issue", body: "body" });
+    const issueJsonPath = path.join(repoDir, "issue.json");
+    writeFileSync(issueJsonPath, issueJson);
+
+    runLoopFn(`run_build_iteration "$(cat '${issueJsonPath}')"`);
+
+    const calls = readCallLog(callLogPath);
+    expect(calls.some((c) => c.includes("blocked-for-agent"))).toBe(false);
+    expect(calls.some((c) => c.includes("--remove-label session-limit-seen"))).toBe(false);
+
+    const commitCount = git(["rev-list", "--count", "master..ralph/issue-61"]).trim();
+    expect(commitCount).toBe("2");
+  });
+
+  it("second hit with no surviving note: blocks instead of retrying, does not write another note", () => {
+    // Label says we've been here before, but ralph/issue-62 doesn't even
+    // exist locally — the state-loss scenario (host reset, branch
+    // deleted, fresh clone).
+    const { callLogPath } = stubGhWithCallLog(["session-limit-seen", "in-progress-by-agent"]);
+    stubSessionLimitNpx();
+
+    const issueJson = JSON.stringify({ number: 62, title: "Test issue", body: "body" });
+    const issueJsonPath = path.join(repoDir, "issue.json");
+    writeFileSync(issueJsonPath, issueJson);
+
+    runLoopFn(`run_build_iteration "$(cat '${issueJsonPath}')"`);
+
+    const calls = readCallLog(callLogPath);
+    expect(calls.some((c) => c.includes("--add-label blocked-for-agent"))).toBe(true);
+    expect(calls.some((c) => c.includes("--remove-label session-limit-seen"))).toBe(true);
+    expect(calls.some((c) => c.startsWith("issue comment 62"))).toBe(true);
+
+    // No note written, no branch created for this run.
+    const branches = git(["branch", "--list", "ralph/issue-62"]);
+    expect(branches).not.toContain("ralph/issue-62");
+  });
+
+  it("success path clears session-limit-seen alongside the other labels", () => {
+    writeFileSync(
+      path.join(stubBinDir, "npx"),
+      [
+        "#!/usr/bin/env bash",
+        'echo "sandbox succeeded"',
+        "exit 0",
+      ].join("\n")
+    );
+    execFileSync("chmod", ["+x", path.join(stubBinDir, "npx")]);
+
+    const { callLogPath } = stubGhWithCallLog(["session-limit-seen"]);
+
+    const issueJson = JSON.stringify({ number: 63, title: "Test issue", body: "body" });
+    const issueJsonPath = path.join(repoDir, "issue.json");
+    writeFileSync(issueJsonPath, issueJson);
+
+    runLoopFn(`run_build_iteration "$(cat '${issueJsonPath}')"`);
+
+    const calls = readCallLog(callLogPath);
+    expect(
+      calls.some(
+        (c) => c.includes("--remove-label session-limit-seen") && c.startsWith("issue edit 63")
+      )
+    ).toBe(true);
   });
 });
