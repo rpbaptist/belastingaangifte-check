@@ -5,9 +5,11 @@ import type {
   Finding,
   MissingStatementItem,
   NotFilledInItem,
+  PropertyStatementData,
 } from "@/lib/types";
 import { formatEuro } from "@/lib/format";
 import { useTranslation } from "@/app/hooks/useTranslation";
+import { translatePropertyAmountKind, translatePropertyDocumentKind } from "@/lib/translations";
 
 type Tone = "pos" | "warn" | "info" | "attn" | "find";
 
@@ -40,6 +42,13 @@ export function SummaryBoxes({ report }: { report: AnalysisReport }) {
       count: report.notFilledIn.length,
       label: t("notFilledInSummaryLabel"),
       href: "#section-niet-ingevuld",
+    },
+    {
+      tone: "info",
+      icon: "file-plus",
+      count: report.propertyStatements.flatMap((s) => s.amounts).length,
+      label: t("propertyStatementsLabel"),
+      href: "#section-verkoop-woning",
     },
     {
       tone: "find",
@@ -191,6 +200,42 @@ export function FindingsSection({ items }: { items: Finding[] }) {
             <div className="m">{f.detail}</div>
           </div>
         </div>
+      ))}
+    </Section>
+  );
+}
+
+// Property bewijsstukken (notarisafrekening, WOZ-beschikking, makelaarsnota) never enter
+// account matching (ADR 0002 amendment), so their amounts are listed rather than compared —
+// each document's amounts are flattened into one row per amount.
+export function PropertyStatementsSection({ items }: { items: PropertyStatementData[] }) {
+  const { t, language } = useTranslation();
+  const rows = items.flatMap((statement, si) =>
+    statement.amounts.map((amount, ai) => ({
+      key: `${si}|${ai}`,
+      documentKind: translatePropertyDocumentKind(statement.documentKind, language),
+      institution: statement.institution,
+      label: amount.kind ? translatePropertyAmountKind(amount.kind, language) : amount.label,
+      amount: amount.amount,
+    }))
+  );
+  return (
+    <Section
+      id="section-verkoop-woning"
+      tone="info"
+      icon="file-plus"
+      title={t("propertyStatementsLabel")}
+      count={rows.length}
+      note={t("propertyStatementsNote")}
+    >
+      {rows.map((r) => (
+        <Row
+          key={r.key}
+          tone="info"
+          f={r.label}
+          m={`${r.documentKind} · ${r.institution}`}
+          a={formatEuro(r.amount)}
+        />
       ))}
     </Section>
   );

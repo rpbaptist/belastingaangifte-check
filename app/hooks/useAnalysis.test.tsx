@@ -40,6 +40,7 @@ describe("useAnalysis", () => {
         covered: [],
         missingStatement: [],
         notFilledIn: [],
+        propertyStatements: [],
         findings: [],
         attentionPoints: [],
         extractionErrors: [],
@@ -47,6 +48,7 @@ describe("useAnalysis", () => {
       extractedData: {
         taxReturn: { taxYear: 2023, entries: [] },
         annualStatements: [],
+        propertyStatements: [],
       },
     };
     vi.stubGlobal(
