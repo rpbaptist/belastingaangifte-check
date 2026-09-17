@@ -69,6 +69,10 @@ export type CategorizationResult = {
   missingStatement: MissingStatementItem[];
   notFilledIn: NotFilledInItem[];
   amountMismatches: AmountMismatch[];
+  // Matched pairs whose bewijsstuk amount could not be resolved. Its own outcome — never
+  // covered — so an unreadable line is never echoed back as a confirmed match. `buildReport`
+  // turns these into findings (ADR 0008).
+  unresolved: MatchedPair[];
   duplicateRowsCollapsed: DuplicateRowCollapsed[];
 };
 
@@ -139,17 +143,22 @@ const notFilledInKey = (n: NotFilledInItem): string =>
 export function categorize(matchResult: MatchResult): CategorizationResult {
   const covered: CoveredItem[] = [];
   const amountMismatches: AmountMismatch[] = [];
+  const unresolved: MatchedPair[] = [];
 
   for (const pair of matchResult.matched) {
     const amountStatement = getJaaropgaveAmount(pair);
 
-    if (amountStatement == null || Math.abs(pair.aangifte.amount - amountStatement) <= 1) {
+    if (amountStatement == null) {
+      // Its own outcome. Reporting the aangifte figure here as `amountStatement` would echo
+      // the filer's own number back as though a bewijsstuk confirmed it.
+      unresolved.push(pair);
+    } else if (Math.abs(pair.aangifte.amount - amountStatement) <= 1) {
       covered.push({
         field: pair.aangifte.field,
         accountNumber: pair.aangifte.accountNumber ?? pair.jaaropgave.account.accountNumber,
         institution: pair.jaaropgave.statement.institution,
         amountTaxReturn: pair.aangifte.amount,
-        amountStatement: amountStatement ?? pair.aangifte.amount,
+        amountStatement,
       });
     } else {
       amountMismatches.push({ ...pair, amountStatement });
@@ -194,6 +203,7 @@ export function categorize(matchResult: MatchResult): CategorizationResult {
       notFilledInKey
     ),
     amountMismatches,
+    unresolved,
     duplicateRowsCollapsed,
   };
 }

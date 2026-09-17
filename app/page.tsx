@@ -12,6 +12,7 @@ import {
   CoveredSection,
   MissingStatementSection,
   NotFilledInSection,
+  FindingsSection,
 } from "./components/ReportSections";
 import { useAnalysis } from "./hooks/useAnalysis";
 import { useDemoMode } from "./hooks/useDemoMode";
@@ -174,6 +175,7 @@ export default function Home() {
         <div className={`body${hasAttn ? "" : " single"}`}>
           <div className="col-main">
             <div className="stack">
+              <FindingsSection items={report.findings} />
               <CoveredSection items={report.covered} />
               <MissingStatementSection items={report.missingStatement} />
               <NotFilledInSection items={report.notFilledIn} />

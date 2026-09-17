@@ -45,6 +45,7 @@ describe("categorize — basic assembly", () => {
     expect(result.missingStatement).toHaveLength(0);
     expect(result.notFilledIn).toHaveLength(0);
     expect(result.amountMismatches).toHaveLength(0);
+    expect(result.unresolved).toHaveLength(0);
     expect(result.duplicateRowsCollapsed).toHaveLength(0);
   });
 
@@ -236,7 +237,7 @@ describe("categorize — row counts are preserved", () => {
     expect(result.covered).toHaveLength(2);
   });
 
-  it("input row count equals output row count across covered + amountMismatches", () => {
+  it("input row count equals output row count across covered + amountMismatches + unresolved", () => {
     const statement = makeStatement("ASN", "broker", "NL29ASNB8844339390", {
       bank: { balance: 1072 },
       broker: { balance: 135 },
@@ -251,7 +252,9 @@ describe("categorize — row counts are preserved", () => {
 
     const result = categorize(makeMatchResult({ matched }));
 
-    expect(result.covered.length + result.amountMismatches.length).toBe(matched.length);
+    expect(result.covered.length + result.amountMismatches.length + result.unresolved.length).toBe(
+      matched.length
+    );
   });
 });
 
@@ -289,8 +292,11 @@ describe("categorize — €1 tolerance", () => {
     expect(result.amountMismatches[0].amountStatement).toBe(5100);
   });
 
-  it("treats unknown amount (null) as covered", () => {
-    // institution "other" with no recognized fields → getJaaropgaveAmount returns null
+  it("reports an unresolvable amount as its own outcome, never covered", () => {
+    // institution "other" with no recognized fields → getJaaropgaveAmount returns null.
+    // The pipeline could not read a bewijsstuk amount, so this must not pass as a confirmed
+    // match. It lands in `unresolved`, and crucially the aangifte figure is not echoed back
+    // as though a jaaropgave agreed with it. (Inverts the pre-#107 "unknown → covered" rule.)
     const statement = makeStatement("Employer", "other", "employer-001", {
       wage: { taxableWage: 100000 },
     });
@@ -300,8 +306,10 @@ describe("categorize — €1 tolerance", () => {
         matched: [{ aangifte: entry, jaaropgave: { statement, account: statement.accounts[0] } }],
       })
     );
-    expect(result.covered).toHaveLength(1);
+    expect(result.covered).toHaveLength(0);
     expect(result.amountMismatches).toHaveLength(0);
+    expect(result.unresolved).toHaveLength(1);
+    expect(result.unresolved[0].aangifte.amount).toBe(99999);
   });
 });
 

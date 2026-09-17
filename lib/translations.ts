@@ -229,6 +229,36 @@ export const translations = {
     nl: "{count} volledig identieke post(en) kwamen dubbel voor in de geëxtraheerde gegevens en zijn samengevoegd tot één. Controleer of dit terecht is.",
     en: "{count} fully identical entry/entries appeared twice in the extracted data and were collapsed into one. Check whether this is correct.",
   },
+
+  // Findings — the deterministic Validation layer reports what it could not read.
+  // Kept visibly separate from aandachtspunten (see ADR 0008): a finding is about the
+  // tool's reading, not about the filer's tax position.
+  findingsLabel: { nl: "Bevindingen", en: "Findings" },
+  findingsSummaryLabel: { nl: "Bevindingen", en: "Findings" },
+  findingsNote: {
+    nl: "Wat de tool niet zeker kon lezen. Dit zijn geen aandachtspunten over je aangifte — controleer deze posten zelf.",
+    en: "What the tool could not read with certainty. These are not attention points about your return — check these entries yourself.",
+  },
+  unresolvedAmountTitle: { nl: "Bedrag niet te lezen", en: "Amount could not be read" },
+  unresolvedAmountExplanation: {
+    nl: "Voor '{field}' bij {institution} kon geen bedrag uit het bewijsstuk worden afgeleid. Het bedrag in de aangifte is hierdoor niet bevestigd.",
+    en: "No amount could be resolved from the supporting document for '{field}' at {institution}. The tax-return figure is therefore not confirmed.",
+  },
+  taxYearMismatchTitle: { nl: "Belastingjaar wijkt af", en: "Tax year differs" },
+  taxYearMismatchExplanation: {
+    nl: "Het bewijsstuk van {institution} betreft belastingjaar {statementYear}, maar de aangifte is voor {taxReturnYear}.",
+    en: "The supporting document from {institution} is for tax year {statementYear}, but the return is for {taxReturnYear}.",
+  },
+  signContradictionTitle: { nl: "Onverwacht negatief bedrag", en: "Unexpected negative amount" },
+  signContradictionExplanation: {
+    nl: "'{field}' bij {institution} is {value}. Dit soort bedrag is een absolute waarde en hoort niet negatief te zijn — mogelijk een leesfout.",
+    en: "'{field}' at {institution} is {value}. This kind of amount is a magnitude and should not be negative — likely a misread.",
+  },
+  unknownAmountKindTitle: { nl: "Onbekend soort bedrag", en: "Unrecognised amount type" },
+  unknownAmountKindExplanation: {
+    nl: "Het bewijsstuk van {institution} bevat een bedrag van het soort '{category}' dat verderop in de vergelijking niet wordt gebruikt.",
+    en: "The supporting document from {institution} carries an amount of kind '{category}' that nothing downstream in the comparison uses.",
+  },
 } as const;
 
 export type TranslationKey = keyof typeof translations;
@@ -257,4 +287,48 @@ export function formatAnalysisFailed(message: string, language: Language): strin
 
 export function formatDuplicateRowsCollapsed(count: number, language: Language): string {
   return translate("duplicateRowsCollapsedExplanation", language).replace("{count}", String(count));
+}
+
+export function formatUnresolvedAmount(
+  field: string,
+  institution: string,
+  language: Language
+): string {
+  return translate("unresolvedAmountExplanation", language)
+    .replace("{field}", field)
+    .replace("{institution}", institution);
+}
+
+export function formatTaxYearMismatch(
+  statementYear: number,
+  taxReturnYear: number,
+  institution: string,
+  language: Language
+): string {
+  return translate("taxYearMismatchExplanation", language)
+    .replace("{institution}", institution)
+    .replace("{statementYear}", String(statementYear))
+    .replace("{taxReturnYear}", String(taxReturnYear));
+}
+
+export function formatSignContradiction(
+  field: string,
+  value: string,
+  institution: string,
+  language: Language
+): string {
+  return translate("signContradictionExplanation", language)
+    .replace("{field}", field)
+    .replace("{institution}", institution)
+    .replace("{value}", value);
+}
+
+export function formatUnknownAmountKind(
+  category: string,
+  institution: string,
+  language: Language
+): string {
+  return translate("unknownAmountKindExplanation", language)
+    .replace("{category}", category)
+    .replace("{institution}", institution);
 }

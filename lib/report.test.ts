@@ -177,6 +177,58 @@ describe("buildReport", () => {
     expect(result.notFilledIn[0]).toMatchObject({ institution: "OtherBank", amount: 2000 });
   });
 
+  it("reports an unresolvable matched amount as a finding, never as covered", () => {
+    // A field nothing downstream can price (institution 'other', unmapped field) used to be
+    // echoed back as covered. It must now be a finding, and the aangifte figure must not
+    // reappear as a confirmed statement amount.
+    const taxReturn = makeTaxReturn({
+      entries: [{ box: "3", field: "Onbekend veld", accountNumber: "NL01TEST", amount: 99999 }],
+    });
+    const statements = makeStatements({
+      institutionType: "other",
+      accounts: [
+        {
+          accountNumber: "NL01TEST",
+          description: "Overig",
+          amounts: { other: { premiumPaid: 500 } },
+        },
+      ],
+    });
+
+    const result = buildReport(taxReturn, statements, "nl");
+
+    expect(result.covered).toEqual([]);
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0].kind).toBe("unresolvedAmount");
+    expect(result.findings[0].field).toBe("Onbekend veld");
+  });
+
+  it("reports a bewijsstuk in a different tax year as a finding, not an attention point", () => {
+    const taxReturn = makeTaxReturn({ entries: [] });
+    const statements = makeStatements({ taxYear: 2023 });
+
+    const result = buildReport(taxReturn, statements, "nl");
+
+    expect(result.findings.some((f) => f.kind === "taxYearMismatch")).toBe(true);
+    expect(result.rulePoints).toEqual([]);
+  });
+
+  it("surfaces a collapsed duplicate as a finding, separate from aandachtspunten", () => {
+    // Pre-#107 this appeared as an attention point. A collapsed duplicate is about the tool's
+    // reading, not the filer's position, so it belongs in findings.
+    const taxReturn = makeTaxReturn({
+      entries: [
+        { box: "3", field: "Saldo bank en spaarrekeningen", accountNumber: null, amount: 100 },
+        { box: "3", field: "Saldo bank en spaarrekeningen", accountNumber: null, amount: 100 },
+      ],
+    });
+
+    const result = buildReport(taxReturn, [], "nl");
+
+    expect(result.findings.some((f) => f.kind === "duplicateRow")).toBe(true);
+    expect(result.rulePoints).toEqual([]);
+  });
+
   it("is deterministic: repeated calls return deep-equal results", () => {
     const taxReturn = makeTaxReturn();
     const statements = makeStatements();
