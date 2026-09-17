@@ -71,7 +71,7 @@ export async function runReview(args: {
     : "(none)";
 
   const reviewResult = await run({
-    agent: claudeCode("claude-opus-4-8", { effort: "high" }),
+    agent: claudeCode("claude-sonnet-5"),
     sandbox: docker({
       mounts: [{ hostPath: "~/.npm", sandboxPath: "/home/agent/.npm", readonly: true }],
     }),
