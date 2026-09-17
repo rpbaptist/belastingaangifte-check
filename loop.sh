@@ -75,8 +75,11 @@ open_blockers() {
   local body="$1" n state
   for n in $(extract_blockers "$body"); do
     state="$(gh issue view "$n" --repo "$REPO" --json state -q '.state' 2>/dev/null || echo "")"
-    [[ "$state" == "OPEN" ]] && echo "$n"
+    if [[ "$state" == "OPEN" ]]; then
+      echo "$n"
+    fi
   done
+  return 0
 }
 
 # Dependency gate: a ready-for-agent issue whose blockers aren't closed
