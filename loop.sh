@@ -382,14 +382,6 @@ run_build_iteration() {
   fi
 }
 
-run_plan_iteration() {
-  # TODO: not yet wired up — grill-with-docs planning-mode fallback when
-  # the ready-for-agent queue is empty. Deliberately deferred until build
-  # mechanics are proven supervised on real issues.
-  echo "No ready-for-agent issues, and planning-mode fallback isn't wired up yet. Stopping."
-  exit 0
-}
-
 main() {
   local i=0
   while :; do
@@ -406,7 +398,8 @@ main() {
     if [[ -n "$issue_json" ]]; then
       run_build_iteration "$issue_json"
     else
-      run_plan_iteration
+      echo "No ready-for-agent issues. Stopping."
+      exit 0
     fi
   done
 }
