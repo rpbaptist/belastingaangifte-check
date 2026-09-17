@@ -120,7 +120,7 @@ pick_issue() {
   candidates="$(gh issue list --repo "$REPO" --label ready-for-agent \
     --json number,title,body,labels --limit 50 \
     | jq -c '[.[] | select([.labels[].name] | (index("in-progress-by-agent") or index("blocked-for-agent")) | not)]
-              | sort_by(.number) | .[]')"
+              | sort_by(.number)')"
 
   while IFS= read -r issue_json; do
     [[ -z "$issue_json" ]] && continue
