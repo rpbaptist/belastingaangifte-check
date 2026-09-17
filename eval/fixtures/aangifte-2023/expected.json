@@ -1,0 +1,74 @@
+{
+  "taxYear": 2023,
+  "entries": [
+    { "box": "1", "field": "Loon in Nederland", "accountNumber": null, "amount": 41200 },
+    { "box": "1", "field": "Loon in Nederland", "accountNumber": null, "amount": 9800 },
+    { "box": "1", "field": "Eigenwoningforfait", "accountNumber": null, "amount": 2650 },
+    {
+      "box": "1",
+      "field": "Hypotheekrente en kosten voor de eigen woning",
+      "accountNumber": "NL64RABO0456789012",
+      "amount": 7310
+    },
+    {
+      "box": "3",
+      "field": "ING Betaalrekening",
+      "accountNumber": "NL22INGB0673345785",
+      "amount": 5140
+    },
+    {
+      "box": "3",
+      "field": "ABN AMRO Spaarrekening",
+      "accountNumber": "NL89ABNA0123456789",
+      "amount": 31400
+    },
+    {
+      "box": "3",
+      "field": "Rabobank Spaarrekening",
+      "accountNumber": "NL18RABO0332211004",
+      "amount": 13250
+    },
+    {
+      "box": "3",
+      "field": "ASN Bank Ideaalsparen",
+      "accountNumber": "NL11ASNB0987654321",
+      "amount": 6100
+    },
+    {
+      "box": "3",
+      "field": "SNS Betaalrekening",
+      "accountNumber": "NL55SNSB0908070605",
+      "amount": 2240
+    },
+    {
+      "box": "3",
+      "field": "bunq Spaarrekening",
+      "accountNumber": "NL42BUNQ2071234567",
+      "amount": 11070
+    },
+    {
+      "box": "3",
+      "field": "ASN Themabeleggen",
+      "accountNumber": "NL77ASNB0456123789",
+      "amount": 17630
+    },
+    {
+      "box": "3",
+      "field": "DEGIRO",
+      "accountNumber": "johndoe / flatexDEGIRO Bank AG / 0532013000",
+      "amount": 22950
+    },
+    {
+      "box": "3",
+      "field": "Brutodividend op aandelen of rente op obligaties",
+      "accountNumber": null,
+      "amount": 610
+    },
+    {
+      "box": "3",
+      "field": "Spaarrekening kinderen",
+      "accountNumber": "NL33TRIO1122334455",
+      "amount": 4980
+    }
+  ]
+}
