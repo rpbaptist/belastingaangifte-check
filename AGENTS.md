@@ -27,6 +27,7 @@ For all new features and changes:
 - Update documentation according to changes made.
 - Create the PR
 - Use `code-review` on the PR and leave findings as comments. Address small review issues directly. If larger or makes sense to follow up, create a new GitHub issues. Only add comments for issues or other findings which may require action.
+- After merging a PR, delete branch, clean up worktree
 
 Default to continuing to the next step unless instructed otherwise.
 
