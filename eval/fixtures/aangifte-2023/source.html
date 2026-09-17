@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <title>Aangifte inkomstenbelasting 2023 (synthetic fixture)</title>
+    <style>
+      /*
+        Synthetic aangifte fixture (ADR 0009). Every text run is absolutely positioned:
+        there is NO table markup, so when this prints to PDF the text layer carries no
+        column delimiters — columns exist only to the eye, exactly as in a real
+        Belastingdienst PDF. All names, BSN, IBANs and amounts are invented.
+      */
+      @page {
+        size: A4;
+        margin: 0;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      .page {
+        position: relative;
+        width: 210mm;
+        height: 297mm;
+        overflow: hidden;
+        font-family: "DejaVu Sans", sans-serif;
+        color: #111;
+      }
+      .page + .page {
+        page-break-before: always;
+      }
+      .run {
+        position: absolute;
+        font-size: 11px;
+        line-height: 14px;
+        white-space: nowrap;
+      }
+      .title {
+        font-size: 15px;
+        font-weight: bold;
+      }
+      .section {
+        font-size: 13px;
+        font-weight: bold;
+      }
+      .sub {
+        font-size: 12px;
+        font-weight: bold;
+      }
+      .head {
+        font-weight: bold;
+        color: #555;
+      }
+      .note {
+        color: #666;
+        font-style: italic;
+      }
+      .naam {
+        left: 24mm;
+      }
+      .indent {
+        left: 30mm;
+      }
+      .nummer {
+        left: 78mm;
+      }
+      .waarde {
+        left: 150mm;
+        width: 36mm;
+        text-align: right;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Page 1 — Box 1 -->
+    <section class="page">
+      <div class="run title" style="top: 15mm; left: 24mm">Belastingdienst</div>
+      <div class="run" style="top: 22mm; left: 24mm">
+        Aangifte inkomstenbelasting en premie volksverzekeringen 2023
+      </div>
+      <div class="run" style="top: 30mm; left: 24mm">Naam: J. Fictief &nbsp; BSN: 1234.56.789</div>
+
+      <div class="run section" style="top: 45mm; left: 24mm">
+        Box 1 — Inkomen uit werk en woning
+      </div>
+      <div class="run head naam" style="top: 55mm">Omschrijving</div>
+      <div class="run head waarde" style="top: 55mm">Bedrag</div>
+
+      <div class="run naam" style="top: 63mm">Loon in Nederland</div>
+      <div class="run nummer" style="top: 63mm">Werkgever Alpha B.V.</div>
+      <div class="run waarde" style="top: 63mm">€ 38.450</div>
+
+      <div class="run naam" style="top: 71mm">Loon in Nederland</div>
+      <div class="run nummer" style="top: 71mm">Werkgever Beta B.V.</div>
+      <div class="run waarde" style="top: 71mm">€ 12.300</div>
+
+      <div class="run naam" style="top: 79mm">Eigenwoningforfait</div>
+      <div class="run waarde" style="top: 79mm">€ 2.310</div>
+
+      <div class="run naam" style="top: 87mm">Hypotheekrente en kosten voor de eigen woning</div>
+      <div class="run nummer" style="top: 87mm">NL64 RABO 0456 7890 12</div>
+      <div class="run waarde" style="top: 87mm">€ 8.640</div>
+    </section>
+
+    <!-- Page 2 — Box 3, bank- en spaarrekeningen (part 1) -->
+    <section class="page">
+      <div class="run section" style="top: 15mm; left: 24mm">Box 3 — Sparen en beleggen</div>
+      <div class="run sub" style="top: 24mm; left: 24mm">Bank- en spaarrekeningen</div>
+      <div class="run head naam" style="top: 32mm">Naam</div>
+      <div class="run head nummer" style="top: 32mm">Rekeningnummer</div>
+      <div class="run head waarde" style="top: 32mm">Waarde op 01-01-2023</div>
+
+      <!-- Wrapped identifier: the IBAN breaks across two lines and the amount sits on
+           the continuation line, not next to the account name. -->
+      <div class="run naam" style="top: 40mm">ING Betaalrekening</div>
+      <div class="run nummer" style="top: 40mm">NL22 INGB 0673</div>
+      <div class="run nummer" style="top: 45mm">3457 85</div>
+      <div class="run waarde" style="top: 45mm">€ 3.080</div>
+
+      <div class="run naam" style="top: 54mm">ABN AMRO Spaarrekening</div>
+      <div class="run nummer" style="top: 54mm">NL89 ABNA 0123 4567 89</div>
+      <div class="run waarde" style="top: 54mm">€ 28.750</div>
+
+      <div class="run naam" style="top: 62mm">Rabobank Spaarrekening</div>
+      <div class="run nummer" style="top: 62mm">NL18 RABO 0332 2110 04</div>
+      <div class="run waarde" style="top: 62mm">€ 15.600</div>
+
+      <div class="run naam" style="top: 70mm">ASN Bank Ideaalsparen</div>
+      <div class="run nummer" style="top: 70mm">NL11 ASNB 0987 6543 21</div>
+      <div class="run waarde" style="top: 70mm">€ 4.200</div>
+
+      <div class="run naam" style="top: 78mm">SNS Betaalrekening</div>
+      <div class="run nummer" style="top: 78mm">NL55 SNSB 0908 0706 05</div>
+      <div class="run waarde" style="top: 78mm">€ 1.875</div>
+
+      <div class="run note" style="top: 285mm; left: 24mm">
+        Wordt vervolgd op de volgende pagina
+      </div>
+    </section>
+
+    <!-- Page 3 — Box 3 continued + beleggingen; a row sits at the very bottom -->
+    <section class="page">
+      <div class="run sub" style="top: 15mm; left: 24mm">Bank- en spaarrekeningen (vervolg)</div>
+      <div class="run head naam" style="top: 23mm">Naam</div>
+      <div class="run head nummer" style="top: 23mm">Rekeningnummer</div>
+      <div class="run head waarde" style="top: 23mm">Waarde op 01-01-2023</div>
+
+      <div class="run naam" style="top: 31mm">bunq Spaarrekening</div>
+      <div class="run nummer" style="top: 31mm">NL42 BUNQ 2071 2345 67</div>
+      <div class="run waarde" style="top: 31mm">€ 9.320</div>
+
+      <div class="run sub" style="top: 45mm; left: 24mm">Beleggingen</div>
+      <div class="run head naam" style="top: 53mm">Naam</div>
+      <div class="run head nummer" style="top: 53mm">Nummer</div>
+      <div class="run head waarde" style="top: 53mm">Waarde op 01-01-2023</div>
+
+      <div class="run naam" style="top: 61mm">ASN Themabeleggen</div>
+      <div class="run nummer" style="top: 61mm">NL77 ASNB 0456 1237 89</div>
+      <div class="run waarde" style="top: 61mm">€ 21.450</div>
+
+      <!-- Broker identifier spread across "columns": one account, three fragments. -->
+      <div class="run naam" style="top: 69mm">DEGIRO</div>
+      <div class="run nummer" style="top: 69mm">johndoe / flatexDEGIRO Bank AG / 0532013000</div>
+      <div class="run waarde" style="top: 69mm">€ 18.700</div>
+
+      <!-- Dividend sub-entry: a separate line under the holdings, not a balance. -->
+      <div class="run indent" style="top: 77mm">
+        Brutodividend op aandelen of rente op obligaties
+      </div>
+      <div class="run waarde" style="top: 77mm">€ 540</div>
+
+      <!-- Last row, pinned to the bottom of the final page, so stopping early misses it. -->
+      <div class="run naam" style="top: 285mm">Spaarrekening kinderen</div>
+      <div class="run nummer" style="top: 285mm">NL33 TRIO 1122 3344 55</div>
+      <div class="run waarde" style="top: 285mm">€ 6.750</div>
+    </section>
+  </body>
+</html>
