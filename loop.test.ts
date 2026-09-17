@@ -216,9 +216,7 @@ describe("checkpoint-timeout detection (#128)", () => {
     const logFile = path.join(repoDir, "checkpoint.log");
     writeFileSync(logFile, "RALPH_CHECKPOINT_TIMEOUT_HIT: run exceeded 90m (5400000ms)\n");
 
-    const output = runLoopFn(
-      `is_checkpoint_timeout "${logFile}" && echo MATCHED || echo NO_MATCH`
-    );
+    const output = runLoopFn(`is_checkpoint_timeout "${logFile}" && echo MATCHED || echo NO_MATCH`);
     expect(output.trim()).toBe("MATCHED");
   });
 
@@ -226,9 +224,7 @@ describe("checkpoint-timeout detection (#128)", () => {
     const logFile = path.join(repoDir, "other.log");
     writeFileSync(logFile, "some unrelated agent error\n");
 
-    const output = runLoopFn(
-      `is_checkpoint_timeout "${logFile}" && echo MATCHED || echo NO_MATCH`
-    );
+    const output = runLoopFn(`is_checkpoint_timeout "${logFile}" && echo MATCHED || echo NO_MATCH`);
     expect(output.trim()).toBe("NO_MATCH");
   });
 

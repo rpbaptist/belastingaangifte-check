@@ -36,7 +36,7 @@ const CHECKPOINT_TIMEOUT_MS = process.env.RALPH_CHECKPOINT_TIMEOUT_MS
   : DEFAULT_CHECKPOINT_TIMEOUT_MS;
 if (!Number.isFinite(CHECKPOINT_TIMEOUT_MS) || CHECKPOINT_TIMEOUT_MS <= 0) {
   throw new Error(
-    `RALPH_CHECKPOINT_TIMEOUT_MS must be a positive number, got "${process.env.RALPH_CHECKPOINT_TIMEOUT_MS}"`,
+    `RALPH_CHECKPOINT_TIMEOUT_MS must be a positive number, got "${process.env.RALPH_CHECKPOINT_TIMEOUT_MS}"`
   );
 }
 const checkpointController = new AbortController();

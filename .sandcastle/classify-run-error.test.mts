@@ -7,9 +7,7 @@ import {
 
 describe("classifyRunError", () => {
   it("classifies a CheckpointTimeoutError as checkpoint-timeout", () => {
-    expect(classifyRunError(new CheckpointTimeoutError(90 * 60 * 1000))).toBe(
-      "checkpoint-timeout",
-    );
+    expect(classifyRunError(new CheckpointTimeoutError(90 * 60 * 1000))).toBe("checkpoint-timeout");
   });
 
   it("classifies any other Error as other", () => {

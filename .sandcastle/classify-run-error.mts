@@ -15,7 +15,7 @@ export function formatCheckpointDuration(timeoutMs: number): string {
 export class CheckpointTimeoutError extends Error {
   constructor(timeoutMs: number) {
     super(
-      `${CHECKPOINT_TIMEOUT_SENTINEL}: run exceeded ${formatCheckpointDuration(timeoutMs)} (${timeoutMs}ms)`,
+      `${CHECKPOINT_TIMEOUT_SENTINEL}: run exceeded ${formatCheckpointDuration(timeoutMs)} (${timeoutMs}ms)`
     );
     this.name = "CheckpointTimeoutError";
   }
