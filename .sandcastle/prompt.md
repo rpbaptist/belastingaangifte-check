@@ -40,7 +40,7 @@ clean.
   progress note about it, separate from any code: write a few sentences to
   `.sandcastle/progress/issue-{{ISSUE_NUMBER}}.md` (create the dir if
   needed) and commit it alone with subject `Progress notes: issue
-  #{{ISSUE_NUMBER}}`. This is not a code commit and is exempt from the
+#{{ISSUE_NUMBER}}`. This is not a code commit and is exempt from the
   tests/fallow gate above — its only job is to save the next run from
   re-discovering the same things. Skip it if you have nothing a resumed
   run would need.

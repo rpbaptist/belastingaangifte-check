@@ -20,7 +20,7 @@ if (!prNumber) {
 const prInfo = JSON.parse(
   execFileSync("gh", ["pr", "view", prNumber, "--json", "headRefName,body"], {
     encoding: "utf-8",
-  }),
+  })
 ) as { headRefName: string; body: string };
 
 const branch = prInfo.headRefName;
