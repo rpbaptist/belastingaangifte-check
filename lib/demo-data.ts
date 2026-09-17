@@ -48,6 +48,17 @@ export const DEMO_REPORT: AnalysisReport = {
       amount: 6100,
     },
   ],
+  findings: [
+    {
+      kind: "unresolvedAmount",
+      title: "Bedrag niet te lezen",
+      detail:
+        "Voor 'Dividendbelasting' bij DeGiro kon geen bedrag uit het bewijsstuk worden afgeleid. Het bedrag in de aangifte is hierdoor niet bevestigd.",
+      institution: "DeGiro",
+      accountNumber: "DG-9876543",
+      field: "Dividendbelasting",
+    },
+  ],
   attentionPoints: [
     {
       title: "Aflossingsvrij hypotheekdeel",
@@ -131,6 +142,17 @@ export const DEMO_REPORT_EN: AnalysisReport = {
       institution: "ASN Bank",
       description: "Savings balance",
       amount: 6100,
+    },
+  ],
+  findings: [
+    {
+      kind: "unresolvedAmount",
+      title: "Amount could not be read",
+      detail:
+        "No amount could be resolved from the supporting document for 'Dividend tax' at DeGiro. The tax-return figure is therefore not confirmed.",
+      institution: "DeGiro",
+      accountNumber: "DG-9876543",
+      field: "Dividend tax",
     },
   ],
   attentionPoints: [

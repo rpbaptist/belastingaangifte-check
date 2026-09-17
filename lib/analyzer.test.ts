@@ -25,7 +25,9 @@ function makeResponse(
 }
 
 describe("analyzeDocuments — duplicate rows collapsed", () => {
-  it("surfaces duplicateRowsCollapsed as an attention point instead of discarding it", async () => {
+  it("surfaces duplicateRowsCollapsed as a finding, not an attention point", async () => {
+    // A collapsed duplicate is about the tool's reading, not the filer's tax position, so it
+    // belongs in findings and must stay out of the aandachtspunten channel (#107, ADR 0008).
     const taxReturn: TaxReturnData = {
       taxYear: 2024,
       entries: [
@@ -37,8 +39,10 @@ describe("analyzeDocuments — duplicate rows collapsed", () => {
     const report = await analyzeDocuments(taxReturn, [], "fake-api-key");
 
     expect(report.missingStatement).toHaveLength(1);
-    expect(report.attentionPoints).toHaveLength(1);
-    expect(report.attentionPoints[0].title).toBe("Dubbele posten samengevoegd");
+    expect(report.attentionPoints).toHaveLength(0);
+    expect(report.findings).toHaveLength(1);
+    expect(report.findings[0].kind).toBe("duplicateRow");
+    expect(report.findings[0].title).toBe("Dubbele posten samengevoegd");
   });
 });
 

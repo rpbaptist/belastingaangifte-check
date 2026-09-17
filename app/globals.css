@@ -36,6 +36,9 @@
   --attn: #7c596d;
   --attn-bg: #f2e9ee;
   --attn-line: #e3d1da;
+  --find: #a2544a;
+  --find-bg: #f4e6e3;
+  --find-line: #e6cbc5;
 }
 
 @theme inline {
@@ -85,6 +88,11 @@ body {
   --c: var(--attn);
   --cbg: var(--attn-bg);
   --cln: var(--attn-line);
+}
+.tone-find {
+  --c: var(--find);
+  --cbg: var(--find-bg);
+  --cln: var(--find-line);
 }
 
 html {
