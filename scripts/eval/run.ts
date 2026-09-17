@@ -1,4 +1,4 @@
-// Perception eval runner (ADR 0009). Extracts each committed aangifte fixture PDF with the
+// Perception eval runner (ADR 0009/0010). Extracts each committed fixture PDF with the
 // current extraction prompt and diffs the result against its known-correct expected.json,
 // reporting per-field misreads.
 //
@@ -8,13 +8,26 @@
 // Opt-in and offline from CI: it calls the Anthropic API (a real cost) and is never part of
 // `npm test`. Exits non-zero if any fixture has a mismatch, so it doubles as a pass/fail gate
 // when comparing a prompt change against the recorded baseline.
+//
+// Two fixture shapes are supported (ADR 0010 anticipated "a second diff shape"): a
+// TaxReturnData fixture (expected.json has `entries`) runs through extractTaxReturn, and a
+// PropertyStatementData fixture (expected.json has `amounts`) runs through extractStatement,
+// asserting the document was classified as the expected property kind along the way.
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { createClient } from "@/lib/llm";
-import { extractTaxReturn } from "@/lib/extractor";
+import { extractStatement, extractTaxReturn } from "@/lib/extractor";
 import { TaxReturnSchema } from "@/lib/schemas";
-import { diffTaxReturn, isPass, formatDiffReport } from "@/lib/eval/diff";
+import {
+  diffPropertyStatement,
+  diffTaxReturn,
+  formatDiffReport,
+  formatPropertyStatementDiffReport,
+  isPass,
+  isPropertyStatementPass,
+} from "@/lib/eval/diff";
 import { FIXTURES_DIR, listFixtures } from "@/lib/eval/fixtures";
+import type { PropertyStatementData } from "@/lib/types";
 
 function selectFixtures(): string[] {
   const requested = process.argv.slice(2);
@@ -26,6 +39,44 @@ function selectFixtures(): string[] {
     throw new Error(`Unknown fixture(s): ${unknown.join(", ")}. Available: ${all.join(", ")}`);
   }
   return requested;
+}
+
+async function runTaxReturnFixture(
+  name: string,
+  pdfBase64: string,
+  expectedRaw: unknown,
+  client: ReturnType<typeof createClient>
+): Promise<boolean> {
+  const expected = TaxReturnSchema.parse(expectedRaw);
+  const actual = await extractTaxReturn(pdfBase64, client);
+  const diff = diffTaxReturn(expected, actual);
+  console.log(formatDiffReport(name, diff));
+  console.log("");
+  return isPass(diff);
+}
+
+async function runPropertyStatementFixture(
+  name: string,
+  pdfBase64: string,
+  expected: PropertyStatementData,
+  client: ReturnType<typeof createClient>
+): Promise<boolean> {
+  const extraction = await extractStatement(pdfBase64, client);
+  if (extraction.documentKind !== expected.documentKind) {
+    console.log(`${name}: FAIL`);
+    console.log(
+      `  document kind: expected ${expected.documentKind}, got ${extraction.documentKind}`
+    );
+    console.log("");
+    return false;
+  }
+  // Narrowed by the check above: documentKind is one of the three property kinds, so this
+  // extraction carries a propertyStatement payload (see lib/types.ts StatementExtraction).
+  const actual = (extraction as { propertyStatement: PropertyStatementData }).propertyStatement;
+  const diff = diffPropertyStatement(expected, actual);
+  console.log(formatPropertyStatementDiffReport(name, diff));
+  console.log("");
+  return isPropertyStatementPass(diff);
 }
 
 async function runFixture(name: string, client: ReturnType<typeof createClient>): Promise<boolean> {
@@ -41,14 +92,15 @@ async function runFixture(name: string, client: ReturnType<typeof createClient>)
     throw new Error(`Missing ${path.relative(process.cwd(), expectedPath)} for fixture ${name}.`);
   }
 
-  const expected = TaxReturnSchema.parse(JSON.parse(readFileSync(expectedPath, "utf-8")));
+  const expectedRaw: unknown = JSON.parse(readFileSync(expectedPath, "utf-8"));
   const pdfBase64 = readFileSync(pdfPath).toString("base64");
 
-  const actual = await extractTaxReturn(pdfBase64, client);
-  const diff = diffTaxReturn(expected, actual);
-  console.log(formatDiffReport(name, diff));
-  console.log("");
-  return isPass(diff);
+  const isPropertyFixture =
+    typeof expectedRaw === "object" && expectedRaw !== null && "amounts" in expectedRaw;
+
+  return isPropertyFixture
+    ? runPropertyStatementFixture(name, pdfBase64, expectedRaw as PropertyStatementData, client)
+    : runTaxReturnFixture(name, pdfBase64, expectedRaw, client);
 }
 
 function requireApiKey(): void {

@@ -1,4 +1,4 @@
-import type { TaxReturnData, TaxReturnEntry } from "@/lib/types";
+import type { PropertyAmount, PropertyStatementData, TaxReturnData, TaxReturnEntry } from "@/lib/types";
 import { normalize } from "@/lib/account-normalizer";
 
 // Perception eval: score an extracted aangifte against a known-correct fixture (ADR 0009).
@@ -171,6 +171,172 @@ export function formatDiffReport(name: string, diff: TaxReturnDiff): string {
   }
   for (const e of diff.unexpected) {
     lines.push(`  UNEXPECTED: ${describeEntry(e)}`);
+  }
+
+  return lines.join("\n");
+}
+
+// ─── Property bewijsstukken (notarisafrekening, WOZ-beschikking, makelaarsnota) ────────────
+//
+// Score an extracted property bewijsstuk against a known-correct fixture, mirroring
+// diffTaxReturn above (ADR 0010 anticipated "a second diff shape" for extending the harness
+// beyond the aangifte). These documents carry no rekeningnummer, so `kind` — the closed
+// amount-kind vocabulary from the ADR 0002 amendment — is the matching identity instead of an
+// account number; an amount with no recognised kind falls back to its raw label.
+
+export type PropertyMismatchField = "kind" | "label" | "amount";
+
+export interface PropertyAmountMismatch {
+  expected: PropertyAmount;
+  actual: PropertyAmount;
+  differing: PropertyMismatchField[];
+}
+
+export interface PropertyStatementDiff {
+  documentKind: { expected: string; actual: string; match: boolean };
+  taxYear: { expected: number; actual: number; match: boolean };
+  institution: { expected: string; actual: string; match: boolean };
+  correct: PropertyAmount[];
+  mismatched: PropertyAmountMismatch[];
+  missing: PropertyAmount[];
+  unexpected: PropertyAmount[];
+}
+
+const normLabel = (label: string): string => label.trim().replace(/\s+/g, " ").toLowerCase();
+
+function differingPropertyFields(
+  expected: PropertyAmount,
+  actual: PropertyAmount
+): PropertyMismatchField[] {
+  const differing: PropertyMismatchField[] = [];
+  if (expected.kind !== actual.kind) differing.push("kind");
+  if (normLabel(expected.label) !== normLabel(actual.label)) differing.push("label");
+  if (expected.amount !== actual.amount) differing.push("amount");
+  return differing;
+}
+
+const isExactPropertyAmount = (expected: PropertyAmount, actual: PropertyAmount): boolean =>
+  expected.kind === actual.kind &&
+  expected.amount === actual.amount &&
+  normLabel(expected.label) === normLabel(actual.label);
+
+// A recognised kind is the strongest identity (the whole point of the closed vocabulary);
+// two null-kind amounts can only be paired by their raw label.
+function findPropertyMatch(
+  target: PropertyAmount,
+  actual: PropertyAmount[],
+  used: boolean[]
+): number {
+  if (target.kind) {
+    const byKind = actual.findIndex((a, i) => !used[i] && a.kind === target.kind);
+    if (byKind >= 0) return byKind;
+  }
+  return actual.findIndex((a, i) => !used[i] && a.kind === null && normLabel(a.label) === normLabel(target.label));
+}
+
+export function diffPropertyStatement(
+  expected: PropertyStatementData,
+  actual: PropertyStatementData
+): PropertyStatementDiff {
+  const actualAmounts = actual.amounts;
+  const used = new Array(actualAmounts.length).fill(false);
+
+  const correct: PropertyAmount[] = [];
+  const mismatched: PropertyAmountMismatch[] = [];
+  const missing: PropertyAmount[] = [];
+  const unresolved: PropertyAmount[] = [];
+
+  for (const expectedAmount of expected.amounts) {
+    const idx = actualAmounts.findIndex((a, i) => !used[i] && isExactPropertyAmount(expectedAmount, a));
+    if (idx >= 0) {
+      used[idx] = true;
+      correct.push(expectedAmount);
+    } else {
+      unresolved.push(expectedAmount);
+    }
+  }
+
+  for (const expectedAmount of unresolved) {
+    const idx = findPropertyMatch(expectedAmount, actualAmounts, used);
+    if (idx >= 0) {
+      used[idx] = true;
+      mismatched.push({
+        expected: expectedAmount,
+        actual: actualAmounts[idx],
+        differing: differingPropertyFields(expectedAmount, actualAmounts[idx]),
+      });
+    } else {
+      missing.push(expectedAmount);
+    }
+  }
+
+  const unexpected = actualAmounts.filter((_, i) => !used[i]);
+
+  return {
+    documentKind: {
+      expected: expected.documentKind,
+      actual: actual.documentKind,
+      match: expected.documentKind === actual.documentKind,
+    },
+    taxYear: {
+      expected: expected.taxYear,
+      actual: actual.taxYear,
+      match: expected.taxYear === actual.taxYear,
+    },
+    institution: {
+      expected: expected.institution,
+      actual: actual.institution,
+      match: expected.institution === actual.institution,
+    },
+    correct,
+    mismatched,
+    missing,
+    unexpected,
+  };
+}
+
+export function isPropertyStatementPass(diff: PropertyStatementDiff): boolean {
+  return (
+    diff.documentKind.match &&
+    diff.taxYear.match &&
+    diff.mismatched.length === 0 &&
+    diff.missing.length === 0 &&
+    diff.unexpected.length === 0
+  );
+}
+
+function describePropertyAmount(amount: PropertyAmount): string {
+  return `${amount.kind ?? "(no kind)"} "${amount.label}" = ${amount.amount}`;
+}
+
+export function formatPropertyStatementDiffReport(name: string, diff: PropertyStatementDiff): string {
+  const total = diff.correct.length + diff.mismatched.length + diff.missing.length;
+  const lines: string[] = [];
+  const status = isPropertyStatementPass(diff) ? "PASS" : "FAIL";
+  lines.push(`${name}: ${status}`);
+  lines.push(
+    `  ${diff.correct.length}/${total} amounts correct, ` +
+      `${diff.mismatched.length} misread, ${diff.missing.length} missing, ` +
+      `${diff.unexpected.length} unexpected`
+  );
+
+  if (!diff.documentKind.match) {
+    lines.push(`  document kind: expected ${diff.documentKind.expected}, got ${diff.documentKind.actual}`);
+  }
+  if (!diff.taxYear.match) {
+    lines.push(`  tax year: expected ${diff.taxYear.expected}, got ${diff.taxYear.actual}`);
+  }
+
+  for (const m of diff.mismatched) {
+    lines.push(`  MISREAD (${m.differing.join(", ")}):`);
+    lines.push(`    expected: ${describePropertyAmount(m.expected)}`);
+    lines.push(`    actual:   ${describePropertyAmount(m.actual)}`);
+  }
+  for (const e of diff.missing) {
+    lines.push(`  MISSING:  ${describePropertyAmount(e)}`);
+  }
+  for (const e of diff.unexpected) {
+    lines.push(`  UNEXPECTED: ${describePropertyAmount(e)}`);
   }
 
   return lines.join("\n");

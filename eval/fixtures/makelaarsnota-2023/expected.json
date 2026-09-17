@@ -1,0 +1,9 @@
+{
+  "documentKind": "makelaarsnota",
+  "institution": "Makelaarskantoor De Vries",
+  "taxYear": 2023,
+  "amounts": [
+    { "kind": "brokerCommission", "label": "Courtage verkoop (excl. btw)", "amount": 4250 },
+    { "kind": null, "label": "Advertentiekosten Funda", "amount": 300 }
+  ]
+}
