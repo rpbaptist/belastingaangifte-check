@@ -198,4 +198,5 @@ export const DEMO_EXTRACTED_DATA: ExtractedData = {
   taxReturn: { taxYear: 2024, entries: [] },
   annualStatements: [],
   propertyStatements: [],
+  unrecognizedDocuments: [],
 };

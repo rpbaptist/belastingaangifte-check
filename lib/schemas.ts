@@ -167,6 +167,11 @@ const PropertyStatementSchema = PropertyStatementFieldsSchema.extend({
   documentKind: z.enum(["notarisafrekening", "wozBeschikking", "makelaarsnota"]),
 });
 
+const UnrecognizedDocumentSchema = z.object({
+  institution: s(),
+  taxYear: n().nullable(),
+});
+
 export const AnalysisReportSchema = z.object({
   taxYear: z.number().int(),
   covered: z.array(CoveredItemSchema),
@@ -195,6 +200,7 @@ export const ExtractedDataSchema = z.object({
   taxReturn: TaxReturnSchema,
   annualStatements: z.array(AnnualStatementSchema),
   propertyStatements: z.array(PropertyStatementSchema),
+  unrecognizedDocuments: z.array(UnrecognizedDocumentSchema),
 });
 
 export const AnalyseResponseSchema = z.object({

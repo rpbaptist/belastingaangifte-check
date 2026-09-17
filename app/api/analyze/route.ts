@@ -60,6 +60,7 @@ export async function POST(request: NextRequest) {
         taxReturn: session.taxReturn,
         annualStatements: session.annualStatements,
         propertyStatements: session.propertyStatements,
+        unrecognizedDocuments: session.unrecognizedDocuments,
       },
     });
   } catch (err) {

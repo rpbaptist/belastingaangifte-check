@@ -186,6 +186,7 @@ export interface ExtractedData {
   taxReturn: TaxReturnData;
   annualStatements: AnnualStatementData[];
   propertyStatements: PropertyStatementData[];
+  unrecognizedDocuments: UnrecognizedDocument[];
 }
 
 export interface QuestionRequest {

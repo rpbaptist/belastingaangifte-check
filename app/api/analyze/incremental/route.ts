@@ -52,18 +52,22 @@ export async function POST(request: NextRequest) {
     const {
       annualStatements: newStatements,
       propertyStatements: newPropertyStatements,
-      unrecognizedDocuments,
+      unrecognizedDocuments: newUnrecognizedDocuments,
       errors: extractionErrors,
     } = await extractStatements(additionalStatements, apiKey, language);
 
     const mergedStatements = [...extractedData.annualStatements, ...newStatements];
     const mergedPropertyStatements = [...extractedData.propertyStatements, ...newPropertyStatements];
+    const mergedUnrecognizedDocuments = [
+      ...extractedData.unrecognizedDocuments,
+      ...newUnrecognizedDocuments,
+    ];
 
     const reportBase = await analyzeDocuments(
       extractedData.taxReturn,
       mergedStatements,
       mergedPropertyStatements,
-      unrecognizedDocuments,
+      mergedUnrecognizedDocuments,
       apiKey,
       language
     );
@@ -73,6 +77,7 @@ export async function POST(request: NextRequest) {
         taxReturn: extractedData.taxReturn,
         annualStatements: mergedStatements,
         propertyStatements: mergedPropertyStatements,
+        unrecognizedDocuments: mergedUnrecognizedDocuments,
       },
     });
   } catch (err) {

@@ -49,6 +49,7 @@ describe("useAnalysis", () => {
         taxReturn: { taxYear: 2023, entries: [] },
         annualStatements: [],
         propertyStatements: [],
+        unrecognizedDocuments: [],
       },
     };
     vi.stubGlobal(
