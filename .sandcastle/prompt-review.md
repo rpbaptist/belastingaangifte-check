@@ -21,6 +21,7 @@ part entirely.
 
 For each pending comment that isn't already marked as something you
 yourself resolved:
+
 - If it asks for a change: make it (fix + commit), same rules as below.
 - If it asks a question or raises a concern you can resolve by
   investigating: investigate, then address it in your `comments` output.

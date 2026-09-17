@@ -7,10 +7,7 @@ const DEFAULT_MODELS: Record<BuildHarness, string> = {
   opencode: "opencode/muse-spark-1.2-contributor-free",
 };
 
-export function getBuildAgent(
-  harness: BuildHarness,
-  modelOverride?: string,
-): AgentProvider {
+export function getBuildAgent(harness: BuildHarness, modelOverride?: string): AgentProvider {
   const model = modelOverride ?? DEFAULT_MODELS[harness];
   switch (harness) {
     case "opencode":
@@ -19,9 +16,7 @@ export function getBuildAgent(
       return claudeCode(model, { effort: "high" });
     default: {
       const exhaustive: never = harness;
-      throw new Error(
-        `Unknown build harness "${exhaustive}" (supported: claude|opencode)`,
-      );
+      throw new Error(`Unknown build harness "${exhaustive}" (supported: claude|opencode)`);
     }
   }
 }

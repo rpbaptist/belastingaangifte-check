@@ -21,15 +21,12 @@ const issueTitle = process.env.ISSUE_TITLE ?? `issue #${issueNumber}`;
 
 const branch = `ralph/issue-${issueNumber}`;
 
-const buildHarness = (process.env.RALPH_AGENT ??
-  "claude") as BuildHarness;
+const buildHarness = (process.env.RALPH_AGENT ?? "claude") as BuildHarness;
 
 const result = await run({
   agent: getBuildAgent(buildHarness),
   sandbox: docker({
-    mounts: [
-      { hostPath: "~/.npm", sandboxPath: "/home/agent/.npm", readonly: true },
-    ],
+    mounts: [{ hostPath: "~/.npm", sandboxPath: "/home/agent/.npm", readonly: true }],
   }),
   branchStrategy: { type: "branch", branch },
   promptFile: "./.sandcastle/prompt.md",
@@ -71,7 +68,7 @@ const result = await run({
 const commitsAheadOfMaster = execFileSync(
   "git",
   ["rev-list", "--count", `master..refs/heads/${result.branch}`],
-  { encoding: "utf-8" },
+  { encoding: "utf-8" }
 ).trim();
 if (commitsAheadOfMaster === "0") {
   console.error(`No commits on ${result.branch}. Treating as blocked.`);
@@ -85,17 +82,13 @@ if (commitsAheadOfMaster === "0") {
 const subjects = execFileSync(
   "git",
   ["log", "--format=%s", `master..refs/heads/${result.branch}`],
-  { encoding: "utf-8" },
+  { encoding: "utf-8" }
 )
   .trim()
   .split("\n");
-const hasRealWork = subjects.some(
-  (s) => !s.startsWith(`Progress notes: issue #${issueNumber}`),
-);
+const hasRealWork = subjects.some((s) => !s.startsWith(`Progress notes: issue #${issueNumber}`));
 if (!hasRealWork) {
-  console.error(
-    `Only progress notes on ${result.branch}, no real work yet. Treating as blocked.`,
-  );
+  console.error(`Only progress notes on ${result.branch}, no real work yet. Treating as blocked.`);
   process.exit(1);
 }
 
@@ -116,7 +109,7 @@ try {
       "--body",
       `${result.output || "No description provided."}\n\nCloses #${issueNumber}`,
     ],
-    { encoding: "utf-8" },
+    { encoding: "utf-8" }
   ).trim();
   console.log(`PR opened: ${prUrl}`);
   prNumber = prUrl.split("/").pop()!;
