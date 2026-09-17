@@ -13,6 +13,16 @@ Issues and PRDs for this repo live as GitHub issues. Use the `gh` CLI for all op
 
 Infer the repo from `git remote -v` — `gh` does this automatically when run inside a clone.
 
+## Parent/split issues
+
+GitHub does not auto-close a parent issue when its split-off children close —
+neither for the `Split from #N` text convention used here nor for GitHub's
+native sub-issues feature. After closing an issue (directly, or via a merged
+PR's `Closes #N`), check whether its body contains `Split from #N`. If so,
+fetch #N and check whether every other open/closed issue that also declares
+`Split from #N` is now closed. When all siblings are closed, close #N too,
+with a comment linking the child issues.
+
 ## When a skill says "publish to the issue tracker"
 
 Create a GitHub issue.
