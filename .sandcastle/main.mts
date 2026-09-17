@@ -30,7 +30,15 @@ const buildHarness = (process.env.RALPH_AGENT ?? "claude") as BuildHarness;
 // that loop.sh's is_checkpoint_timeout() greps for, and that
 // classifyRunError() below checks for to route this distinctly from an
 // arbitrary run() failure.
-const CHECKPOINT_TIMEOUT_MS = Number(process.env.RALPH_CHECKPOINT_TIMEOUT_MS ?? 90 * 60 * 1000);
+const DEFAULT_CHECKPOINT_TIMEOUT_MS = 90 * 60 * 1000;
+const CHECKPOINT_TIMEOUT_MS = process.env.RALPH_CHECKPOINT_TIMEOUT_MS
+  ? Number(process.env.RALPH_CHECKPOINT_TIMEOUT_MS)
+  : DEFAULT_CHECKPOINT_TIMEOUT_MS;
+if (!Number.isFinite(CHECKPOINT_TIMEOUT_MS) || CHECKPOINT_TIMEOUT_MS <= 0) {
+  throw new Error(
+    `RALPH_CHECKPOINT_TIMEOUT_MS must be a positive number, got "${process.env.RALPH_CHECKPOINT_TIMEOUT_MS}"`,
+  );
+}
 const checkpointController = new AbortController();
 const checkpointTimer = setTimeout(() => {
   checkpointController.abort(new CheckpointTimeoutError(CHECKPOINT_TIMEOUT_MS));
