@@ -4,7 +4,7 @@ import path from "path";
 export default defineConfig({
   test: {
     environment: "node",
-    include: ["lib/**/*.test.ts", "app/**/*.test.tsx", "*.test.ts"],
+    include: ["lib/**/*.test.ts", "app/**/*.test.tsx", "*.test.ts", ".sandcastle/**/*.test.mts"],
     exclude: ["node_modules/**", ".claude/**"],
     setupFiles: ["./vitest.setup.ts"],
   },

@@ -147,6 +147,8 @@ is_transient_failure() {
   # Claude session limit — resets on its own, not an agent/issue problem.
   # See ralph-logs/issue-{106,107,108,109}-20260914-*.log.
   is_session_limit "$log_file" && return 0
+  # main.mts's self-imposed wall-clock ceiling — retry, don't block (#128).
+  is_checkpoint_timeout "$log_file" && return 0
   return 1
 }
 
@@ -158,6 +160,17 @@ is_transient_failure() {
 is_session_limit() {
   local log_file="$1"
   grep -qi "hit your session limit" "$log_file" 2>/dev/null
+}
+
+# Whether a log shows main.mts's checkpoint-timeout sentinel — its
+# AbortController fired because the run exceeded RALPH_CHECKPOINT_TIMEOUT_MS
+# (default 90 minutes). Parallel to is_session_limit; deliberately NOT
+# folded into #121/#124's session-limit-seen anomaly counter/auto-block
+# path — a checkpoint timeout is expected to retry indefinitely on its
+# own, unlike a repeated session-limit hit with no surviving note.
+is_checkpoint_timeout() {
+  local log_file="$1"
+  grep -q "RALPH_CHECKPOINT_TIMEOUT_HIT" "$log_file" 2>/dev/null
 }
 
 # Session-limit hits used to retry immediately on every iteration with no
@@ -216,7 +229,7 @@ wait_out_session_limit() {
 # to detect these notes (e.g. #121's anomaly check) must read local
 # refs, not the remote.
 write_progress_note() {
-  local n="$1" log_file="$2"
+  local n="$1" log_file="$2" reason="${3:-session-limit}"
   local branch="ralph/issue-$n"
   local note_path=".sandcastle/progress/issue-${n}.md"
 
@@ -229,18 +242,29 @@ write_progress_note() {
   local parent_sha
   parent_sha="$(git rev-parse "$base_ref")"
 
-  local reset_str
-  reset_str="$(grep -io "resets [0-9]\{1,2\}:[0-9]\{2\}[ap]m (UTC)" "$log_file" 2>/dev/null | head -1)"
-  [[ -z "$reset_str" ]] && reset_str="reset time not found in log"
+  local body resume_note
+  if [[ "$reason" == "checkpoint-timeout" ]]; then
+    local duration
+    duration="$(grep -o "run exceeded [0-9]*m" "$log_file" 2>/dev/null | head -1 | sed 's/run exceeded //')"
+    [[ -z "$duration" ]] && duration="the configured ceiling"
+    body="Checkpoint timeout hit after $duration."
+    resume_note="this note only confirms a checkpoint-timeout retry happened"
+  else
+    local reset_str
+    reset_str="$(grep -io "resets [0-9]\{1,2\}:[0-9]\{2\}[ap]m (UTC)" "$log_file" 2>/dev/null | head -1)"
+    [[ -z "$reset_str" ]] && reset_str="reset time not found in log"
+    body="Session-limit hit, $reset_str."
+    resume_note="this note only confirms a session-limit retry happened"
+  fi
 
   local note_content
   note_content="$(cat <<EOF
 # Progress — issue #$n — $(date -u +"%Y-%m-%d %H:%M UTC")
 
-Session-limit hit, $reset_str.
+$body
 Log: $log_file
 
-Resume: this note only confirms a session-limit retry happened. Check
+Resume: $resume_note. Check
 \`git log --oneline\` / \`git show\` on this branch for any real prior
 work before re-exploring the issue from scratch.
 EOF
@@ -363,8 +387,11 @@ run_build_iteration() {
         if ! issue_has_label "$n" "session-limit-seen"; then
           gh issue edit "$n" --repo "$REPO" --add-label session-limit-seen
         fi
-        write_progress_note "$n" "$log_file"
+        write_progress_note "$n" "$log_file" "session-limit"
         wait_out_session_limit "$log_file"
+      elif is_checkpoint_timeout "$log_file"; then
+        write_progress_note "$n" "$log_file" "checkpoint-timeout"
+        echo "Checkpoint timeout — retrying next iteration immediately, no wait."
       fi
       gh issue edit "$n" --repo "$REPO" --remove-label in-progress-by-agent
       rm -f .git/config.lock
