@@ -29,23 +29,31 @@ const KNOWN_AMOUNT_CATEGORIES: ReadonlySet<string> = new Set([
 // a margin debit, a Box 3 debt) — so a field named "balance" is never sign-judged.
 const SIGN_EXEMPT_FIELDS: ReadonlySet<string> = new Set(["balance"]);
 
+// Every finding shares this {kind, title, detail} core; builders below add whatever
+// fields their kind actually carries (institution, accountNumber, field, proposedCorrection).
+function makeFinding(
+  kind: Finding["kind"],
+  titleKey: Parameters<typeof translate>[0],
+  detail: string,
+  language: Language,
+  extra: Omit<Finding, "kind" | "title" | "detail"> = {}
+): Finding {
+  return { kind, title: translate(titleKey, language), detail, ...extra };
+}
+
 function taxYearFinding(
   statement: AnnualStatementData,
   taxReturnYear: number,
   language: Language
 ): Finding | null {
   if (statement.taxYear === taxReturnYear) return null;
-  return {
-    kind: "taxYearMismatch",
-    title: translate("taxYearMismatchTitle", language),
-    detail: formatTaxYearMismatch(
-      statement.taxYear,
-      taxReturnYear,
-      statement.institution,
-      language
-    ),
-    institution: statement.institution,
-  };
+  return makeFinding(
+    "taxYearMismatch",
+    "taxYearMismatchTitle",
+    formatTaxYearMismatch(statement.taxYear, taxReturnYear, statement.institution, language),
+    language,
+    { institution: statement.institution }
+  );
 }
 
 function unknownKindFinding(
@@ -54,14 +62,13 @@ function unknownKindFinding(
   category: string,
   language: Language
 ): Finding {
-  return {
-    kind: "unknownAmountKind",
-    title: translate("unknownAmountKindTitle", language),
-    detail: formatUnknownAmountKind(category, statement.institution, language),
-    institution: statement.institution,
-    accountNumber: account.accountNumber,
-    field: category,
-  };
+  return makeFinding(
+    "unknownAmountKind",
+    "unknownAmountKindTitle",
+    formatUnknownAmountKind(category, statement.institution, language),
+    language,
+    { institution: statement.institution, accountNumber: account.accountNumber, field: category }
+  );
 }
 
 function signFinding(
@@ -74,15 +81,18 @@ function signFinding(
 ): Finding | null {
   if (value >= 0 || SIGN_EXEMPT_FIELDS.has(field)) return null;
   const label = `${category}.${field}`;
-  return {
-    kind: "signContradiction",
-    title: translate("signContradictionTitle", language),
-    detail: formatSignContradiction(label, formatEuro(value), statement.institution, language),
-    institution: statement.institution,
-    accountNumber: account.accountNumber,
-    field: label,
-    proposedCorrection: { before: value, after: -value },
-  };
+  return makeFinding(
+    "signContradiction",
+    "signContradictionTitle",
+    formatSignContradiction(label, formatEuro(value), statement.institution, language),
+    language,
+    {
+      institution: statement.institution,
+      accountNumber: account.accountNumber,
+      field: label,
+      proposedCorrection: { before: value, after: -value },
+    }
+  );
 }
 
 // A category the pipeline reads is checked amount by amount for a contradictory sign; an
@@ -115,18 +125,17 @@ function accountFindings(
 // A matched pair whose bewijsstuk amount could not be resolved. Its own outcome — never
 // covered — and the aangifte figure is deliberately not echoed back as a confirmed match.
 export function unresolvedAmountFinding(pair: MatchedPair, language: Language): Finding {
-  return {
-    kind: "unresolvedAmount",
-    title: translate("unresolvedAmountTitle", language),
-    detail: formatUnresolvedAmount(
-      pair.aangifte.field,
-      pair.jaaropgave.statement.institution,
-      language
-    ),
-    institution: pair.jaaropgave.statement.institution,
-    accountNumber: pair.aangifte.accountNumber ?? pair.jaaropgave.account.accountNumber,
-    field: pair.aangifte.field,
-  };
+  return makeFinding(
+    "unresolvedAmount",
+    "unresolvedAmountTitle",
+    formatUnresolvedAmount(pair.aangifte.field, pair.jaaropgave.statement.institution, language),
+    language,
+    {
+      institution: pair.jaaropgave.statement.institution,
+      accountNumber: pair.aangifte.accountNumber ?? pair.jaaropgave.account.accountNumber,
+      field: pair.aangifte.field,
+    }
+  );
 }
 
 // Collapsed exact-duplicate rows are a reading artifact, not a position — one finding
@@ -136,11 +145,12 @@ export function duplicateRowsFinding(
   language: Language
 ): Finding | null {
   if (collapsed.length === 0) return null;
-  return {
-    kind: "duplicateRow",
-    title: translate("duplicateRowsCollapsedTitle", language),
-    detail: formatDuplicateRowsCollapsed(collapsed.length, language),
-  };
+  return makeFinding(
+    "duplicateRow",
+    "duplicateRowsCollapsedTitle",
+    formatDuplicateRowsCollapsed(collapsed.length, language),
+    language
+  );
 }
 
 /**
