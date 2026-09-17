@@ -21,14 +21,12 @@ For all new features and changes:
   run `grill-with-docs` explicitly regardless of whether plan mode was used.
 - use `to-spec`
 - use `to-tickets`, when result is only one ticket, update existing ticket.
-- use `implement`
-- use `code-review`
-- Implement new issues on a new worktree.
+- use `implement` and use a worktree.
 - When changing or adding new functionality, use `tdd` skill.
 - Create logically grouped, atomic commits.
 - Update documentation according to changes made.
 - Create the PR
-- Review the PR and leave findings as comments. Address small review issues directly. If larger or makes sense to follow up, create a new GitHub issues. Only add comments for issues or other findings which may require action.
+- Use `code-review` on the PR and leave findings as comments. Address small review issues directly. If larger or makes sense to follow up, create a new GitHub issues. Only add comments for issues or other findings which may require action.
 
 Default to continuing to the next step unless instructed otherwise.
 
