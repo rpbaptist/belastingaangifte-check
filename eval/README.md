@@ -5,7 +5,7 @@ worse, instead of eyeballing a cached analysis. Every accuracy fix in this repo'
 verified by hand; ADRs 0002 and 0004 exist to end that practice, and #100 deletes prompt
 rules — deleting them without a number repeats it. This harness produces the number.
 
-See [ADR 0009](../docs/adr/0009-perception-eval-harness.md) for the design and rationale.
+See [ADR 0010](../docs/adr/0010-perception-eval-harness.md) for the design and rationale.
 
 ## What's here
 
