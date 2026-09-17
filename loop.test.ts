@@ -64,6 +64,28 @@ function stubSessionLimitNpx() {
   execFileSync("chmod", ["+x", path.join(stubBinDir, "sleep")]);
 }
 
+// Fails like main.mts does on a checkpoint-timeout: prints the sentinel
+// line classifyRunError()/is_checkpoint_timeout() key off, exits non-zero.
+// Also stubs `sleep` as a hard failure — a checkpoint-timeout retry must
+// never call it (no wait_out_session_limit-style backoff, see #128).
+function stubCheckpointTimeoutNpx() {
+  writeFileSync(
+    path.join(stubBinDir, "npx"),
+    [
+      "#!/usr/bin/env bash",
+      'echo "agent output"',
+      'echo "RALPH_CHECKPOINT_TIMEOUT_HIT: run exceeded 90m (5400000ms)"',
+      "exit 1",
+    ].join("\n")
+  );
+  execFileSync("chmod", ["+x", path.join(stubBinDir, "npx")]);
+  writeFileSync(
+    path.join(stubBinDir, "sleep"),
+    ["#!/usr/bin/env bash", 'echo "sleep should not be called" >&2', "exit 1"].join("\n")
+  );
+  execFileSync("chmod", ["+x", path.join(stubBinDir, "sleep")]);
+}
+
 function readCallLog(callLogPath: string): string[] {
   try {
     return readFileSync(callLogPath, "utf-8").trim().split("\n").filter(Boolean);
@@ -186,6 +208,75 @@ describe("session-limit detection", () => {
 
     const output = runLoopFn(`is_transient_failure "${logFile}" && echo MATCHED || echo NO_MATCH`);
     expect(output.trim()).toBe("MATCHED");
+  });
+});
+
+describe("checkpoint-timeout detection (#128)", () => {
+  it("is_checkpoint_timeout matches the sentinel line", () => {
+    const logFile = path.join(repoDir, "checkpoint.log");
+    writeFileSync(logFile, "RALPH_CHECKPOINT_TIMEOUT_HIT: run exceeded 90m (5400000ms)\n");
+
+    const output = runLoopFn(`is_checkpoint_timeout "${logFile}" && echo MATCHED || echo NO_MATCH`);
+    expect(output.trim()).toBe("MATCHED");
+  });
+
+  it("is_checkpoint_timeout does not match an unrelated failure", () => {
+    const logFile = path.join(repoDir, "other.log");
+    writeFileSync(logFile, "some unrelated agent error\n");
+
+    const output = runLoopFn(`is_checkpoint_timeout "${logFile}" && echo MATCHED || echo NO_MATCH`);
+    expect(output.trim()).toBe("NO_MATCH");
+  });
+
+  it("is_transient_failure treats a checkpoint-timeout as transient", () => {
+    const logFile = path.join(repoDir, "checkpoint2.log");
+    writeFileSync(logFile, "RALPH_CHECKPOINT_TIMEOUT_HIT: run exceeded 90m (5400000ms)\n");
+
+    const output = runLoopFn(`is_transient_failure "${logFile}" && echo MATCHED || echo NO_MATCH`);
+    expect(output.trim()).toBe("MATCHED");
+  });
+});
+
+describe("write_progress_note with a checkpoint-timeout reason", () => {
+  it("produces a note body naming the checkpoint-timeout duration", () => {
+    const logFile = path.join(repoDir, "checkpoint3.log");
+    writeFileSync(logFile, "RALPH_CHECKPOINT_TIMEOUT_HIT: run exceeded 90m (5400000ms)\n");
+
+    runLoopFn(`write_progress_note 70 "${logFile}" "checkpoint-timeout"`);
+
+    const noteContent = git(["show", "ralph/issue-70:.sandcastle/progress/issue-70.md"]);
+    expect(noteContent).toContain("Checkpoint timeout hit after 90m.");
+    expect(noteContent).not.toContain("Session-limit hit");
+  });
+});
+
+describe("run_build_iteration on a checkpoint-timeout failure (#128)", () => {
+  it("writes a checkpoint-timeout progress note, retries without waiting, and does not touch session-limit-seen", () => {
+    stubCheckpointTimeoutNpx();
+    const { callLogPath } = stubGhWithCallLog([]);
+
+    // ralph/issue-71 already exists with zero commits ahead of master —
+    // the exact shape the empty-branch cleanup targets for deletion.
+    git(["branch", "ralph/issue-71"]);
+
+    const issueJson = JSON.stringify({ number: 71, title: "Test issue", body: "body" });
+    const issueJsonPath = path.join(repoDir, "issue.json");
+    writeFileSync(issueJsonPath, issueJson);
+
+    runLoopFn(`run_build_iteration "$(cat '${issueJsonPath}')"`);
+
+    const branches = git(["branch", "--list", "ralph/issue-71"]);
+    expect(branches).toContain("ralph/issue-71");
+
+    const log = git(["log", "--format=%s", "ralph/issue-71"]);
+    expect(log.trim().split("\n")[0]).toBe("Progress notes: issue #71");
+
+    const commitCount = git(["rev-list", "--count", "master..ralph/issue-71"]).trim();
+    expect(commitCount).toBe("1");
+
+    const calls = readCallLog(callLogPath);
+    expect(calls.some((c) => c.includes("session-limit-seen"))).toBe(false);
+    expect(calls.some((c) => c.includes("blocked-for-agent"))).toBe(false);
   });
 });
 
