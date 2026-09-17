@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { AccountAmounts } from "./types";
+import type { AccountAmounts, StatementExtraction } from "./types";
 
 // Cents are preserved through the schema for jaaropgave amounts (AccountAmountsSchema);
 // only display truncates to whole euros. Aangifte amounts (TaxReturnEntrySchema) are
@@ -37,6 +37,73 @@ export const AnnualStatementSchema = z.object({
     .transform((obj) => Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, String(v)])))
     .default({}),
 });
+
+// Property bewijsstukken (notarisafrekening, WOZ-beschikking, makelaarsnota) get a closed set
+// of amount kinds from the start (ADR 0002 amendment) — kind selection has proven reliable
+// only where a prompt vocabulary exists. kind is nullable: an amount the model found but that
+// fits none of the closed kinds is still reported, with its raw label, rather than invented
+// into a new key (see lib/validation.ts — surfaced as an unknownAmountKind finding).
+const PropertyAmountSchema = z.object({
+  kind: z
+    .enum(["saleProceeds", "notaryCosts", "brokerCommission", "loanRepayment", "wozValue"])
+    .nullable()
+    .catch(null),
+  label: s(),
+  amount: n(),
+});
+
+const PropertyStatementFieldsSchema = z.object({
+  institution: z.string(),
+  taxYear: z.number().int(),
+  amounts: z.array(PropertyAmountSchema),
+});
+
+// One extraction call per uploaded bewijsstuk identifies which kind of document it is, then
+// extracts accordingly — a document is never force-fit into the jaaropgave shape just because
+// that used to be the only shape extraction produced (the bug #109 fixes).
+//
+// z.discriminatedUnion needs each branch to be a plain object schema with the discriminant as
+// a literal, so the flat LLM-facing shape is unioned first and reshaped into the nested
+// StatementExtraction the rest of the app consumes in a separate `.transform()` afterwards.
+const JaaropgaveExtractionSchema = AnnualStatementSchema.extend({
+  documentKind: z.literal("jaaropgave"),
+});
+
+const NotarisafrekeningExtractionSchema = PropertyStatementFieldsSchema.extend({
+  documentKind: z.literal("notarisafrekening"),
+});
+
+const WozBeschikkingExtractionSchema = PropertyStatementFieldsSchema.extend({
+  documentKind: z.literal("wozBeschikking"),
+});
+
+const MakelaarsnotaExtractionSchema = PropertyStatementFieldsSchema.extend({
+  documentKind: z.literal("makelaarsnota"),
+});
+
+const UnrecognizedExtractionSchema = z.object({
+  documentKind: z.literal("unrecognized"),
+  institution: s(),
+  taxYear: z.number().int().nullable().catch(null),
+});
+
+export const StatementExtractionSchema = z
+  .discriminatedUnion("documentKind", [
+    JaaropgaveExtractionSchema,
+    NotarisafrekeningExtractionSchema,
+    WozBeschikkingExtractionSchema,
+    MakelaarsnotaExtractionSchema,
+    UnrecognizedExtractionSchema,
+  ])
+  .transform((raw): StatementExtraction => {
+    if (raw.documentKind === "jaaropgave") {
+      const { documentKind, ...annualStatement } = raw;
+      return { documentKind, annualStatement };
+    }
+    if (raw.documentKind === "unrecognized") return raw;
+    const { documentKind, ...fields } = raw;
+    return { documentKind, propertyStatement: { documentKind, ...fields } };
+  });
 
 export const TaxReturnEntrySchema = z.object({
   box: z.enum(["1", "2", "3"]),
@@ -86,6 +153,7 @@ const FindingSchema = z.object({
     "signContradiction",
     "duplicateRow",
     "unknownAmountKind",
+    "unrecognizedDocument",
   ]),
   title: s(),
   detail: s(),
@@ -95,11 +163,16 @@ const FindingSchema = z.object({
   proposedCorrection: z.object({ before: n().nullable(), after: n().nullable() }).optional(),
 });
 
+const PropertyStatementSchema = PropertyStatementFieldsSchema.extend({
+  documentKind: z.enum(["notarisafrekening", "wozBeschikking", "makelaarsnota"]),
+});
+
 export const AnalysisReportSchema = z.object({
   taxYear: z.number().int(),
   covered: z.array(CoveredItemSchema),
   missingStatement: z.array(MissingStatementItemSchema),
   notFilledIn: z.array(NotFilledInItemSchema),
+  propertyStatements: z.array(PropertyStatementSchema),
   findings: z.array(FindingSchema),
   attentionPoints: z.array(AttentionPointSchema),
 });
@@ -121,6 +194,7 @@ const FullAnalysisReportSchema = AnalysisReportSchema.extend({
 export const ExtractedDataSchema = z.object({
   taxReturn: TaxReturnSchema,
   annualStatements: z.array(AnnualStatementSchema),
+  propertyStatements: z.array(PropertyStatementSchema),
 });
 
 export const AnalyseResponseSchema = z.object({

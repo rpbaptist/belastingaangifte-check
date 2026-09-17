@@ -54,7 +54,54 @@ export interface TaxReturnEntry {
   amount: number; // always full euros, rounded by Belastingdienst
 }
 
+// ─── Property bewijsstukken (notarisafrekening, WOZ-beschikking, makelaarsnota) ────────────
+//
+// Unlike a jaaropgave, these carry no rekeningnummer of their own — the only IBAN on a
+// notarisafrekening is where the sale proceeds were paid, not the document's identity (ADR
+// 0002 amendment). They never enter account matching (lib/reconciler.ts) and get a closed
+// set of amount kinds instead of free-form keys, because key selection has proven reliable
+// only where a prompt vocabulary exists (see docs/adr/0002).
+
+export type PropertyDocumentKind = "notarisafrekening" | "wozBeschikking" | "makelaarsnota";
+
+export type PropertyAmountKind =
+  | "saleProceeds" // verkoopopbrengst
+  | "notaryCosts" // notariskosten
+  | "brokerCommission" // courtage
+  | "loanRepayment" // aflossing geldlening
+  | "wozValue"; // WOZ-waarde
+
+export interface PropertyAmount {
+  // null: an amount the model found on the page but that fits none of the closed kinds.
+  // The raw label is always kept so it is still traceable, never silently dropped.
+  kind: PropertyAmountKind | null;
+  label: string;
+  amount: number;
+}
+
+export interface PropertyStatementData {
+  documentKind: PropertyDocumentKind;
+  institution: string;
+  taxYear: number;
+  amounts: PropertyAmount[];
+}
+
+// A bewijsstuk the extractor could not place in any recognised kind (jaaropgave or one of
+// the three property kinds). Reported as a finding rather than silently producing nothing.
+export interface UnrecognizedDocument {
+  institution: string;
+  taxYear: number | null;
+}
+
 // ─── Extraction results (per PDF) ──────────────────────────────────────────
+
+// The result of extracting one uploaded bewijsstuk. Its prompt/schema first identifies which
+// kind of document it is, then extracts accordingly — a document is never force-fit into the
+// jaaropgave shape just because that was the only shape extraction used to produce.
+export type StatementExtraction =
+  | { documentKind: "jaaropgave"; annualStatement: AnnualStatementData }
+  | { documentKind: PropertyDocumentKind; propertyStatement: PropertyStatementData }
+  | { documentKind: "unrecognized"; institution: string; taxYear: number | null };
 
 export type StatementExtractionResult =
   | { status: "success"; filename: string; data: AnnualStatementData }
@@ -67,6 +114,9 @@ export interface AnalysisReport {
   covered: CoveredItem[];
   missingStatement: MissingStatementItem[];
   notFilledIn: NotFilledInItem[];
+  // Property bewijsstukken never enter matching, so their amounts are listed here rather
+  // than folded into covered/missingStatement/notFilledIn.
+  propertyStatements: PropertyStatementData[];
   findings: Finding[];
   attentionPoints: AttentionPoint[];
   extractionErrors: ExtractionError[];
@@ -80,7 +130,8 @@ export type FindingKind =
   | "taxYearMismatch" // a bewijsstuk covering a different tax year than the aangifte
   | "signContradiction" // an amount whose sign contradicts its kind (a magnitude gone negative)
   | "duplicateRow" // rows identical in every field, collapsed to one
-  | "unknownAmountKind"; // an amount of a kind nothing downstream understands
+  | "unknownAmountKind" // an amount of a kind nothing downstream understands
+  | "unrecognizedDocument"; // a bewijsstuk that matched none of the known document kinds
 
 export interface Finding {
   kind: FindingKind;
@@ -134,6 +185,7 @@ export interface ExtractionError {
 export interface ExtractedData {
   taxReturn: TaxReturnData;
   annualStatements: AnnualStatementData[];
+  propertyStatements: PropertyStatementData[];
 }
 
 export interface QuestionRequest {

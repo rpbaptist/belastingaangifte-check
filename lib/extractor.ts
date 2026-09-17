@@ -1,10 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
-import type { AnnualStatementData, TaxReturnData } from "./types";
+import type { StatementExtraction, TaxReturnData } from "./types";
 import { readCache, writeCache } from "./extraction-cache";
 import { parseLlmJson } from "./parse-llm-json";
-import { AnnualStatementSchema, TaxReturnSchema } from "./schemas";
-import { ANNUAL_STATEMENT_SYSTEM } from "./prompts/annual-statement";
+import { StatementExtractionSchema, TaxReturnSchema } from "./schemas";
+import { STATEMENT_SYSTEM } from "./prompts/statement";
 import { TAX_RETURN_SYSTEM } from "./prompts/tax-return";
 import { EXTRACTION_MODEL, extractResponseText } from "./llm";
 import { withRetry } from "./utils";
@@ -16,7 +16,7 @@ type ExtractOpts<T> = {
   systemPrompt: string;
   maxTokens: number;
   userPrompt: string;
-  noResponseErrorKey: "noResponseAnnualStatement" | "noResponseTaxReturn";
+  noResponseErrorKey: "noResponseStatement" | "noResponseTaxReturn";
   schema: z.ZodType<T>;
 };
 
@@ -78,19 +78,19 @@ async function extract<T>(
   }
 }
 
-export function extractAnnualStatement(
+export function extractStatement(
   pdfBase64: string,
   client: Anthropic,
   language: Language = "nl"
-): Promise<AnnualStatementData> {
+): Promise<StatementExtraction> {
   return extract(
     pdfBase64,
     {
-      systemPrompt: ANNUAL_STATEMENT_SYSTEM,
+      systemPrompt: STATEMENT_SYSTEM,
       maxTokens: 4096,
-      userPrompt: "Extract the structured data from this jaaropgave.",
-      noResponseErrorKey: "noResponseAnnualStatement",
-      schema: AnnualStatementSchema,
+      userPrompt: "Identify and extract the structured data from this bewijsstuk.",
+      noResponseErrorKey: "noResponseStatement",
+      schema: StatementExtractionSchema,
     },
     client,
     language

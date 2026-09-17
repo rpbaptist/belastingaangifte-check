@@ -1,3 +1,5 @@
+import type { PropertyAmountKind, PropertyDocumentKind } from "./types";
+
 export type Language = "nl" | "en";
 
 export const translations = {
@@ -192,9 +194,9 @@ export const translations = {
     nl: "Extractie afgebroken — het PDF is mogelijk te groot of te complex",
     en: "Extraction aborted — the PDF may be too large or too complex",
   },
-  noResponseAnnualStatement: {
-    nl: "Geen reactie ontvangen bij verwerking van de jaaropgave",
-    en: "No response received while processing the annual income statement",
+  noResponseStatement: {
+    nl: "Geen reactie ontvangen bij verwerking van het bewijsstuk",
+    en: "No response received while processing the supporting document",
   },
   noResponseTaxReturn: {
     nl: "Geen reactie ontvangen bij verwerking van de aangifte",
@@ -259,6 +261,27 @@ export const translations = {
     nl: "Het bewijsstuk van {institution} bevat een bedrag van het soort '{category}' dat verderop in de vergelijking niet wordt gebruikt.",
     en: "The supporting document from {institution} carries an amount of kind '{category}' that nothing downstream in the comparison uses.",
   },
+  unrecognizedDocumentTitle: { nl: "Document niet herkend", en: "Document not recognised" },
+  unrecognizedDocumentExplanation: {
+    nl: "Het document{institution} kon niet worden herkend als jaaropgave, notarisafrekening, WOZ-beschikking of makelaarsnota. Er is niets met de inhoud gedaan — controleer dit bestand zelf.",
+    en: "The document{institution} could not be recognised as a jaaropgave, notarisafrekening, WOZ-beschikking or makelaarsnota. Nothing was done with its contents — check this file yourself.",
+  },
+
+  // Property statements — notarisafrekening, WOZ-beschikking, makelaarsnota (see CONTEXT.md).
+  // These never enter account matching, so their amounts are listed rather than compared.
+  propertyStatementsLabel: { nl: "Verkoop woning", en: "Property Sale" },
+  propertyStatementsNote: {
+    nl: "Uit notarisafrekening, WOZ-beschikking of makelaarsnota — niet vergeleken met de aangifte",
+    en: "From a notarisafrekening, WOZ-beschikking or makelaarsnota — not compared against the tax return",
+  },
+  notarisafrekeningLabel: { nl: "Notarisafrekening", en: "Notary Settlement" },
+  wozBeschikkingLabel: { nl: "WOZ-beschikking", en: "WOZ Valuation" },
+  makelaarsnotaLabel: { nl: "Makelaarsnota", en: "Estate Agent Invoice" },
+  saleProceedsLabel: { nl: "Verkoopopbrengst", en: "Sale Proceeds" },
+  notaryCostsLabel: { nl: "Notariskosten", en: "Notary Costs" },
+  brokerCommissionLabel: { nl: "Courtage", en: "Broker Commission" },
+  loanRepaymentLabel: { nl: "Aflossing geldlening", en: "Loan Repayment" },
+  wozValueLabel: { nl: "WOZ-waarde", en: "WOZ Value" },
 } as const;
 
 export type TranslationKey = keyof typeof translations;
@@ -331,4 +354,38 @@ export function formatUnknownAmountKind(
   return translate("unknownAmountKindExplanation", language)
     .replace("{category}", category)
     .replace("{institution}", institution);
+}
+
+export function formatUnrecognizedDocument(institution: string, language: Language): string {
+  const suffix = institution
+    ? language === "en"
+      ? ` from ${institution}`
+      : ` van ${institution}`
+    : "";
+  return translate("unrecognizedDocumentExplanation", language).replace("{institution}", suffix);
+}
+
+const PROPERTY_DOCUMENT_KIND_KEYS: Record<PropertyDocumentKind, TranslationKey> = {
+  notarisafrekening: "notarisafrekeningLabel",
+  wozBeschikking: "wozBeschikkingLabel",
+  makelaarsnota: "makelaarsnotaLabel",
+};
+
+const PROPERTY_AMOUNT_KIND_KEYS: Record<PropertyAmountKind, TranslationKey> = {
+  saleProceeds: "saleProceedsLabel",
+  notaryCosts: "notaryCostsLabel",
+  brokerCommission: "brokerCommissionLabel",
+  loanRepayment: "loanRepaymentLabel",
+  wozValue: "wozValueLabel",
+};
+
+export function translatePropertyDocumentKind(
+  kind: PropertyDocumentKind,
+  language: Language
+): string {
+  return translate(PROPERTY_DOCUMENT_KIND_KEYS[kind], language);
+}
+
+export function translatePropertyAmountKind(kind: PropertyAmountKind, language: Language): string {
+  return translate(PROPERTY_AMOUNT_KIND_KEYS[kind], language);
 }
