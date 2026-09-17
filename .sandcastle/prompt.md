@@ -34,16 +34,25 @@ clean.
 - If you cannot get tests/build/lint passing after retrying, or get stuck:
   do NOT force a code commit to satisfy the loop. Leave the working tree
   as-is.
-- If you did non-trivial exploration/analysis before getting stuck or
-  running low on budget (a dependency you traced, a design decision you
-  ruled out, findings from reading several files), commit ONLY a short
-  progress note about it, separate from any code: write a few sentences to
-  `.sandcastle/progress/issue-{{ISSUE_NUMBER}}.md` (create the dir if
-  needed) and commit it alone with subject `Progress notes: issue
-#{{ISSUE_NUMBER}}`. This is not a code commit and is exempt from the
-  tests/fallow gate above — its only job is to save the next run from
-  re-discovering the same things. Skip it if you have nothing a resumed
-  run would need.
+- Checkpoint routinely, not only when stuck or low on budget. As soon as
+  EITHER of these happens, commit a progress note before doing anything
+  else: (a) you've read 5 or more files, or (b) you've ruled out a design
+  direction or traced a dependency to a conclusion. Write a few sentences
+  to `.sandcastle/progress/issue-{{ISSUE_NUMBER}}.md` (create the dir if
+  needed) summarizing the current-best state, and commit it alone with
+  subject `Progress notes: issue #{{ISSUE_NUMBER}}`. This is not a code
+  commit and is exempt from the tests/fallow gate above — its only job is
+  to save a later run from re-discovering the same things.
+- Checkpoint again every time either trigger condition re-fires later in
+  the same run (another 5+ files read since the last checkpoint, or
+  another design decision ruled out). Each checkpoint OVERWRITES
+  `.sandcastle/progress/issue-{{ISSUE_NUMBER}}.md` with the current-best
+  summary — do not append to or keep prior checkpoint text, so a resumed
+  run always finds one current note, not a history to reconcile.
+- If you get stuck or run low on budget without having hit either trigger
+  yet, checkpoint anyway before stopping, same file and commit subject.
+  Skip checkpointing only if you truly have nothing a resumed run would
+  need (e.g. you finished the task or haven't started exploring yet).
 
 # Done
 
