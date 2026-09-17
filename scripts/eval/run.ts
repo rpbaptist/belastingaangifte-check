@@ -79,7 +79,7 @@ async function runPropertyStatementFixture(
   return isPropertyStatementPass(diff);
 }
 
-async function runFixture(name: string, client: ReturnType<typeof createClient>): Promise<boolean> {
+function readFixtureFiles(name: string): { pdfBase64: string; expectedRaw: unknown } {
   const dir = path.join(FIXTURES_DIR, name);
   const pdfPath = path.join(dir, `${name}.pdf`);
   const expectedPath = path.join(dir, "expected.json");
@@ -92,14 +92,21 @@ async function runFixture(name: string, client: ReturnType<typeof createClient>)
     throw new Error(`Missing ${path.relative(process.cwd(), expectedPath)} for fixture ${name}.`);
   }
 
-  const expectedRaw: unknown = JSON.parse(readFileSync(expectedPath, "utf-8"));
-  const pdfBase64 = readFileSync(pdfPath).toString("base64");
+  return {
+    pdfBase64: readFileSync(pdfPath).toString("base64"),
+    expectedRaw: JSON.parse(readFileSync(expectedPath, "utf-8")),
+  };
+}
 
-  const isPropertyFixture =
-    typeof expectedRaw === "object" && expectedRaw !== null && "amounts" in expectedRaw;
+function isPropertyFixture(expectedRaw: unknown): expectedRaw is PropertyStatementData {
+  return typeof expectedRaw === "object" && expectedRaw !== null && "amounts" in expectedRaw;
+}
 
-  return isPropertyFixture
-    ? runPropertyStatementFixture(name, pdfBase64, expectedRaw as PropertyStatementData, client)
+async function runFixture(name: string, client: ReturnType<typeof createClient>): Promise<boolean> {
+  const { pdfBase64, expectedRaw } = readFixtureFiles(name);
+
+  return isPropertyFixture(expectedRaw)
+    ? runPropertyStatementFixture(name, pdfBase64, expectedRaw, client)
     : runTaxReturnFixture(name, pdfBase64, expectedRaw, client);
 }
 

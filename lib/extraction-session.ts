@@ -10,8 +10,7 @@ import type {
 import { isUserFacingError } from "./anthropic-error";
 import { createClient } from "./llm";
 import { formatTaxReturnProcessingError, translate, type Language } from "./translations";
-
-type StatementInput = { data: string; filename: string };
+import type { StatementInput } from "./file-utils";
 
 type SplitStatements = {
   annualStatements: AnnualStatementData[];
@@ -65,6 +64,35 @@ export function formatSessionFailure(
   };
 }
 
+// Shared by runExtractionSession and extractStatements: turns settled statement
+// extractions into the successful StatementExtraction list, routing rejections into
+// errors (and rethrowing user-facing ones) rather than failing the whole batch.
+function collectStatementResults(
+  results: PromiseSettledResult<StatementExtraction>[],
+  statements: StatementInput[],
+  language: Language
+): { extractions: StatementExtraction[]; errors: ExtractionError[] } {
+  const errors: ExtractionError[] = [];
+  const extractions = results
+    .map((result, i) => {
+      if (result.status === "rejected") {
+        if (isUserFacingError(result.reason)) throw result.reason;
+        errors.push({
+          filename: statements[i].filename,
+          error:
+            result.reason instanceof Error
+              ? result.reason.message
+              : translate("extractionFailedShort", language),
+        });
+        return null;
+      }
+      return result.value;
+    })
+    .filter((s): s is StatementExtraction => s !== null);
+
+  return { extractions, errors };
+}
+
 export async function runExtractionSession(
   taxReturnPdf: string,
   statements: StatementInput[],
@@ -86,23 +114,7 @@ export async function runExtractionSession(
     return { ok: false, message };
   }
 
-  const errors: ExtractionError[] = [];
-  const extractions = statementResults
-    .map((result, i) => {
-      if (result.status === "rejected") {
-        if (isUserFacingError(result.reason)) throw result.reason;
-        errors.push({
-          filename: statements[i].filename,
-          error:
-            result.reason instanceof Error
-              ? result.reason.message
-              : translate("extractionFailedShort", language),
-        });
-        return null;
-      }
-      return result.value;
-    })
-    .filter((s): s is StatementExtraction => s !== null);
+  const { extractions, errors } = collectStatementResults(statementResults, statements, language);
 
   return { ok: true, taxReturn: taxReturnResult.value, ...splitStatements(extractions), errors };
 }
@@ -117,23 +129,7 @@ export async function extractStatements(
     statements.map((s) => extractStatement(s.data, client, language))
   );
 
-  const errors: ExtractionError[] = [];
-  const extractions = settled
-    .map((result, i) => {
-      if (result.status === "rejected") {
-        if (isUserFacingError(result.reason)) throw result.reason;
-        errors.push({
-          filename: statements[i].filename,
-          error:
-            result.reason instanceof Error
-              ? result.reason.message
-              : translate("extractionFailedShort", language),
-        });
-        return null;
-      }
-      return result.value;
-    })
-    .filter((s): s is StatementExtraction => s !== null);
+  const { extractions, errors } = collectStatementResults(settled, statements, language);
 
   return { ...splitStatements(extractions), errors };
 }

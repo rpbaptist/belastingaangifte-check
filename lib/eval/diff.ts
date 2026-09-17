@@ -144,36 +144,64 @@ function describeEntry(entry: TaxReturnEntry): string {
   return `box ${entry.box} "${entry.field}"${account} = ${entry.amount}`;
 }
 
-// Human-readable per-field report for the runner. Kept here (not in the script) so the
-// exact wording a reviewer scans is covered by a test.
-export function formatDiffReport(name: string, diff: TaxReturnDiff): string {
-  const total = diff.correct.length + diff.mismatched.length + diff.missing.length;
+// Shared by formatDiffReport and formatPropertyStatementDiffReport: the two diff shapes
+// (aangifte entries, property bewijsstuk amounts) render identically once reduced to
+// correct/mismatched/missing/unexpected counts plus a per-item describe function — only the
+// noun, header lines (tax year, and for property statements also document kind) and describe
+// function differ.
+function formatDiffLines<T, M extends { expected: T; actual: T; differing: readonly string[] }>(
+  name: string,
+  passed: boolean,
+  correctCount: number,
+  noun: string,
+  mismatched: M[],
+  missing: T[],
+  unexpected: T[],
+  headerLines: string[],
+  describe: (item: T) => string
+): string {
+  const total = correctCount + mismatched.length + missing.length;
   const lines: string[] = [];
-  const status = isPass(diff) ? "PASS" : "FAIL";
-  lines.push(`${name}: ${status}`);
+  lines.push(`${name}: ${passed ? "PASS" : "FAIL"}`);
   lines.push(
-    `  ${diff.correct.length}/${total} rows correct, ` +
-      `${diff.mismatched.length} misread, ${diff.missing.length} missing, ` +
-      `${diff.unexpected.length} unexpected`
+    `  ${correctCount}/${total} ${noun} correct, ` +
+      `${mismatched.length} misread, ${missing.length} missing, ` +
+      `${unexpected.length} unexpected`
   );
+  lines.push(...headerLines);
 
-  if (!diff.taxYear.match) {
-    lines.push(`  tax year: expected ${diff.taxYear.expected}, got ${diff.taxYear.actual}`);
-  }
-
-  for (const m of diff.mismatched) {
+  for (const m of mismatched) {
     lines.push(`  MISREAD (${m.differing.join(", ")}):`);
-    lines.push(`    expected: ${describeEntry(m.expected)}`);
-    lines.push(`    actual:   ${describeEntry(m.actual)}`);
+    lines.push(`    expected: ${describe(m.expected)}`);
+    lines.push(`    actual:   ${describe(m.actual)}`);
   }
-  for (const e of diff.missing) {
-    lines.push(`  MISSING:  ${describeEntry(e)}`);
+  for (const e of missing) {
+    lines.push(`  MISSING:  ${describe(e)}`);
   }
-  for (const e of diff.unexpected) {
-    lines.push(`  UNEXPECTED: ${describeEntry(e)}`);
+  for (const e of unexpected) {
+    lines.push(`  UNEXPECTED: ${describe(e)}`);
   }
 
   return lines.join("\n");
+}
+
+// Human-readable per-field report for the runner. Kept here (not in the script) so the
+// exact wording a reviewer scans is covered by a test.
+export function formatDiffReport(name: string, diff: TaxReturnDiff): string {
+  const headerLines = diff.taxYear.match
+    ? []
+    : [`  tax year: expected ${diff.taxYear.expected}, got ${diff.taxYear.actual}`];
+  return formatDiffLines(
+    name,
+    isPass(diff),
+    diff.correct.length,
+    "rows",
+    diff.mismatched,
+    diff.missing,
+    diff.unexpected,
+    headerLines,
+    describeEntry
+  );
 }
 
 // ─── Property bewijsstukken (notarisafrekening, WOZ-beschikking, makelaarsnota) ────────────
@@ -310,34 +338,25 @@ function describePropertyAmount(amount: PropertyAmount): string {
 }
 
 export function formatPropertyStatementDiffReport(name: string, diff: PropertyStatementDiff): string {
-  const total = diff.correct.length + diff.mismatched.length + diff.missing.length;
-  const lines: string[] = [];
-  const status = isPropertyStatementPass(diff) ? "PASS" : "FAIL";
-  lines.push(`${name}: ${status}`);
-  lines.push(
-    `  ${diff.correct.length}/${total} amounts correct, ` +
-      `${diff.mismatched.length} misread, ${diff.missing.length} missing, ` +
-      `${diff.unexpected.length} unexpected`
-  );
-
+  const headerLines: string[] = [];
   if (!diff.documentKind.match) {
-    lines.push(`  document kind: expected ${diff.documentKind.expected}, got ${diff.documentKind.actual}`);
+    headerLines.push(
+      `  document kind: expected ${diff.documentKind.expected}, got ${diff.documentKind.actual}`
+    );
   }
   if (!diff.taxYear.match) {
-    lines.push(`  tax year: expected ${diff.taxYear.expected}, got ${diff.taxYear.actual}`);
+    headerLines.push(`  tax year: expected ${diff.taxYear.expected}, got ${diff.taxYear.actual}`);
   }
 
-  for (const m of diff.mismatched) {
-    lines.push(`  MISREAD (${m.differing.join(", ")}):`);
-    lines.push(`    expected: ${describePropertyAmount(m.expected)}`);
-    lines.push(`    actual:   ${describePropertyAmount(m.actual)}`);
-  }
-  for (const e of diff.missing) {
-    lines.push(`  MISSING:  ${describePropertyAmount(e)}`);
-  }
-  for (const e of diff.unexpected) {
-    lines.push(`  UNEXPECTED: ${describePropertyAmount(e)}`);
-  }
-
-  return lines.join("\n");
+  return formatDiffLines(
+    name,
+    isPropertyStatementPass(diff),
+    diff.correct.length,
+    "amounts",
+    diff.mismatched,
+    diff.missing,
+    diff.unexpected,
+    headerLines,
+    describePropertyAmount
+  );
 }

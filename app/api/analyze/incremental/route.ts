@@ -4,7 +4,7 @@ import { analyzeDocuments } from "@/lib/analyzer";
 import { classifyError } from "@/lib/anthropic-error";
 import { ExtractedDataSchema } from "@/lib/schemas";
 import type { ExtractedData } from "@/lib/types";
-import { fileToBase64 } from "@/lib/file-utils";
+import { filesToStatementInputs } from "@/lib/file-utils";
 import { translate, type Language } from "@/lib/translations";
 
 export const maxDuration = 300;
@@ -47,11 +47,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const additionalStatements = await Promise.all(
-      statementFiles
-        .filter((f): f is File => f instanceof File)
-        .map(async (f) => ({ data: await fileToBase64(f), filename: f.name }))
-    );
+    const additionalStatements = await filesToStatementInputs(statementFiles);
 
     const {
       annualStatements: newStatements,
