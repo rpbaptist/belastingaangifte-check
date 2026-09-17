@@ -53,12 +53,18 @@ export async function POST(request: NextRequest) {
     const reportBase = await analyzeDocuments(
       session.taxReturn,
       session.annualStatements,
+      session.propertyStatements,
+      session.unrecognizedDocuments,
       apiKey,
       language
     );
     return NextResponse.json({
       report: { ...reportBase, extractionErrors: session.errors },
-      extractedData: { taxReturn: session.taxReturn, annualStatements: session.annualStatements },
+      extractedData: {
+        taxReturn: session.taxReturn,
+        annualStatements: session.annualStatements,
+        propertyStatements: session.propertyStatements,
+      },
     });
   } catch (err) {
     const { status, message } = classifyError(err, language);

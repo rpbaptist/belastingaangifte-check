@@ -1,4 +1,11 @@
-import type { AccountData, AnnualStatementData, Finding, TaxReturnData } from "./types";
+import type {
+  AccountData,
+  AnnualStatementData,
+  Finding,
+  PropertyStatementData,
+  TaxReturnData,
+  UnrecognizedDocument,
+} from "./types";
 import type { MatchedPair } from "./reconciler";
 import type { DuplicateRowCollapsed } from "./categorizer";
 import { formatEuro } from "./format";
@@ -7,6 +14,7 @@ import {
   formatSignContradiction,
   formatTaxYearMismatch,
   formatUnknownAmountKind,
+  formatUnrecognizedDocument,
   formatUnresolvedAmount,
   translate,
   type Language,
@@ -42,7 +50,7 @@ function makeFinding(
 }
 
 function taxYearFinding(
-  statement: AnnualStatementData,
+  statement: { taxYear: number; institution: string },
   taxReturnYear: number,
   language: Language
 ): Finding | null {
@@ -54,6 +62,35 @@ function taxYearFinding(
     language,
     { institution: statement.institution }
   );
+}
+
+// A bewijsstuk the extractor could not place in any recognised kind. Reported so an
+// unclassifiable document says so rather than silently having no effect (#109).
+function unrecognizedDocumentFinding(doc: UnrecognizedDocument, language: Language): Finding {
+  return makeFinding(
+    "unrecognizedDocument",
+    "unrecognizedDocumentTitle",
+    formatUnrecognizedDocument(doc.institution, language),
+    language,
+    doc.institution ? { institution: doc.institution } : {}
+  );
+}
+
+// A property bewijsstuk amount outside the closed kind set (saleProceeds, notaryCosts,
+// brokerCommission, loanRepayment, wozValue). Its raw label is reported rather than the
+// amount being invented into a new key.
+function propertyAmountFindings(statement: PropertyStatementData, language: Language): Finding[] {
+  return statement.amounts
+    .filter((a) => a.kind === null)
+    .map((a) =>
+      makeFinding(
+        "unknownAmountKind",
+        "unknownAmountKindTitle",
+        formatUnknownAmountKind(a.label, statement.institution, language),
+        language,
+        { institution: statement.institution, field: a.label }
+      )
+    );
 }
 
 function unknownKindFinding(
@@ -159,14 +196,18 @@ export function duplicateRowsFinding(
  * a rule may attach a proposed correction as data on its finding, but applying it is a
  * separate, named transform the caller invokes.
  *
- * Covers the statement-level checks: tax year mismatch, sign contradiction, and amounts of
- * a kind nothing downstream understands. Reading failures that only surface once aangifte
- * and bewijsstuk are matched (an unresolvable amount, a collapsed duplicate) are produced by
- * the categorizer and folded into the same findings channel by `buildReport`.
+ * Covers the statement-level checks: tax year mismatch, sign contradiction, amounts of a kind
+ * nothing downstream understands (jaaropgave categories and property-bewijsstuk kinds alike),
+ * and documents that matched none of the recognised kinds at all. Reading failures that only
+ * surface once aangifte and bewijsstuk are matched (an unresolvable amount, a collapsed
+ * duplicate) are produced by the categorizer and folded into the same findings channel by
+ * `buildReport`.
  */
 export function validateStatements(
   taxReturn: TaxReturnData,
   annualStatements: AnnualStatementData[],
+  propertyStatements: PropertyStatementData[],
+  unrecognizedDocuments: UnrecognizedDocument[],
   language: Language
 ): Finding[] {
   const findings: Finding[] = [];
@@ -176,6 +217,14 @@ export function validateStatements(
     for (const account of statement.accounts) {
       findings.push(...accountFindings(statement, account, language));
     }
+  }
+  for (const statement of propertyStatements) {
+    const yearFinding = taxYearFinding(statement, taxReturn.taxYear, language);
+    if (yearFinding) findings.push(yearFinding);
+    findings.push(...propertyAmountFindings(statement, language));
+  }
+  for (const doc of unrecognizedDocuments) {
+    findings.push(unrecognizedDocumentFinding(doc, language));
   }
   return findings;
 }

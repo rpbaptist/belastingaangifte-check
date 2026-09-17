@@ -53,23 +53,31 @@ export async function POST(request: NextRequest) {
         .map(async (f) => ({ data: await fileToBase64(f), filename: f.name }))
     );
 
-    const { results: newStatements, errors: extractionErrors } = await extractStatements(
-      additionalStatements,
-      apiKey,
-      language
-    );
+    const {
+      annualStatements: newStatements,
+      propertyStatements: newPropertyStatements,
+      unrecognizedDocuments,
+      errors: extractionErrors,
+    } = await extractStatements(additionalStatements, apiKey, language);
 
     const mergedStatements = [...extractedData.annualStatements, ...newStatements];
+    const mergedPropertyStatements = [...extractedData.propertyStatements, ...newPropertyStatements];
 
     const reportBase = await analyzeDocuments(
       extractedData.taxReturn,
       mergedStatements,
+      mergedPropertyStatements,
+      unrecognizedDocuments,
       apiKey,
       language
     );
     return NextResponse.json({
       report: { ...reportBase, extractionErrors },
-      extractedData: { taxReturn: extractedData.taxReturn, annualStatements: mergedStatements },
+      extractedData: {
+        taxReturn: extractedData.taxReturn,
+        annualStatements: mergedStatements,
+        propertyStatements: mergedPropertyStatements,
+      },
     });
   } catch (err) {
     const { status, message } = classifyError(err, language);
