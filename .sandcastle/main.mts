@@ -3,6 +3,7 @@ import { docker } from "@ai-hero/sandcastle/sandboxes/docker";
 import { execFileSync } from "node:child_process";
 import { runReview } from "./review-lib.mts";
 import { getBuildAgent, type BuildHarness } from "./harness.mts";
+import { CheckpointTimeoutError, classifyRunError } from "./classify-run-error.mts";
 
 // Invoked per-issue by loop.sh:
 //   ISSUE_NUMBER=42 ISSUE_TITLE="..." ISSUE_BODY="..." npx tsx .sandcastle/main.mts
@@ -23,35 +24,59 @@ const branch = `ralph/issue-${issueNumber}`;
 
 const buildHarness = (process.env.RALPH_AGENT ?? "claude") as BuildHarness;
 
-const result = await run({
-  agent: getBuildAgent(buildHarness),
-  sandbox: docker({
-    mounts: [{ hostPath: "~/.npm", sandboxPath: "/home/agent/.npm", readonly: true }],
-  }),
-  branchStrategy: { type: "branch", branch },
-  promptFile: "./.sandcastle/prompt.md",
-  promptArgs: {
-    ISSUE_NUMBER: issueNumber,
-    ISSUE_TITLE: process.env.ISSUE_TITLE ?? "",
-    ISSUE_BODY: process.env.ISSUE_BODY ?? "",
-  },
-  hooks: {
-    sandbox: {
-      onSandboxReady: [
-        {
-          command:
-            'for i in 1 2 3 4 5; do rm -f .git/config.lock; git config user.name "Ralph (belastingaangifte-check agent)" && break || { ec=$?; if [ "$i" -eq 5 ]; then echo "git config user.name failed after 5 attempts (exit $ec)"; exit $ec; fi; echo "git config user.name failed (attempt $i/5, exit $ec) — retrying..."; sleep $((i*2)); }; done',
-        },
-        {
-          command:
-            'for i in 1 2 3 4 5; do rm -f .git/config.lock; git config user.email "ralph-agent@users.noreply.github.com" && break || { ec=$?; if [ "$i" -eq 5 ]; then echo "git config user.email failed after 5 attempts (exit $ec)"; exit $ec; fi; echo "git config user.email failed (attempt $i/5, exit $ec) — retrying..."; sleep $((i*2)); }; done',
-        },
-        { command: "npm ci" },
-      ],
+// Self-imposed wall-clock ceiling per build attempt, so a run can never
+// silently consume unlimited budget with nothing checkpointed. On expiry
+// the abort reason is a CheckpointTimeoutError carrying a sentinel line
+// that loop.sh's is_checkpoint_timeout() greps for, and that
+// classifyRunError() below checks for to route this distinctly from an
+// arbitrary run() failure.
+const CHECKPOINT_TIMEOUT_MS = Number(process.env.RALPH_CHECKPOINT_TIMEOUT_MS ?? 90 * 60 * 1000);
+const checkpointController = new AbortController();
+const checkpointTimer = setTimeout(() => {
+  checkpointController.abort(new CheckpointTimeoutError(CHECKPOINT_TIMEOUT_MS));
+}, CHECKPOINT_TIMEOUT_MS);
+
+let result;
+try {
+  result = await run({
+    agent: getBuildAgent(buildHarness),
+    sandbox: docker({
+      mounts: [{ hostPath: "~/.npm", sandboxPath: "/home/agent/.npm", readonly: true }],
+    }),
+    branchStrategy: { type: "branch", branch },
+    promptFile: "./.sandcastle/prompt.md",
+    promptArgs: {
+      ISSUE_NUMBER: issueNumber,
+      ISSUE_TITLE: process.env.ISSUE_TITLE ?? "",
+      ISSUE_BODY: process.env.ISSUE_BODY ?? "",
     },
-  },
-  output: Output.string({ tag: "pr_description" }),
-});
+    hooks: {
+      sandbox: {
+        onSandboxReady: [
+          {
+            command:
+              'for i in 1 2 3 4 5; do rm -f .git/config.lock; git config user.name "Ralph (belastingaangifte-check agent)" && break || { ec=$?; if [ "$i" -eq 5 ]; then echo "git config user.name failed after 5 attempts (exit $ec)"; exit $ec; fi; echo "git config user.name failed (attempt $i/5, exit $ec) — retrying..."; sleep $((i*2)); }; done',
+          },
+          {
+            command:
+              'for i in 1 2 3 4 5; do rm -f .git/config.lock; git config user.email "ralph-agent@users.noreply.github.com" && break || { ec=$?; if [ "$i" -eq 5 ]; then echo "git config user.email failed after 5 attempts (exit $ec)"; exit $ec; fi; echo "git config user.email failed (attempt $i/5, exit $ec) — retrying..."; sleep $((i*2)); }; done',
+          },
+          { command: "npm ci" },
+        ],
+      },
+    },
+    output: Output.string({ tag: "pr_description" }),
+    signal: checkpointController.signal,
+  });
+} catch (err) {
+  if (classifyRunError(err) === "checkpoint-timeout") {
+    console.error((err as Error).message);
+    process.exit(1);
+  }
+  throw err;
+} finally {
+  clearTimeout(checkpointTimer);
+}
 
 // Trust nothing the agent self-reports beyond what's actually on the
 // branch. result.commits is NOT "commits ahead of master" — Sandcastle
