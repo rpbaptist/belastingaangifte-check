@@ -129,4 +129,46 @@ export async function runReview(args: {
   console.log(
     `Done: PR #${prNumber} reviewed (${pendingComments.length} pending comment(s) addressed, ${newIssues.length} follow-up issue(s)).`
   );
+
+  // No pending comment means review found nothing outstanding: any
+  // findings were either fixed inline (reviewResult.commits above) or
+  // deferred to a new issue (newIssues above). Per AGENTS.md, a comment
+  // only exists for something that still needs action — so its absence is
+  // exactly the merge gate. A pending comment means human/agent
+  // follow-up is expected first, so leave the PR open.
+  if (comments.length === 0) {
+    await mergeAndCleanUp(prNumber, branch);
+  }
+}
+
+// Squash-merges a clean PR and removes its branch (remote + local). Only
+// called once review found nothing outstanding — still gated on CI
+// passing, since a clean review says nothing about build/test health.
+async function mergeAndCleanUp(prNumber: string, branch: string): Promise<void> {
+  try {
+    execFileSync("gh", ["pr", "checks", prNumber, "--watch", "--fail-fast"], {
+      stdio: "inherit",
+    });
+  } catch (err) {
+    console.error(`PR #${prNumber} has failing/pending checks — leaving open for a human.`, err);
+    return;
+  }
+
+  try {
+    execFileSync("gh", ["pr", "merge", prNumber, "--squash", "--delete-branch"], {
+      stdio: "inherit",
+    });
+  } catch (err) {
+    console.error(`Merge failed for PR #${prNumber} — leaving open for a human.`, err);
+    return;
+  }
+
+  // gh's --delete-branch removes the remote branch; the host's local
+  // clone still has its own ref (main.mts pushed to it directly).
+  try {
+    execFileSync("git", ["branch", "-D", branch], { stdio: "ignore" });
+  } catch {
+    // No local ref to remove — fine.
+  }
+  console.log(`Merged PR #${prNumber} and deleted branch ${branch}.`);
 }
