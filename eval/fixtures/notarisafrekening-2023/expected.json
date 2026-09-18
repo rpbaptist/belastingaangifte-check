@@ -1,0 +1,11 @@
+{
+  "documentKind": "notarisafrekening",
+  "institution": "Notaris Jansen & Partners",
+  "taxYear": 2023,
+  "amounts": [
+    { "kind": "saleProceeds", "label": "Verkoopopbrengst", "amount": 425000 },
+    { "kind": "loanRepayment", "label": "Aflossing hypotheek ABN AMRO", "amount": 180000 },
+    { "kind": "notaryCosts", "label": "Notariskosten", "amount": 850 },
+    { "kind": null, "label": "Kadasterkosten", "amount": 125 }
+  ]
+}

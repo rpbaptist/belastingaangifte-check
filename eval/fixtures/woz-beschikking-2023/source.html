@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <title>WOZ-beschikking 2023 (synthetic fixture)</title>
+    <style>
+      /*
+        Synthetic WOZ-beschikking fixture (#109, following ADR 0009). Every text run is
+        absolutely positioned: there is NO table markup. All names, aanslagnummers and
+        amounts are invented.
+      */
+      @page {
+        size: A4;
+        margin: 0;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      .page {
+        position: relative;
+        width: 210mm;
+        height: 297mm;
+        overflow: hidden;
+        font-family: "DejaVu Sans", sans-serif;
+        color: #111;
+      }
+      .run {
+        position: absolute;
+        font-size: 11px;
+        line-height: 14px;
+        white-space: nowrap;
+      }
+      .title {
+        font-size: 15px;
+        font-weight: bold;
+      }
+      .section {
+        font-size: 13px;
+        font-weight: bold;
+      }
+      .head {
+        font-weight: bold;
+        color: #555;
+      }
+      .naam {
+        left: 24mm;
+      }
+      .waarde {
+        left: 150mm;
+        width: 36mm;
+        text-align: right;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="page">
+      <div class="run title" style="top: 15mm; left: 24mm">Gemeente Amsterdam</div>
+      <div class="run" style="top: 22mm; left: 24mm">Afdeling Belastingen — Wet WOZ</div>
+      <div class="run" style="top: 29mm; left: 24mm">Aanslagnummer: 123.456.789.2023</div>
+      <div class="run" style="top: 36mm; left: 24mm">Dagtekening: 28 februari 2023</div>
+
+      <div class="run section" style="top: 48mm; left: 24mm">WOZ-beschikking</div>
+      <div class="run" style="top: 56mm; left: 24mm">Object: Vredestraat 12, 1234 AB Amsterdam</div>
+      <div class="run" style="top: 63mm; left: 24mm">Waardepeildatum: 1 januari 2022</div>
+      <div class="run" style="top: 70mm; left: 24mm">Belanghebbende: J. Fictief</div>
+
+      <div class="run head naam" style="top: 84mm">Omschrijving</div>
+      <div class="run head waarde" style="top: 84mm">Bedrag</div>
+
+      <div class="run naam" style="top: 92mm">WOZ-waarde kalenderjaar 2023</div>
+      <div class="run waarde" style="top: 92mm">€ 385.000,00</div>
+    </section>
+  </body>
+</html>

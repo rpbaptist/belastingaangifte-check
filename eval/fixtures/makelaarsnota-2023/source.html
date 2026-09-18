@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <title>Makelaarsnota 2023 (synthetic fixture)</title>
+    <style>
+      /*
+        Synthetic makelaarsnota fixture (#109, following ADR 0009). Every text run is
+        absolutely positioned: there is NO table markup. All names, factuurnummers and
+        amounts are invented.
+      */
+      @page {
+        size: A4;
+        margin: 0;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      .page {
+        position: relative;
+        width: 210mm;
+        height: 297mm;
+        overflow: hidden;
+        font-family: "DejaVu Sans", sans-serif;
+        color: #111;
+      }
+      .run {
+        position: absolute;
+        font-size: 11px;
+        line-height: 14px;
+        white-space: nowrap;
+      }
+      .title {
+        font-size: 15px;
+        font-weight: bold;
+      }
+      .section {
+        font-size: 13px;
+        font-weight: bold;
+      }
+      .head {
+        font-weight: bold;
+        color: #555;
+      }
+      .naam {
+        left: 24mm;
+      }
+      .waarde {
+        left: 150mm;
+        width: 36mm;
+        text-align: right;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="page">
+      <div class="run title" style="top: 15mm; left: 24mm">Makelaarskantoor De Vries</div>
+      <div class="run" style="top: 22mm; left: 24mm">NVM-makelaar o.g.</div>
+      <div class="run" style="top: 29mm; left: 24mm">Factuurnummer: DV-2023-0142</div>
+      <div class="run" style="top: 36mm; left: 24mm">Factuurdatum: 14 maart 2023</div>
+
+      <div class="run section" style="top: 48mm; left: 24mm">Eindafrekening verkoopbemiddeling</div>
+      <div class="run" style="top: 56mm; left: 24mm">Object: Vredestraat 12, 1234 AB Amsterdam</div>
+      <div class="run" style="top: 63mm; left: 24mm">Opdrachtgever: J. Fictief</div>
+
+      <div class="run head naam" style="top: 77mm">Omschrijving</div>
+      <div class="run head waarde" style="top: 77mm">Bedrag</div>
+
+      <div class="run naam" style="top: 85mm">Courtage verkoop (excl. btw)</div>
+      <div class="run waarde" style="top: 85mm">€ 4.250,00</div>
+
+      <!-- An amount that fits none of the five closed kinds — must be reported with its raw
+           label, never invented into a new key. -->
+      <div class="run naam" style="top: 93mm">Advertentiekosten Funda</div>
+      <div class="run waarde" style="top: 93mm">€ 300,00</div>
+    </section>
+  </body>
+</html>

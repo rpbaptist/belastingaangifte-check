@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { formatSessionFailure, runExtractionSession } from "@/lib/extraction-session";
 import { analyzeDocuments } from "@/lib/analyzer";
 import { classifyError } from "@/lib/anthropic-error";
-import { fileToBase64 } from "@/lib/file-utils";
+import { fileToBase64, filesToStatementInputs } from "@/lib/file-utils";
 import { translate, type Language } from "@/lib/translations";
 
 // Allow up to 300s — parallel extraction + analysis across many PDFs
@@ -37,11 +37,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const taxReturnBase64 = await fileToBase64(taxReturnFile);
-    const statements = await Promise.all(
-      statementFiles
-        .filter((f): f is File => f instanceof File)
-        .map(async (f) => ({ data: await fileToBase64(f), filename: f.name }))
-    );
+    const statements = await filesToStatementInputs(statementFiles);
 
     const session = await runExtractionSession(taxReturnBase64, statements, apiKey, language);
 
@@ -53,12 +49,19 @@ export async function POST(request: NextRequest) {
     const reportBase = await analyzeDocuments(
       session.taxReturn,
       session.annualStatements,
+      session.propertyStatements,
+      session.unrecognizedDocuments,
       apiKey,
       language
     );
     return NextResponse.json({
       report: { ...reportBase, extractionErrors: session.errors },
-      extractedData: { taxReturn: session.taxReturn, annualStatements: session.annualStatements },
+      extractedData: {
+        taxReturn: session.taxReturn,
+        annualStatements: session.annualStatements,
+        propertyStatements: session.propertyStatements,
+        unrecognizedDocuments: session.unrecognizedDocuments,
+      },
     });
   } catch (err) {
     const { status, message } = classifyError(err, language);

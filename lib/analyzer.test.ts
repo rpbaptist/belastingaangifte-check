@@ -36,7 +36,7 @@ describe("analyzeDocuments — duplicate rows collapsed", () => {
       ],
     };
 
-    const report = await analyzeDocuments(taxReturn, [], "fake-api-key");
+    const report = await analyzeDocuments(taxReturn, [], [], [], "fake-api-key");
 
     expect(report.missingStatement).toHaveLength(1);
     expect(report.attentionPoints).toHaveLength(0);

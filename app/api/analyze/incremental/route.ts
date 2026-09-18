@@ -4,7 +4,7 @@ import { analyzeDocuments } from "@/lib/analyzer";
 import { classifyError } from "@/lib/anthropic-error";
 import { ExtractedDataSchema } from "@/lib/schemas";
 import type { ExtractedData } from "@/lib/types";
-import { fileToBase64 } from "@/lib/file-utils";
+import { filesToStatementInputs } from "@/lib/file-utils";
 import { translate, type Language } from "@/lib/translations";
 
 export const maxDuration = 300;
@@ -47,29 +47,41 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const additionalStatements = await Promise.all(
-      statementFiles
-        .filter((f): f is File => f instanceof File)
-        .map(async (f) => ({ data: await fileToBase64(f), filename: f.name }))
-    );
+    const additionalStatements = await filesToStatementInputs(statementFiles);
 
-    const { results: newStatements, errors: extractionErrors } = await extractStatements(
-      additionalStatements,
-      apiKey,
-      language
-    );
+    const {
+      annualStatements: newStatements,
+      propertyStatements: newPropertyStatements,
+      unrecognizedDocuments: newUnrecognizedDocuments,
+      errors: extractionErrors,
+    } = await extractStatements(additionalStatements, apiKey, language);
 
     const mergedStatements = [...extractedData.annualStatements, ...newStatements];
+    const mergedPropertyStatements = [
+      ...extractedData.propertyStatements,
+      ...newPropertyStatements,
+    ];
+    const mergedUnrecognizedDocuments = [
+      ...extractedData.unrecognizedDocuments,
+      ...newUnrecognizedDocuments,
+    ];
 
     const reportBase = await analyzeDocuments(
       extractedData.taxReturn,
       mergedStatements,
+      mergedPropertyStatements,
+      mergedUnrecognizedDocuments,
       apiKey,
       language
     );
     return NextResponse.json({
       report: { ...reportBase, extractionErrors },
-      extractedData: { taxReturn: extractedData.taxReturn, annualStatements: mergedStatements },
+      extractedData: {
+        taxReturn: extractedData.taxReturn,
+        annualStatements: mergedStatements,
+        propertyStatements: mergedPropertyStatements,
+        unrecognizedDocuments: mergedUnrecognizedDocuments,
+      },
     });
   } catch (err) {
     const { status, message } = classifyError(err, language);

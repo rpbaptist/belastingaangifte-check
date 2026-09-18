@@ -10,7 +10,9 @@ import type {
   Finding,
   MissingStatementItem,
   NotFilledInItem,
+  PropertyStatementData,
   TaxReturnData,
+  UnrecognizedDocument,
 } from "./types";
 
 export type DeterministicReport = {
@@ -18,6 +20,7 @@ export type DeterministicReport = {
   covered: CoveredItem[];
   missingStatement: MissingStatementItem[];
   notFilledIn: NotFilledInItem[];
+  propertyStatements: PropertyStatementData[];
   amountMismatches: AmountMismatch[];
   findings: Finding[];
   rulePoints: AttentionPoint[];
@@ -31,10 +34,16 @@ export type DeterministicReport = {
  *
  * `findings` (what the tool could not read) are kept separate from `rulePoints`/aandachtspunten
  * (statements about the filer's tax position) — see ADR 0008.
+ *
+ * `propertyStatements` (notarisafrekening, WOZ-beschikking, makelaarsnota) never reach
+ * `reconcile`/`categorize` — per the ADR 0002 amendment they carry no rekeningnummer and are
+ * never matched against the aangifte, only listed and validated.
  */
 export function buildReport(
   taxReturn: TaxReturnData,
   annualStatements: AnnualStatementData[],
+  propertyStatements: PropertyStatementData[],
+  unrecognizedDocuments: UnrecognizedDocument[],
   language: Language
 ): DeterministicReport {
   const matchResult = reconcile(taxReturn, annualStatements);
@@ -49,12 +58,19 @@ export function buildReport(
   const rulePoints = runRuleChecks(annualStatements, taxReturn.taxYear, language);
 
   // The Validation layer owns every Finding's shape and wording. buildReport only routes its
-  // three sources: unresolvable matched amounts and collapsed duplicates (surfaced by the
-  // categorizer) and the statement-level checks (validateStatements).
+  // sources: unresolvable matched amounts and collapsed duplicates (surfaced by the
+  // categorizer) and the statement-level checks (validateStatements), which also cover
+  // property bewijsstukken and documents of no recognised kind.
   const duplicateFinding = duplicateRowsFinding(duplicateRowsCollapsed, language);
   const findings: Finding[] = [
     ...unresolved.map((pair) => unresolvedAmountFinding(pair, language)),
-    ...validateStatements(taxReturn, annualStatements, language),
+    ...validateStatements(
+      taxReturn,
+      annualStatements,
+      propertyStatements,
+      unrecognizedDocuments,
+      language
+    ),
     ...(duplicateFinding ? [duplicateFinding] : []),
   ];
 
@@ -63,6 +79,7 @@ export function buildReport(
     covered,
     missingStatement,
     notFilledIn,
+    propertyStatements,
     amountMismatches,
     findings,
     rulePoints,

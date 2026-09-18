@@ -77,3 +77,16 @@ An opt-in eval harness under `eval/`, scored by a pure diff in `lib/eval/`.
   directory automatically.
 - The diff currently covers `TaxReturnData` (aangifte). Extending it to jaaropgave extraction
   later means a second diff shape; the fixture/rendering/runner scaffolding is reusable as-is.
+
+## Amendment (#109)
+
+The second diff shape arrived for property bewijsstukken (notarisafrekening, WOZ-beschikking,
+makelaarsnota) rather than jaaropgave, since #109 needed a perception baseline for those first.
+`diffPropertyStatement` (`lib/eval/diff.ts`) matches amounts by `kind` — the closed vocabulary
+that replaces rekeningnummer as these documents' identity (ADR 0002 amendment) — falling back
+to label matching only when `kind` is null on both sides. `scripts/eval/run.ts` picks the diff
+and extractor per fixture by inspecting `expected.json` (an `amounts` array means a property
+fixture; `entries` means a tax-return fixture) rather than by filename convention, so the
+scaffolding stays reusable for jaaropgave next. As with `aangifte-2023`, the three new
+fixtures' PDFs still need `npm run eval:render` on a WeasyPrint-capable machine before their
+baseline can be recorded — see `eval/README.md`.
