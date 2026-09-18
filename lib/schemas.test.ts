@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AnnualStatementSchema, TaxReturnSchema } from "./schemas";
+import { AnnualStatementSchema, StatementExtractionSchema, TaxReturnSchema } from "./schemas";
 
 const validStatement = {
   institution: "ING Bank N.V.",
@@ -69,6 +69,112 @@ describe("TaxReturnSchema", () => {
       entries: [{ ...validTaxReturn.entries[0], amount: -102.4 }],
     });
     expect(result.entries[0].amount).toBe(-102);
+  });
+});
+
+describe("StatementExtractionSchema", () => {
+  it("reshapes a jaaropgave-kind extraction into the { documentKind, annualStatement } wrapper", () => {
+    const result = StatementExtractionSchema.parse({
+      ...validStatement,
+      documentKind: "jaaropgave",
+    });
+    expect(result).toEqual({
+      documentKind: "jaaropgave",
+      annualStatement: validStatement,
+    });
+  });
+
+  it("reshapes a notarisafrekening extraction into the { documentKind, propertyStatement } wrapper", () => {
+    const raw = {
+      documentKind: "notarisafrekening",
+      institution: "Notaris Jansen",
+      taxYear: 2024,
+      amounts: [{ kind: "saleProceeds", label: "Verkoopopbrengst", amount: 398000 }],
+    };
+    const result = StatementExtractionSchema.parse(raw);
+    expect(result).toEqual({
+      documentKind: "notarisafrekening",
+      propertyStatement: raw,
+    });
+  });
+
+  it("parses wozBeschikking and makelaarsnota the same way", () => {
+    for (const documentKind of ["wozBeschikking", "makelaarsnota"]) {
+      const raw = { documentKind, institution: "Gemeente", taxYear: 2024, amounts: [] };
+      const result = StatementExtractionSchema.parse(raw);
+      expect(result).toEqual({ documentKind, propertyStatement: raw });
+    }
+  });
+
+  it("keeps a property amount whose kind is outside the closed set as null, preserving its label", () => {
+    // An amount that fits no kind is reported (via the label), never invented into a new key.
+    const raw = {
+      documentKind: "makelaarsnota",
+      institution: "Makelaar Pietersen",
+      taxYear: 2024,
+      amounts: [{ kind: "administrationFee", label: "Administratiekosten", amount: 45 }],
+    };
+    const result = StatementExtractionSchema.parse(raw);
+    expect(result).toMatchObject({
+      documentKind: "makelaarsnota",
+      propertyStatement: {
+        amounts: [{ kind: null, label: "Administratiekosten", amount: 45 }],
+      },
+    });
+  });
+
+  it("passes through an unrecognized document without a data payload", () => {
+    const result = StatementExtractionSchema.parse({
+      documentKind: "unrecognized",
+      institution: "Mystery BV",
+      taxYear: 2024,
+    });
+    expect(result).toEqual({
+      documentKind: "unrecognized",
+      institution: "Mystery BV",
+      taxYear: 2024,
+    });
+  });
+
+  it("coerces a missing taxYear to null for an unrecognized document rather than throwing", () => {
+    const result = StatementExtractionSchema.parse({
+      documentKind: "unrecognized",
+      institution: "",
+    });
+    expect(result).toMatchObject({ documentKind: "unrecognized", taxYear: null });
+  });
+
+  it("never extracts an accountNumber for a property document kind", () => {
+    // Property bewijsstukken carry no rekeningnummer (ADR 0002 amendment) — the schema has
+    // no field for one, so a model that emits one anyway gets it silently stripped. toEqual
+    // (not toMatchObject) fails on any extra key, so a leaked accountNumber would show up.
+    const raw = {
+      documentKind: "notarisafrekening",
+      institution: "Notaris Jansen",
+      taxYear: 2024,
+      accountNumber: "NL91INGB0001234567",
+      amounts: [{ kind: "saleProceeds", label: "Verkoopopbrengst", amount: 398000 }],
+    };
+    const result = StatementExtractionSchema.parse(raw);
+    expect(result).toEqual({
+      documentKind: "notarisafrekening",
+      propertyStatement: {
+        documentKind: "notarisafrekening",
+        institution: "Notaris Jansen",
+        taxYear: 2024,
+        amounts: [{ kind: "saleProceeds", label: "Verkoopopbrengst", amount: 398000 }],
+      },
+    });
+  });
+
+  it("rejects a documentKind outside the closed set", () => {
+    expect(() =>
+      StatementExtractionSchema.parse({
+        documentKind: "erfpachtcanon",
+        institution: "Test",
+        taxYear: 2024,
+      })
+    ).toThrow();
   });
 });
 

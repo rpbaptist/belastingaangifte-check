@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { AnnualStatementData, TaxReturnData } from "./types";
+import type { AnnualStatementData, PropertyStatementData, TaxReturnData } from "./types";
 import { buildReport } from "./report";
 
 function makeTaxReturn(overrides: Partial<TaxReturnData> = {}): TaxReturnData {
@@ -35,7 +35,7 @@ function makeStatements(overrides: Partial<AnnualStatementData> = {}): AnnualSta
 describe("buildReport", () => {
   it("maps a Gedekt pair to covered with no mismatches or rule points", () => {
     const taxReturn = makeTaxReturn({ entries: [makeTaxReturn().entries[0]] });
-    const result = buildReport(taxReturn, makeStatements(), "nl");
+    const result = buildReport(taxReturn, makeStatements(), [], [], "nl");
 
     expect(result.taxYear).toBe(2024);
     expect(result.covered).toHaveLength(1);
@@ -50,7 +50,7 @@ describe("buildReport", () => {
   });
 
   it("places an unmatched aangifte entry in missingStatement (Jaaropgave ontbreekt)", () => {
-    const result = buildReport(makeTaxReturn(), makeStatements(), "nl");
+    const result = buildReport(makeTaxReturn(), makeStatements(), [], [], "nl");
 
     expect(result.covered).toHaveLength(1);
     expect(result.missingStatement).toHaveLength(1);
@@ -75,7 +75,7 @@ describe("buildReport", () => {
       ],
     });
 
-    const result = buildReport(taxReturn, statements, "nl");
+    const result = buildReport(taxReturn, statements, [], [], "nl");
 
     expect(result.covered).toEqual([]);
     expect(result.amountMismatches).toHaveLength(1);
@@ -85,7 +85,7 @@ describe("buildReport", () => {
 
   it("places an unmatched jaaropgave account in notFilledIn (Niet ingevuld in aangifte)", () => {
     const taxReturn = makeTaxReturn({ entries: [] });
-    const result = buildReport(taxReturn, makeStatements(), "nl");
+    const result = buildReport(taxReturn, makeStatements(), [], [], "nl");
 
     expect(result.notFilledIn).toHaveLength(1);
     expect(result.notFilledIn[0]).toMatchObject({
@@ -106,7 +106,7 @@ describe("buildReport", () => {
       ],
     });
 
-    const result = buildReport(taxReturn, statements, "nl");
+    const result = buildReport(taxReturn, statements, [], [], "nl");
 
     expect(result.notFilledIn).toEqual([]);
   });
@@ -125,7 +125,7 @@ describe("buildReport", () => {
       ],
     });
 
-    const result = buildReport(taxReturn, statements, "nl");
+    const result = buildReport(taxReturn, statements, [], [], "nl");
 
     expect(result.rulePoints.some((p) => p.title === "Aflossingsvrij hypotheek")).toBe(true);
   });
@@ -144,7 +144,7 @@ describe("buildReport", () => {
       ],
     });
 
-    const result = buildReport(taxReturn, statements, "en");
+    const result = buildReport(taxReturn, statements, [], [], "en");
 
     expect(result.rulePoints.some((p) => p.title === "Interest-only mortgage")).toBe(true);
   });
@@ -170,7 +170,7 @@ describe("buildReport", () => {
       },
     ];
 
-    const result = buildReport(taxReturn, statements, "nl");
+    const result = buildReport(taxReturn, statements, [], [], "nl");
 
     expect(result.covered).toHaveLength(1);
     expect(result.notFilledIn).toHaveLength(1);
@@ -195,7 +195,7 @@ describe("buildReport", () => {
       ],
     });
 
-    const result = buildReport(taxReturn, statements, "nl");
+    const result = buildReport(taxReturn, statements, [], [], "nl");
 
     expect(result.covered).toEqual([]);
     expect(result.findings).toHaveLength(1);
@@ -207,7 +207,7 @@ describe("buildReport", () => {
     const taxReturn = makeTaxReturn({ entries: [] });
     const statements = makeStatements({ taxYear: 2023 });
 
-    const result = buildReport(taxReturn, statements, "nl");
+    const result = buildReport(taxReturn, statements, [], [], "nl");
 
     expect(result.findings.some((f) => f.kind === "taxYearMismatch")).toBe(true);
     expect(result.rulePoints).toEqual([]);
@@ -223,7 +223,7 @@ describe("buildReport", () => {
       ],
     });
 
-    const result = buildReport(taxReturn, [], "nl");
+    const result = buildReport(taxReturn, [], [], [], "nl");
 
     expect(result.findings.some((f) => f.kind === "duplicateRow")).toBe(true);
     expect(result.rulePoints).toEqual([]);
@@ -232,9 +232,102 @@ describe("buildReport", () => {
   it("is deterministic: repeated calls return deep-equal results", () => {
     const taxReturn = makeTaxReturn();
     const statements = makeStatements();
-    const first = buildReport(taxReturn, statements, "nl");
-    const second = buildReport(taxReturn, statements, "nl");
+    const first = buildReport(taxReturn, statements, [], [], "nl");
+    const second = buildReport(taxReturn, statements, [], [], "nl");
 
     expect(second).toEqual(first);
+  });
+
+  describe("property bewijsstukken", () => {
+    function makePropertyStatement(
+      overrides: Partial<PropertyStatementData> = {}
+    ): PropertyStatementData {
+      return {
+        documentKind: "notarisafrekening",
+        institution: "Notaris Jansen",
+        taxYear: 2024,
+        amounts: [
+          { kind: "saleProceeds", label: "Verkoopopbrengst", amount: 398000 },
+          { kind: "loanRepayment", label: "Aflossing hypotheek TestBank", amount: 1000 },
+        ],
+        ...overrides,
+      };
+    }
+
+    it("lists a property bewijsstuk's amounts on the report without matching it", () => {
+      const taxReturn = makeTaxReturn({ entries: [] });
+      const result = buildReport(taxReturn, [], [makePropertyStatement()], [], "nl");
+
+      expect(result.propertyStatements).toHaveLength(1);
+      expect(result.propertyStatements[0].amounts).toHaveLength(2);
+      expect(result.covered).toEqual([]);
+      expect(result.missingStatement).toEqual([]);
+      expect(result.notFilledIn).toEqual([]);
+      expect(result.amountMismatches).toEqual([]);
+    });
+
+    it("never pairs a notarisafrekening against a jaaropgave bank account, even when amounts coincide", () => {
+      // The notarisafrekening's loanRepayment amount (1000) intentionally matches the
+      // jaaropgave's bank balance (1000) and the aangifte entry's accountNumber (NL01TEST) —
+      // a false pair here would mean the property statement leaked into account matching.
+      const taxReturn = makeTaxReturn({
+        entries: [
+          { box: "3", field: "Saldo bankrekening", accountNumber: "NL01TEST", amount: 1000 },
+        ],
+      });
+      const statements = makeStatements();
+      const propertyStatements = [makePropertyStatement()];
+
+      const result = buildReport(taxReturn, statements, propertyStatements, [], "nl");
+
+      expect(result.covered).toHaveLength(1);
+      expect(result.covered[0].institution).toBe("TestBank");
+      expect(result.amountMismatches).toEqual([]);
+      expect(result.propertyStatements).toHaveLength(1);
+    });
+
+    it("never lets a payment-reference IBAN on a notarisafrekening become the row's identity", () => {
+      // PropertyStatementData has no accountNumber field at all, so this is a structural
+      // guarantee, not a heuristic — reflected here as an end-to-end report assertion.
+      const taxReturn = makeTaxReturn({ entries: [] });
+      const statements = makeStatements(); // jaaropgave for NL01TEST
+      const propertyStatements = [
+        makePropertyStatement({ institution: "Notaris Jansen (uitbetaling op NL01TEST)" }),
+      ];
+
+      const result = buildReport(taxReturn, statements, propertyStatements, [], "nl");
+
+      // The jaaropgave's own NL01TEST balance is still unmatched and reported as notFilledIn —
+      // it was never paired away by the property statement mentioning the same IBAN in prose.
+      expect(result.notFilledIn).toHaveLength(1);
+      expect(result.notFilledIn[0].institution).toBe("TestBank");
+    });
+
+    it("reports a property amount outside the closed kind set as a finding", () => {
+      const taxReturn = makeTaxReturn({ entries: [] });
+      const propertyStatements = [
+        makePropertyStatement({
+          amounts: [{ kind: null, label: "Administratiekosten", amount: 45 }],
+        }),
+      ];
+
+      const result = buildReport(taxReturn, [], propertyStatements, [], "nl");
+
+      expect(result.findings.some((f) => f.kind === "unknownAmountKind")).toBe(true);
+    });
+
+    it("reports an unrecognized document as a finding rather than having no effect", () => {
+      const taxReturn = makeTaxReturn({ entries: [] });
+      const result = buildReport(
+        taxReturn,
+        [],
+        [],
+        [{ institution: "Onbekend BV", taxYear: 2024 }],
+        "nl"
+      );
+
+      expect(result.findings).toHaveLength(1);
+      expect(result.findings[0].kind).toBe("unrecognizedDocument");
+    });
   });
 });

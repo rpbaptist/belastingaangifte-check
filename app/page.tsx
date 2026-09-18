@@ -12,6 +12,7 @@ import {
   CoveredSection,
   MissingStatementSection,
   NotFilledInSection,
+  PropertyStatementsSection,
   FindingsSection,
 } from "./components/ReportSections";
 import { useAnalysis } from "./hooks/useAnalysis";
@@ -179,6 +180,7 @@ export default function Home() {
               <CoveredSection items={report.covered} />
               <MissingStatementSection items={report.missingStatement} />
               <NotFilledInSection items={report.notFilledIn} />
+              <PropertyStatementsSection items={report.propertyStatements} />
             </div>
             {!hasAttn && !demo.active && (
               <IncrementalCard

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <title>Notarisafrekening 2023 (synthetic fixture)</title>
+    <style>
+      /*
+        Synthetic notarisafrekening fixture (#109, following ADR 0009). Every text run is
+        absolutely positioned: there is NO table markup, so when this prints to PDF the text
+        layer carries no column delimiters — columns exist only to the eye, exactly as in a
+        real notary settlement. All names, dossier numbers, IBANs and amounts are invented.
+
+        This fixture also exercises the bug #109 fixes: the payment-reference IBAN
+        (where the sale proceeds were transferred) must NOT be read as this document's
+        identity — property bewijsstukken carry no rekeningnummer of their own.
+      */
+      @page {
+        size: A4;
+        margin: 0;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      .page {
+        position: relative;
+        width: 210mm;
+        height: 297mm;
+        overflow: hidden;
+        font-family: "DejaVu Sans", sans-serif;
+        color: #111;
+      }
+      .run {
+        position: absolute;
+        font-size: 11px;
+        line-height: 14px;
+        white-space: nowrap;
+      }
+      .title {
+        font-size: 15px;
+        font-weight: bold;
+      }
+      .section {
+        font-size: 13px;
+        font-weight: bold;
+      }
+      .head {
+        font-weight: bold;
+        color: #555;
+      }
+      .note {
+        color: #666;
+        font-style: italic;
+      }
+      .naam {
+        left: 24mm;
+      }
+      .waarde {
+        left: 150mm;
+        width: 36mm;
+        text-align: right;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="page">
+      <div class="run title" style="top: 15mm; left: 24mm">Notaris Jansen &amp; Partners</div>
+      <div class="run" style="top: 22mm; left: 24mm">Kantoor voor notariaat en vastgoedrecht</div>
+      <div class="run" style="top: 29mm; left: 24mm">Dossiernummer: NJ-2023-00456</div>
+      <div class="run" style="top: 36mm; left: 24mm">Datum: 14 maart 2023</div>
+
+      <div class="run section" style="top: 48mm; left: 24mm">
+        Nota van afrekening — verkoop registergoed
+      </div>
+      <div class="run" style="top: 56mm; left: 24mm">Object: Vredestraat 12, 1234 AB Amsterdam</div>
+      <div class="run" style="top: 63mm; left: 24mm">Verkoper: J. Fictief</div>
+      <div class="run" style="top: 70mm; left: 24mm">Koper: A. Anoniem</div>
+
+      <div class="run head naam" style="top: 84mm">Omschrijving</div>
+      <div class="run head waarde" style="top: 84mm">Bedrag</div>
+
+      <div class="run naam" style="top: 92mm">Verkoopopbrengst</div>
+      <div class="run waarde" style="top: 92mm">€ 398.000,00</div>
+
+      <div class="run naam" style="top: 100mm">Aflossing hypotheek ABN AMRO</div>
+      <div class="run waarde" style="top: 100mm">€ 215.000,00</div>
+
+      <div class="run naam" style="top: 108mm">Notariskosten</div>
+      <div class="run waarde" style="top: 108mm">€ 920,00</div>
+
+      <!-- An amount that fits none of the five closed kinds — must be reported with its raw
+           label, never invented into a new key. -->
+      <div class="run naam" style="top: 116mm">Kadasterkosten</div>
+      <div class="run waarde" style="top: 116mm">€ 140,00</div>
+
+      <!-- The only IBAN on the page: a payment reference for where the proceeds were
+           transferred, not the document's identity. Must never be extracted as an
+           account number — property bewijsstukken carry none of their own. -->
+      <div class="run note" style="top: 130mm; left: 24mm">
+        Uitbetaling verkoopopbrengst aan verkoper op rekeningnummer NL91 ABNA 0417 1643 00.
+      </div>
+    </section>
+  </body>
+</html>

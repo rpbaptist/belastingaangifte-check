@@ -1,6 +1,13 @@
 import { promises as fs } from "fs";
 import path from "path";
-import type { AnalysisReport, AnnualStatementData, AttentionPoint, TaxReturnData } from "./types";
+import type {
+  AnalysisReport,
+  AnnualStatementData,
+  AttentionPoint,
+  PropertyStatementData,
+  TaxReturnData,
+  UnrecognizedDocument,
+} from "./types";
 import { z } from "zod";
 import { parseLlmJson } from "./parse-llm-json";
 import type { AmountMismatch } from "./categorizer";
@@ -70,6 +77,8 @@ export function parseAnalysisResponse(
 export async function analyzeDocuments(
   taxReturn: TaxReturnData,
   annualStatements: AnnualStatementData[],
+  propertyStatements: PropertyStatementData[] = [],
+  unrecognizedDocuments: UnrecognizedDocument[] = [],
   apiKey?: string,
   language: Language = "nl"
 ): Promise<Omit<AnalysisReport, "extractionErrors">> {
@@ -80,10 +89,11 @@ export async function analyzeDocuments(
     covered,
     missingStatement,
     notFilledIn,
+    propertyStatements: reportedPropertyStatements,
     amountMismatches,
     findings,
     rulePoints,
-  } = buildReport(taxReturn, annualStatements, language);
+  } = buildReport(taxReturn, annualStatements, propertyStatements, unrecognizedDocuments, language);
 
   if (amountMismatches.length === 0) {
     return {
@@ -91,6 +101,7 @@ export async function analyzeDocuments(
       covered,
       missingStatement,
       notFilledIn,
+      propertyStatements: reportedPropertyStatements,
       findings,
       attentionPoints: rulePoints,
     };
@@ -141,6 +152,7 @@ export async function analyzeDocuments(
     covered,
     missingStatement,
     notFilledIn,
+    propertyStatements: reportedPropertyStatements,
     findings,
     attentionPoints: [...rulePoints, ...llmPoints],
   };

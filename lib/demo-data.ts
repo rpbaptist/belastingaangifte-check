@@ -48,6 +48,7 @@ export const DEMO_REPORT: AnalysisReport = {
       amount: 6100,
     },
   ],
+  propertyStatements: [],
   findings: [
     {
       kind: "unresolvedAmount",
@@ -144,6 +145,7 @@ export const DEMO_REPORT_EN: AnalysisReport = {
       amount: 6100,
     },
   ],
+  propertyStatements: [],
   findings: [
     {
       kind: "unresolvedAmount",
@@ -195,4 +197,6 @@ export const DEMO_REPORT_EN: AnalysisReport = {
 export const DEMO_EXTRACTED_DATA: ExtractedData = {
   taxReturn: { taxYear: 2024, entries: [] },
   annualStatements: [],
+  propertyStatements: [],
+  unrecognizedDocuments: [],
 };

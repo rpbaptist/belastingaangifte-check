@@ -1,0 +1,6 @@
+{
+  "documentKind": "wozBeschikking",
+  "institution": "Gemeente Amsterdam",
+  "taxYear": 2023,
+  "amounts": [{ "kind": "wozValue", "label": "WOZ-waarde kalenderjaar 2023", "amount": 362000 }]
+}

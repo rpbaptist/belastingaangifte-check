@@ -13,11 +13,24 @@ See [ADR 0010](../docs/adr/0010-perception-eval-harness.md) for the design and r
 eval/
 ├── README.md
 └── fixtures/
-    └── aangifte-2023/
-        ├── source.html      # hand-authored, every text run absolutely positioned
-        ├── aangifte-2023.pdf # rendered from source.html (committed)
-        └── expected.json     # the known-correct TaxReturnData for that PDF
+    ├── aangifte-2023/
+    │   ├── source.html      # hand-authored, every text run absolutely positioned
+    │   ├── aangifte-2023.pdf # rendered from source.html (committed)
+    │   └── expected.json     # the known-correct TaxReturnData for that PDF
+    ├── notarisafrekening-2023/
+    ├── woz-beschikking-2023/
+    └── makelaarsnota-2023/
+        ├── source.html      # same positioned-run rule, no table markup
+        ├── <name>.pdf        # rendered from source.html
+        └── expected.json     # the known-correct PropertyStatementData for that PDF
 ```
+
+A fixture whose `expected.json` has an `amounts` array (the three property fixtures above) is
+a `PropertyStatementData` fixture and runs through `extractStatement`; one with an `entries`
+array (`aangifte-2023`) is a `TaxReturnData` fixture and runs through `extractTaxReturn`. The
+runner (`scripts/eval/run.ts`) picks the right extractor and diff (`lib/eval/diff.ts`)
+automatically by inspecting `expected.json` — this is the "second diff shape" ADR 0010
+anticipated when extraction grew beyond the aangifte.
 
 Fixtures are **synthetic** — every name, BSN, IBAN and amount is invented, so the expected
 output is known exactly and no real financial data is involved.
@@ -46,6 +59,21 @@ misread costs the most):
 It also folds in a broker identifier spread across "columns" (DEGIRO) and a dividend
 sub-entry that must not be collapsed into the balance above it.
 
+### The property bewijsstuk fixtures (#109)
+
+`notarisafrekening-2023`, `woz-beschikking-2023` and `makelaarsnota-2023` exercise the
+extraction prompt's document-kind classification and the closed amount-kind vocabulary
+(ADR 0002 amendment) rather than page-layout hazards:
+
+- Each carries an amount whose label fits none of the five closed kinds (`Kadasterkosten`,
+  `Advertentiekosten Funda`) — extraction must report `kind: null` with the raw label
+  preserved, never invent a new key.
+- `notarisafrekening-2023` also prints a payment-reference IBAN in prose ("Uitbetaling
+  verkoopopbrengst … op rekeningnummer …") — the one hazard specific to this kind, since it is
+  the exact shape of text that used to get misread as the document's account number before
+  #109. `PropertyStatementData` has no `accountNumber` field at all, so a correct extraction
+  cannot carry one regardless.
+
 ## Re-rendering the PDFs
 
 The PDFs are committed, but you can re-render them from source:
@@ -55,6 +83,12 @@ npm run eval:render
 ```
 
 This prints each `eval/fixtures/<name>/source.html` to `eval/fixtures/<name>/<name>.pdf`.
+
+> **Status:** the three property-bewijsstuk fixtures above currently ship `source.html` and
+> `expected.json` only — their PDFs have not been rendered because no WeasyPrint-capable
+> environment was available when they were authored. Run `npm run eval:render` on a machine
+> with WeasyPrint installed and commit the resulting `<name>.pdf` files before relying on
+> `npm run eval` for these three; `aangifte-2023.pdf` is unaffected and already committed.
 
 **Requires [WeasyPrint](https://weasyprint.org/)** (a standalone HTML→PDF renderer). It is not
 an npm dependency and does not run in CI or on build. Install it once, e.g.:
