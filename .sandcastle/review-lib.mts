@@ -105,6 +105,8 @@ export async function runReview(args: {
     console.log(`Review pass pushed ${reviewResult.commits.length} more commit(s).`);
   }
 
+  await autoFixFormatting(branch);
+
   const { summary, comments, newIssues } = reviewResult.output;
   // AGENTS.md: only comment on findings that may require action. A clean
   // pass (no comments) gets no PR comment at all — posting the summary
@@ -139,6 +141,35 @@ export async function runReview(args: {
   if (comments.length === 0) {
     await mergeAndCleanUp(prNumber, branch);
   }
+}
+
+// `ci`'s format/lint checks fail on drift the build/review agents don't run
+// themselves (e.g. an edit to a file prettier or eslint's --fix disagrees
+// with). Rather than leave every such PR for a human — the CI failure gives
+// no other reason to stop — fix it deterministically on the host and push,
+// same as a review commit. Runs after every review pass, merge-bound or
+// not, so a PR is never left open over a purely mechanical, auto-fixable
+// issue. Lint runs first: eslint.config defers all formatting rules to
+// prettier (eslint-config-prettier), so a --fix can't produce output
+// prettier would then reformat out from under it.
+async function autoFixFormatting(branch: string): Promise<void> {
+  // --fix still exits non-zero when unfixable errors remain — that's not a
+  // failure of this step, just something for the (unchanged) CI lint check
+  // to catch and a human/agent to fix for real.
+  try {
+    execFileSync("npx", ["eslint", ".", "--fix"], { stdio: "inherit" });
+  } catch {
+    // Unfixable lint errors remain — leave them for CI to report.
+  }
+  execFileSync("npm", ["run", "format"], { stdio: "inherit" });
+  const status = execFileSync("git", ["status", "--porcelain"], { encoding: "utf-8" });
+  if (status.trim() === "") {
+    return;
+  }
+  execFileSync("git", ["add", "-A"], { stdio: "inherit" });
+  execFileSync("git", ["commit", "-m", "Fix lint and formatting"], { stdio: "inherit" });
+  execFileSync("git", ["push", "origin", branch], { stdio: "inherit" });
+  console.log(`Auto-fixed lint/formatting on ${branch}.`);
 }
 
 // Squash-merges a clean PR and removes its branch (remote + local). Only
