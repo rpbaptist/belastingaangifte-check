@@ -351,6 +351,56 @@ Blocked: session limit hit twice in a row for this issue, and the progress note 
 EOF
 }
 
+# Comment posted on an issue's first orphan recovery.
+hard_kill_reap_comment() {
+  cat <<EOF
+Recovered: found labeled \`in-progress-by-agent\` with no corresponding run — the prior attempt was likely killed out from under it (container OOM, host restart, etc.). Re-labeled \`ready-for-agent\` to retry. (loop.sh startup reap)
+EOF
+}
+
+# Comment posted when the same issue orphans a second time in a row.
+hard_kill_anomaly_comment() {
+  cat <<EOF
+Blocked: this issue was found labeled \`in-progress-by-agent\` with no corresponding run for the second time in a row. Re-labeled \`blocked-for-agent\` instead of retrying blind again. A human should check \`ralph-logs/\` if still present, then re-label \`ready-for-agent\` to resume. (loop.sh startup reap)
+EOF
+}
+
+# Runs once at loop.sh startup, before the main iteration loop. loop.sh
+# handles one issue at a time in a single synchronous process and only
+# sets in-progress-by-agent for the duration of its own
+# run_build_iteration call — so any issue still carrying that label when
+# a *fresh* loop.sh process starts is proof the process that set it is
+# gone (crashed/killed), not a live run. No staleness timer or
+# container/PID probing needed; the label alone is the signal. See #134,
+# #137.
+#
+# First orphan: reset to ready-for-agent and mark hard-kill-seen, same
+# trust level as a checkpoint-timeout retry. Second orphan in a row
+# (hard-kill-seen already present): escalate to blocked-for-agent instead
+# of retrying blind again, mirroring is_session_limit_anomaly.
+reap_orphaned_in_progress_issues() {
+  local orphans_json n
+  orphans_json="$(gh issue list --repo "$REPO" --label in-progress-by-agent \
+    --json number,labels --limit 50)"
+  while IFS= read -r issue_json; do
+    [[ -z "$issue_json" ]] && continue
+    n="$(jq -r '.number' <<<"$issue_json")"
+    if jq -e '[.labels[].name] | index("hard-kill-seen")' <<<"$issue_json" >/dev/null; then
+      gh issue edit "$n" --repo "$REPO" \
+        --remove-label in-progress-by-agent --remove-label hard-kill-seen \
+        --add-label blocked-for-agent
+      gh issue comment "$n" --repo "$REPO" --body "$(hard_kill_anomaly_comment)"
+      echo "Issue #$n orphaned twice in a row — blocked for human review." >&2
+    else
+      gh issue edit "$n" --repo "$REPO" \
+        --remove-label in-progress-by-agent \
+        --add-label hard-kill-seen --add-label ready-for-agent
+      gh issue comment "$n" --repo "$REPO" --body "$(hard_kill_reap_comment)"
+      echo "Issue #$n found in-progress-by-agent at startup with no live run — recovered to ready-for-agent." >&2
+    fi
+  done < <(jq -c '.[]' <<<"$orphans_json")
+}
+
 run_build_iteration() {
   local issue_json="$1"
   local n title body
@@ -375,7 +425,7 @@ run_build_iteration() {
     # issue stays eligible for re-selection forever, and the next
     # iteration re-picks it, finds nothing new to commit, and reports a
     # false "blocked" failure. Success means done, not queue-again.
-    gh issue edit "$n" --repo "$REPO" --remove-label in-progress-by-agent --remove-label ready-for-agent --remove-label session-limit-seen
+    gh issue edit "$n" --repo "$REPO" --remove-label in-progress-by-agent --remove-label ready-for-agent --remove-label session-limit-seen --remove-label hard-kill-seen
   else
     echo "Iteration for issue #$n failed (see $log_file)."
     if is_session_limit "$log_file" && is_session_limit_anomaly "$n"; then
@@ -413,6 +463,10 @@ run_build_iteration() {
 }
 
 main() {
+  # Once, before the loop starts: recover any issue left in-progress by
+  # a hard-killed prior run (see reap_orphaned_in_progress_issues).
+  reap_orphaned_in_progress_issues
+
   local i=0
   while :; do
     i=$((i + 1))
