@@ -96,9 +96,13 @@ export async function analyzeDocuments(
     };
   }
 
+  const rules = await fs.readFile(path.join(process.cwd(), "rules", "aandachtspunten.md"), "utf-8");
+  const systemPrompt = buildAnalyzerPrompt(rules, language);
+
   const cached = readAnalysisCache<{ llmPoints: AttentionPoint[] }>(
     taxReturn,
     annualStatements,
+    systemPrompt,
     language
   );
   let llmPoints: AttentionPoint[];
@@ -106,11 +110,6 @@ export async function analyzeDocuments(
   if (cached) {
     llmPoints = cached.llmPoints;
   } else {
-    const rules = await fs.readFile(
-      path.join(process.cwd(), "rules", "aandachtspunten.md"),
-      "utf-8"
-    );
-
     let retrievedContext = "";
     try {
       const chunks = await retrieveKennisbankContext(amountMismatches);
@@ -132,6 +131,7 @@ export async function analyzeDocuments(
         missingStatement,
         notFilledIn,
       },
+      systemPrompt,
       language
     );
   }
