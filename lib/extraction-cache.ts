@@ -44,25 +44,36 @@ export function writeCache<T>(pdfBase64: string, data: T, systemPrompt: string):
 
 // ─── Analysis result cache ──────────────────────────────────────────────────
 
+// The system prompt joins the key for the same reason as cacheKey above: an
+// edited analyzer prompt (or rules/aandachtspunten.md, which it embeds) must
+// invalidate the cache without the input data itself changing. The
+// RAG-derived retrievedContext suffix is deliberately excluded — see #115.
 function analysisKey(
   taxReturn: TaxReturnData,
   annualStatements: AnnualStatementData[],
+  systemPrompt: string,
   language: Language
 ): string {
   const payload = JSON.stringify({ taxReturn, annualStatements, language });
-  return crypto.createHash("sha256").update(payload).digest("hex");
+  return crypto
+    .createHash("sha256")
+    .update(payload)
+    .update("\0")
+    .update(systemPrompt)
+    .digest("hex");
 }
 
 export function readAnalysisCache<T>(
   taxReturn: TaxReturnData,
   annualStatements: AnnualStatementData[],
+  systemPrompt: string,
   language: Language = "nl"
 ): T | null {
   if (process.env.NODE_ENV !== "development") return null;
   try {
     const file = path.join(
       CACHE_DIR,
-      `analysis-${analysisKey(taxReturn, annualStatements, language)}.json`
+      `analysis-${analysisKey(taxReturn, annualStatements, systemPrompt, language)}.json`
     );
     return JSON.parse(fs.readFileSync(file, "utf-8")) as T;
   } catch {
@@ -74,11 +85,12 @@ export function writeAnalysisCache<T>(
   taxReturn: TaxReturnData,
   annualStatements: AnnualStatementData[],
   data: T,
+  systemPrompt: string,
   language: Language = "nl"
 ): void {
   if (process.env.NODE_ENV !== "development") return;
   fs.mkdirSync(CACHE_DIR, { recursive: true });
-  const key = analysisKey(taxReturn, annualStatements, language);
+  const key = analysisKey(taxReturn, annualStatements, systemPrompt, language);
   fs.writeFileSync(path.join(CACHE_DIR, `analysis-${key}.json`), JSON.stringify(data, null, 2));
   // Always overwrite last-analysis.json for easy direct inspection
   fs.writeFileSync(path.join(CACHE_DIR, "last-analysis.json"), JSON.stringify(data, null, 2));
