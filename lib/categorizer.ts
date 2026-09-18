@@ -43,11 +43,16 @@ function getJaaropgaveAmount(pair: MatchedPair): number | null {
   }
 }
 
+// remainingDebt and openingDebt are balance figures (schuld), not declarable amounts — a
+// mortgage account with only a debt balance and no interestPaid has nothing to declare, so
+// neither key may stand in as the item's display amount.
+const BALANCE_ONLY_KEYS = new Set(["remainingDebt", "openingDebt"]);
+
 function primaryDisplayAmount(amounts: AccountAmounts): number {
   for (const category of Object.values(amounts)) {
     if (!category) continue;
     for (const [key, val] of Object.entries(category)) {
-      if (val !== undefined && val !== 0 && key !== "remainingDebt") return val;
+      if (val !== undefined && val !== 0 && !BALANCE_ONLY_KEYS.has(key)) return val;
     }
   }
   return 0;
