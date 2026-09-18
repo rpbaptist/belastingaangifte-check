@@ -172,18 +172,28 @@ async function autoFixFormatting(branch: string): Promise<void> {
   console.log(`Auto-fixed lint/formatting on ${branch}.`);
 }
 
+// Branch naming convention shared by main.mts (`ralph/issue-${n}`) and
+// review.mts's PR lookup — used here so the CI-fix pass can quote the
+// issue number without threading it through mergeAndCleanUp's existing
+// callers, both of which already have `branch` but not necessarily a
+// resolved issue number (review.mts falls back to "unknown").
+function issueNumberFromBranch(branch: string): string {
+  return branch.match(/^ralph\/issue-(\d+)$/)?.[1] ?? "unknown";
+}
+
+// A failing "ci" check is almost always something an agent can fix from the
+// logs (a flaky-looking type error, a missed lint rule, a stale snapshot) —
+// leaving it open for a human on the first failure wastes the loop. Capped
+// so a genuinely broken PR still lands on a human rather than retrying
+// forever.
+const MAX_CI_FIX_ATTEMPTS = 2;
+
 // Squash-merges a clean PR and removes its branch (remote + local). Only
-// called once review found nothing outstanding — still gated on CI
-// passing, since a clean review says nothing about build/test health.
+// called once review found nothing outstanding. Still gated on CI passing —
+// a clean review says nothing about build/test health — but a failing run
+// gets up to MAX_CI_FIX_ATTEMPTS agent fix passes before giving up on it.
 async function mergeAndCleanUp(prNumber: string, branch: string): Promise<void> {
-  try {
-    execFileSync("gh", ["pr", "checks", prNumber, "--watch", "--fail-fast"], {
-      stdio: "inherit",
-    });
-  } catch (err) {
-    console.error(`PR #${prNumber} has failing/pending checks — leaving open for a human.`, err);
-    return;
-  }
+  if (!(await ensureChecksPass(prNumber, branch))) return;
 
   try {
     execFileSync("gh", ["pr", "merge", prNumber, "--squash", "--delete-branch"], {
@@ -202,4 +212,130 @@ async function mergeAndCleanUp(prNumber: string, branch: string): Promise<void> 
     // No local ref to remove — fine.
   }
   console.log(`Merged PR #${prNumber} and deleted branch ${branch}.`);
+}
+
+// Watches checks to completion, and on a failure hands off to an agent fix
+// pass and watches again, up to MAX_CI_FIX_ATTEMPTS times. Returns whether
+// checks ended up passing — false means a give-up comment was already
+// posted and the PR should stay open.
+async function ensureChecksPass(prNumber: string, branch: string): Promise<boolean> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      execFileSync("gh", ["pr", "checks", prNumber, "--watch", "--fail-fast"], {
+        stdio: "inherit",
+      });
+      return true;
+    } catch (err) {
+      if (attempt > MAX_CI_FIX_ATTEMPTS) {
+        console.error(
+          `PR #${prNumber} still has failing checks after ${MAX_CI_FIX_ATTEMPTS} fix attempt(s) — leaving open for a human.`,
+          err
+        );
+        await postCiGaveUpComment(prNumber);
+        return false;
+      }
+      console.error(
+        `PR #${prNumber} has failing/pending checks (attempt ${attempt}/${MAX_CI_FIX_ATTEMPTS}) — attempting a fix.`,
+        err
+      );
+      if (!(await fixCiFailures({ prNumber, branch, attempt }))) {
+        console.error(`No CI fix commits produced for PR #${prNumber} — leaving open for a human.`);
+        await postCiGaveUpComment(prNumber);
+        return false;
+      }
+    }
+  }
+}
+
+// Concatenated failed-step logs for every check in the "fail" bucket, keyed
+// off `gh pr checks --json`'s per-check job link (…/actions/runs/<id>/job/…).
+// Returns undefined if there's nothing failing to fetch a log for (e.g. the
+// PR was blocked on a still-pending check, not an actual failure) or the log
+// fetch itself errors, so callers can treat either as "can't fix this".
+function getFailedCiLog(prNumber: string): string | undefined {
+  let checks: { name: string; bucket: string; link: string }[];
+  try {
+    checks = JSON.parse(
+      execFileSync("gh", ["pr", "checks", prNumber, "--json", "name,bucket,link"], {
+        encoding: "utf-8",
+      })
+    );
+  } catch (err) {
+    console.error(`Could not read check status for PR #${prNumber}:`, err);
+    return undefined;
+  }
+
+  const failed = checks.filter((c) => c.bucket === "fail");
+  if (failed.length === 0) return undefined;
+
+  const logs = failed.map((c) => {
+    const runId = c.link.match(/\/actions\/runs\/(\d+)/)?.[1];
+    if (!runId) return `(check "${c.name}" failed, no Actions run id in link: ${c.link})`;
+    try {
+      return `## ${c.name}\n\n${execFileSync("gh", ["run", "view", runId, "--log-failed"], {
+        encoding: "utf-8",
+        maxBuffer: 20 * 1024 * 1024,
+      })}`;
+    } catch (err) {
+      return `(check "${c.name}" failed, could not fetch its log: ${err})`;
+    }
+  });
+  return logs.join("\n\n---\n\n");
+}
+
+// One agent pass to fix whatever's failing in CI, on the same branch as the
+// original build. Returns whether it produced (and pushed) any commits —
+// no commits means it either couldn't reproduce/diagnose the failure or
+// gave up, either way nothing changed for the next check run to react to.
+async function fixCiFailures(args: {
+  readonly prNumber: string;
+  readonly branch: string;
+  readonly attempt: number;
+}): Promise<boolean> {
+  const { prNumber, branch, attempt } = args;
+
+  const ciLog = getFailedCiLog(prNumber);
+  if (!ciLog) return false;
+
+  const result = await run({
+    agent: claudeCode("claude-sonnet-5"),
+    sandbox: docker({
+      mounts: [{ hostPath: "~/.npm", sandboxPath: "/home/agent/.npm", readonly: true }],
+    }),
+    branchStrategy: { type: "branch", branch },
+    promptFile: "./.sandcastle/prompt-ci-fix.md",
+    promptArgs: {
+      ISSUE_NUMBER: issueNumberFromBranch(branch),
+      PR_NUMBER: prNumber,
+      CI_LOG: ciLog,
+      ATTEMPT: String(attempt),
+      MAX_ATTEMPTS: String(MAX_CI_FIX_ATTEMPTS),
+    },
+    hooks: {
+      sandbox: {
+        onSandboxReady: [
+          { command: 'git config user.name "Ralph (belastingaangifte-check agent)"' },
+          { command: 'git config user.email "ralph-agent@users.noreply.github.com"' },
+          { command: "npm ci" },
+        ],
+      },
+    },
+  });
+
+  if (result.commits.length === 0) return false;
+  execFileSync("git", ["push", "origin", branch], { stdio: "inherit" });
+  console.log(`CI-fix pass pushed ${result.commits.length} commit(s) to PR #${prNumber}.`);
+  return true;
+}
+
+async function postCiGaveUpComment(prNumber: string): Promise<void> {
+  const body = [
+    RALPH_MARKER,
+    `CI is still failing after ${MAX_CI_FIX_ATTEMPTS} automated fix attempt(s). Leaving this PR open for a human — check the latest check run for what's still broken.`,
+  ].join("\n");
+  try {
+    execFileSync("gh", ["pr", "comment", prNumber, "--body", body], { stdio: "inherit" });
+  } catch (err) {
+    console.error(`Could not post give-up comment on PR #${prNumber}:`, err);
+  }
 }
