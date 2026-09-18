@@ -74,7 +74,10 @@ describe("TaxReturnSchema", () => {
 
 describe("StatementExtractionSchema", () => {
   it("reshapes a jaaropgave-kind extraction into the { documentKind, annualStatement } wrapper", () => {
-    const result = StatementExtractionSchema.parse({ ...validStatement, documentKind: "jaaropgave" });
+    const result = StatementExtractionSchema.parse({
+      ...validStatement,
+      documentKind: "jaaropgave",
+    });
     expect(result).toEqual({
       documentKind: "jaaropgave",
       annualStatement: validStatement,

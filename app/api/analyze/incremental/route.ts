@@ -57,7 +57,10 @@ export async function POST(request: NextRequest) {
     } = await extractStatements(additionalStatements, apiKey, language);
 
     const mergedStatements = [...extractedData.annualStatements, ...newStatements];
-    const mergedPropertyStatements = [...extractedData.propertyStatements, ...newPropertyStatements];
+    const mergedPropertyStatements = [
+      ...extractedData.propertyStatements,
+      ...newPropertyStatements,
+    ];
     const mergedUnrecognizedDocuments = [
       ...extractedData.unrecognizedDocuments,
       ...newUnrecognizedDocuments,

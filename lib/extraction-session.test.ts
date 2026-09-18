@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import type Anthropic from "@anthropic-ai/sdk";
-import { extractStatements, formatSessionFailure, runExtractionSession } from "./extraction-session";
+import {
+  extractStatements,
+  formatSessionFailure,
+  runExtractionSession,
+} from "./extraction-session";
 
 // runExtractionSession/extractStatements call createClient() internally rather than taking a
 // client, so the Anthropic client itself is mocked at the module boundary (lib/llm) — mirrors
@@ -17,7 +21,9 @@ vi.mock("./llm", async (importOriginal) => {
         messages: {
           create: vi.fn(async (params: Anthropic.MessageCreateParamsNonStreaming) => {
             const content = params.messages[0]!.content;
-            const doc = (content as Anthropic.ContentBlockParam[])[0] as Anthropic.DocumentBlockParam;
+            const doc = (
+              content as Anthropic.ContentBlockParam[]
+            )[0] as Anthropic.DocumentBlockParam;
             const source = doc.source as Anthropic.Base64PDFSource;
             const json = JSON.stringify(responder(source.data));
             return {
@@ -49,7 +55,11 @@ describe("runExtractionSession / extractStatements — statement kind splitting"
           institutionType: "bank",
           taxYear: 2024,
           accounts: [
-            { accountNumber: "NL01TEST", description: "Betaal", amounts: { bank: { balance: 100 } } },
+            {
+              accountNumber: "NL01TEST",
+              description: "Betaal",
+              amounts: { bank: { balance: 100 } },
+            },
           ],
           metadata: {},
         };

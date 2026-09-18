@@ -271,7 +271,9 @@ describe("buildReport", () => {
       // jaaropgave's bank balance (1000) and the aangifte entry's accountNumber (NL01TEST) —
       // a false pair here would mean the property statement leaked into account matching.
       const taxReturn = makeTaxReturn({
-        entries: [{ box: "3", field: "Saldo bankrekening", accountNumber: "NL01TEST", amount: 1000 }],
+        entries: [
+          { box: "3", field: "Saldo bankrekening", accountNumber: "NL01TEST", amount: 1000 },
+        ],
       });
       const statements = makeStatements();
       const propertyStatements = [makePropertyStatement()];

@@ -1,4 +1,9 @@
-import type { PropertyAmount, PropertyStatementData, TaxReturnData, TaxReturnEntry } from "@/lib/types";
+import type {
+  PropertyAmount,
+  PropertyStatementData,
+  TaxReturnData,
+  TaxReturnEntry,
+} from "@/lib/types";
 import { normalize } from "@/lib/account-normalizer";
 
 // Perception eval: score an extracted aangifte against a known-correct fixture (ADR 0009).
@@ -259,7 +264,9 @@ function findPropertyMatch(
     const byKind = actual.findIndex((a, i) => !used[i] && a.kind === target.kind);
     if (byKind >= 0) return byKind;
   }
-  return actual.findIndex((a, i) => !used[i] && a.kind === null && normLabel(a.label) === normLabel(target.label));
+  return actual.findIndex(
+    (a, i) => !used[i] && a.kind === null && normLabel(a.label) === normLabel(target.label)
+  );
 }
 
 export function diffPropertyStatement(
@@ -275,7 +282,9 @@ export function diffPropertyStatement(
   const unresolved: PropertyAmount[] = [];
 
   for (const expectedAmount of expected.amounts) {
-    const idx = actualAmounts.findIndex((a, i) => !used[i] && isExactPropertyAmount(expectedAmount, a));
+    const idx = actualAmounts.findIndex(
+      (a, i) => !used[i] && isExactPropertyAmount(expectedAmount, a)
+    );
     if (idx >= 0) {
       used[idx] = true;
       correct.push(expectedAmount);
@@ -337,7 +346,10 @@ function describePropertyAmount(amount: PropertyAmount): string {
   return `${amount.kind ?? "(no kind)"} "${amount.label}" = ${amount.amount}`;
 }
 
-export function formatPropertyStatementDiffReport(name: string, diff: PropertyStatementDiff): string {
+export function formatPropertyStatementDiffReport(
+  name: string,
+  diff: PropertyStatementDiff
+): string {
   const headerLines: string[] = [];
   if (!diff.documentKind.match) {
     headerLines.push(

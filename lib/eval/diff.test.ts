@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import type { PropertyAmount, PropertyStatementData, TaxReturnData, TaxReturnEntry } from "@/lib/types";
+import type {
+  PropertyAmount,
+  PropertyStatementData,
+  TaxReturnData,
+  TaxReturnEntry,
+} from "@/lib/types";
 import {
   diffPropertyStatement,
   diffTaxReturn,

@@ -173,9 +173,9 @@ describe("validateStatements", () => {
 
   it("returns no findings for a clean, in-year property bewijsstuk", () => {
     // Every amount kind is in the closed set, so nothing should be flagged.
-    expect(
-      validateStatements(makeTaxReturn(), [], [makePropertyStatement()], [], "nl")
-    ).toEqual([]);
+    expect(validateStatements(makeTaxReturn(), [], [makePropertyStatement()], [], "nl")).toEqual(
+      []
+    );
   });
 
   it("reports a property amount outside the closed kind set as unknownAmountKind, keyed by its raw label", () => {
