@@ -106,10 +106,17 @@ export async function runReview(args: {
   }
 
   const { summary, comments, newIssues } = reviewResult.output;
-  const commentBody = [RALPH_MARKER, summary, "", ...comments.map((c) => `- ${c}`)].join("\n");
-  execFileSync("gh", ["pr", "comment", prNumber, "--body", commentBody], {
-    stdio: "inherit",
-  });
+  // AGENTS.md: only comment on findings that may require action. A clean
+  // pass (no comments) gets no PR comment at all — posting the summary
+  // unconditionally turned every review into a "looks good" comment,
+  // exactly the noise AGENTS.md and the review prompt tell the agent not
+  // to produce.
+  if (comments.length > 0) {
+    const commentBody = [RALPH_MARKER, summary, "", ...comments.map((c) => `- ${c}`)].join("\n");
+    execFileSync("gh", ["pr", "comment", prNumber, "--body", commentBody], {
+      stdio: "inherit",
+    });
+  }
 
   for (const issue of newIssues) {
     execFileSync(
