@@ -146,22 +146,67 @@ const AttentionPointSchema = z.object({
   accountNumber: s().optional(),
 });
 
-const FindingSchema = z.object({
-  kind: z.enum([
-    "unresolvedAmount",
-    "taxYearMismatch",
-    "signContradiction",
-    "duplicateRow",
-    "unknownAmountKind",
-    "unrecognizedDocument",
-  ]),
+// One sub-schema per Finding variant (lib/types.ts), each carrying exactly the fields its
+// kind uses. z.discriminatedUnion needs the discriminant as a literal on every branch.
+const TaxYearMismatchFindingSchema = z.object({
+  kind: z.literal("taxYearMismatch"),
+  title: s(),
+  detail: s(),
+  institution: s(),
+});
+
+const DuplicateRowFindingSchema = z.object({
+  kind: z.literal("duplicateRow"),
+  title: s(),
+  detail: s(),
+});
+
+// accountNumber is only present when raised against a jaaropgave account — property
+// bewijsstukken carry no rekeningnummer (see Property bewijsstuk in CONTEXT.md).
+const UnknownAmountKindFindingSchema = z.object({
+  kind: z.literal("unknownAmountKind"),
+  title: s(),
+  detail: s(),
+  institution: s(),
+  accountNumber: s().optional(),
+  field: s(),
+});
+
+const UnresolvedAmountFindingSchema = z.object({
+  kind: z.literal("unresolvedAmount"),
+  title: s(),
+  detail: s(),
+  institution: s(),
+  accountNumber: s(),
+  field: s(),
+});
+
+const SignContradictionFindingSchema = z.object({
+  kind: z.literal("signContradiction"),
+  title: s(),
+  detail: s(),
+  institution: s(),
+  accountNumber: s(),
+  field: s(),
+  proposedCorrection: z.object({ before: n().nullable(), after: n().nullable() }),
+});
+
+// institution is only present when the extractor could read one.
+const UnrecognizedDocumentFindingSchema = z.object({
+  kind: z.literal("unrecognizedDocument"),
   title: s(),
   detail: s(),
   institution: s().optional(),
-  accountNumber: s().optional(),
-  field: s().optional(),
-  proposedCorrection: z.object({ before: n().nullable(), after: n().nullable() }).optional(),
 });
+
+const FindingSchema = z.discriminatedUnion("kind", [
+  TaxYearMismatchFindingSchema,
+  DuplicateRowFindingSchema,
+  UnknownAmountKindFindingSchema,
+  UnresolvedAmountFindingSchema,
+  SignContradictionFindingSchema,
+  UnrecognizedDocumentFindingSchema,
+]);
 
 const PropertyStatementSchema = PropertyStatementFieldsSchema.extend({
   documentKind: z.enum(["notarisafrekening", "wozBeschikking", "makelaarsnota"]),
