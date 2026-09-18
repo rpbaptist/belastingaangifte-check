@@ -31,7 +31,11 @@ clean.
 - Search the codebase before concluding something isn't implemented.
 - Only one subagent validates (build/test); several may search/write.
 - Capture the why: when a test passes, note near it why the behavior matters.
-- Run the full test suite and `fallow audit`. Both must pass before you commit.
+- Before every commit, run every check CI runs, in the same order it does:
+  `npx tsc --noEmit`, the full test suite, `npx prettier --check .`,
+  `npm run lint`, `fallow audit`. All must pass — a commit that fails any of
+  them is not done. If Prettier fails, run `npx prettier --write .` and
+  re-check rather than hand-editing whitespace.
 - Commit with atomic commits and an imperative subject line, per this repo's
   commit style. Do NOT push and do NOT run `gh pr create` — that happens
   outside the sandbox, on the host, after you exit.
