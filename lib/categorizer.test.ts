@@ -84,6 +84,46 @@ describe("categorize — basic assembly", () => {
   });
 });
 
+// ─── Debt-only mortgage excluded from notFilledIn ──────────────────────────
+
+describe("categorize — debt-only mortgage excluded from notFilledIn", () => {
+  it("excludes a mortgage with only an opening debt and no interestPaid from notFilledIn", () => {
+    // openingDebt is a balance (schuld op 1 januari), not a declarable amount — like
+    // remainingDebt, it must never stand in as the item's display amount. Without an
+    // interestPaid figure there is nothing to declare, so the account should not surface
+    // in notFilledIn with the debt balance misrepresented as its amount (#114).
+    const statement = makeStatement("Rabobank", "mortgage", "Nummer192658069", {
+      mortgage: { openingDebt: 89956 },
+    });
+    const result = categorize(
+      makeMatchResult({ onlyInJaaropgave: [{ statement, account: statement.accounts[0] }] })
+    );
+    expect(result.notFilledIn).toHaveLength(0);
+  });
+
+  it("excludes a mortgage with only a remaining debt from notFilledIn (regression guard)", () => {
+    // remainingDebt-only exclusion already worked before #118; kept as a regression
+    // guard so the openingDebt fix above doesn't silently rely on this behavior changing.
+    const statement = makeStatement("Rabobank", "mortgage", "Nummer192658069", {
+      mortgage: { remainingDebt: 50000 },
+    });
+    const result = categorize(
+      makeMatchResult({ onlyInJaaropgave: [{ statement, account: statement.accounts[0] }] })
+    );
+    expect(result.notFilledIn).toHaveLength(0);
+  });
+
+  it("excludes a mortgage with opening debt and explicit zero interestPaid from notFilledIn", () => {
+    const statement = makeStatement("Rabobank", "mortgage", "Nummer192658069", {
+      mortgage: { openingDebt: 50000, interestPaid: 0 },
+    });
+    const result = categorize(
+      makeMatchResult({ onlyInJaaropgave: [{ statement, account: statement.accounts[0] }] })
+    );
+    expect(result.notFilledIn).toHaveLength(0);
+  });
+});
+
 // ─── notFilledIn deduplication ──────────────────────────────────────────────
 
 describe("categorize — missingStatement deduplication", () => {
@@ -564,20 +604,6 @@ describe("categorize — mid-year closed mortgage", () => {
       makeMatchResult({ onlyInJaaropgave: [{ statement, account: statement.accounts[0] }] })
     );
     expect(result.notFilledIn).toHaveLength(1);
-  });
-
-  it("excludes a mortgage with only an opening debt and no interestPaid from notFilledIn", () => {
-    // openingDebt is a balance (schuld op 1 januari), not a declarable amount — like
-    // remainingDebt, it must never stand in as the item's display amount. Without an
-    // interestPaid figure there is nothing to declare, so the account should not surface
-    // in notFilledIn with the debt balance misrepresented as its amount (#114).
-    const statement = makeStatement("Rabobank", "mortgage", "Nummer192658069", {
-      mortgage: { openingDebt: 89956 },
-    });
-    const result = categorize(
-      makeMatchResult({ onlyInJaaropgave: [{ statement, account: statement.accounts[0] }] })
-    );
-    expect(result.notFilledIn).toHaveLength(0);
   });
 });
 

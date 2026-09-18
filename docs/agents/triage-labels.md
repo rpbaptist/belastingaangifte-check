@@ -70,7 +70,7 @@ single synchronous process, so a fresh process finding the label already
 set means the prior run never got to clear it. The first time this
 happens for an issue, it's relabeled `ready-for-agent` and marked
 `hard-kill-seen` (auto-retry, same trust level as a checkpoint-timeout
-retry). If the same issue is found orphaned *again* on a later startup
+retry). If the same issue is found orphaned _again_ on a later startup
 (`hard-kill-seen` already present), the loop escalates it to
 `blocked-for-agent` instead of retrying blind a second time. Like
 `session-limit-seen`, the label is cleared once the issue succeeds.
