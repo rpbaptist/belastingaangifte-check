@@ -94,6 +94,32 @@ function readCallLog(callLogPath: string): string[] {
   }
 }
 
+// Stub `gh` for reap_orphaned_in_progress_issues tests: logs every call,
+// and answers `gh issue list ... --label in-progress-by-agent ...` with
+// the caller-supplied orphan list (number + label names), same shape
+// `gh issue list --json number,labels` returns for real.
+function stubGhForReap(orphans: { number: number; labels: string[] }[]): { callLogPath: string } {
+  const callLogPath = path.join(repoDir, "gh-calls.log");
+  const orphansJson = JSON.stringify(
+    orphans.map((o) => ({ number: o.number, labels: o.labels.map((name) => ({ name })) }))
+  );
+  writeFileSync(
+    path.join(stubBinDir, "gh"),
+    [
+      "#!/usr/bin/env bash",
+      `echo "$@" >> "${callLogPath}"`,
+      'if [[ "$1 $2" == "issue list" ]]; then',
+      `  cat <<'REAP_EOF'`,
+      orphansJson,
+      "REAP_EOF",
+      "fi",
+      "exit 0",
+    ].join("\n")
+  );
+  execFileSync("chmod", ["+x", path.join(stubBinDir, "gh")]);
+  return { callLogPath };
+}
+
 beforeEach(() => {
   repoDir = mkdtempSync(path.join(tmpdir(), "loop-sh-test-"));
   git(["init", "-q", "-b", "master"]);
@@ -280,6 +306,65 @@ describe("run_build_iteration on a checkpoint-timeout failure (#128)", () => {
   });
 });
 
+describe("reap_orphaned_in_progress_issues (#137)", () => {
+  it("does nothing when no issue is labeled in-progress-by-agent", () => {
+    const { callLogPath } = stubGhForReap([]);
+
+    runLoopFn("reap_orphaned_in_progress_issues");
+
+    const calls = readCallLog(callLogPath);
+    expect(calls.some((c) => c.startsWith("issue edit"))).toBe(false);
+    expect(calls.some((c) => c.startsWith("issue comment"))).toBe(false);
+  });
+
+  it("recovers a first-time orphan to ready-for-agent and marks hard-kill-seen", () => {
+    const { callLogPath } = stubGhForReap([{ number: 114, labels: ["in-progress-by-agent"] }]);
+
+    runLoopFn("reap_orphaned_in_progress_issues");
+
+    const calls = readCallLog(callLogPath);
+    const editCall = calls.find((c) => c.startsWith("issue edit 114"));
+    expect(editCall).toContain("--remove-label in-progress-by-agent");
+    expect(editCall).toContain("--add-label hard-kill-seen");
+    expect(editCall).toContain("--add-label ready-for-agent");
+    expect(editCall).not.toContain("blocked-for-agent");
+    expect(calls.some((c) => c.startsWith("issue comment 114"))).toBe(true);
+  });
+
+  it("escalates a second consecutive orphan to blocked-for-agent", () => {
+    const { callLogPath } = stubGhForReap([
+      { number: 115, labels: ["in-progress-by-agent", "hard-kill-seen"] },
+    ]);
+
+    runLoopFn("reap_orphaned_in_progress_issues");
+
+    const calls = readCallLog(callLogPath);
+    const editCall = calls.find((c) => c.startsWith("issue edit 115"));
+    expect(editCall).toContain("--remove-label in-progress-by-agent");
+    expect(editCall).toContain("--remove-label hard-kill-seen");
+    expect(editCall).toContain("--add-label blocked-for-agent");
+    expect(editCall).not.toContain("--add-label ready-for-agent");
+    expect(calls.some((c) => c.startsWith("issue comment 115"))).toBe(true);
+  });
+
+  it("handles multiple orphaned issues found at once", () => {
+    const { callLogPath } = stubGhForReap([
+      { number: 200, labels: ["in-progress-by-agent"] },
+      { number: 201, labels: ["in-progress-by-agent", "hard-kill-seen"] },
+    ]);
+
+    runLoopFn("reap_orphaned_in_progress_issues");
+
+    const calls = readCallLog(callLogPath);
+    expect(calls.some((c) => c.startsWith("issue edit 200") && c.includes("ready-for-agent"))).toBe(
+      true
+    );
+    expect(
+      calls.some((c) => c.startsWith("issue edit 201") && c.includes("blocked-for-agent"))
+    ).toBe(true);
+  });
+});
+
 describe("session-limit anomaly detection (#121)", () => {
   it("first-ever session-limit hit: labels session-limit-seen, writes note, does not block", () => {
     const { callLogPath } = stubGhWithCallLog([]); // no labels on the issue yet
@@ -369,6 +454,29 @@ describe("session-limit anomaly detection (#121)", () => {
     expect(
       calls.some(
         (c) => c.includes("--remove-label session-limit-seen") && c.startsWith("issue edit 63")
+      )
+    ).toBe(true);
+  });
+
+  it("success path clears hard-kill-seen alongside the other labels (#137)", () => {
+    writeFileSync(
+      path.join(stubBinDir, "npx"),
+      ["#!/usr/bin/env bash", 'echo "sandbox succeeded"', "exit 0"].join("\n")
+    );
+    execFileSync("chmod", ["+x", path.join(stubBinDir, "npx")]);
+
+    const { callLogPath } = stubGhWithCallLog(["hard-kill-seen"]);
+
+    const issueJson = JSON.stringify({ number: 116, title: "Test issue", body: "body" });
+    const issueJsonPath = path.join(repoDir, "issue.json");
+    writeFileSync(issueJsonPath, issueJson);
+
+    runLoopFn(`run_build_iteration "$(cat '${issueJsonPath}')"`);
+
+    const calls = readCallLog(callLogPath);
+    expect(
+      calls.some(
+        (c) => c.includes("--remove-label hard-kill-seen") && c.startsWith("issue edit 116")
       )
     ).toBe(true);
   });
