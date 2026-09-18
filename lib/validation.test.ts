@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { validateStatements } from "./validation";
-import type { AnnualStatementData, PropertyStatementData, TaxReturnData } from "./types";
+import type { AnnualStatementData, Finding, PropertyStatementData, TaxReturnData } from "./types";
+
+// Narrows a Finding to one variant by its kind, the way ReportSections.tsx does with
+// `"field" in f`. Kept in one place so tests read the variant-specific fields (field,
+// institution, proposedCorrection) without an `as` cast.
+function assertKind<K extends Finding["kind"]>(
+  finding: Finding,
+  kind: K
+): asserts finding is Extract<Finding, { kind: K }> {
+  expect(finding.kind).toBe(kind);
+}
 
 function makeTaxReturn(taxYear = 2024): TaxReturnData {
   return { taxYear, entries: [] };
@@ -54,12 +64,13 @@ describe("validateStatements", () => {
     );
 
     expect(findings).toHaveLength(1);
-    expect(findings[0].kind).toBe("taxYearMismatch");
-    // A wrong-year document is not fixed by editing an amount, so it carries no numeric
-    // proposedCorrection (that field is reserved for amount before/after per ADR 0008).
-    expect(findings[0].proposedCorrection).toBeUndefined();
-    expect(findings[0].detail).toContain("2023");
-    expect(findings[0].detail).toContain("2024");
+    const finding = findings[0];
+    assertKind(finding, "taxYearMismatch");
+    // A wrong-year document is not fixed by editing an amount, so its variant carries no
+    // proposedCorrection at all (that field is reserved for amount before/after per ADR 0008).
+    expect("proposedCorrection" in finding).toBe(false);
+    expect(finding.detail).toContain("2023");
+    expect(finding.detail).toContain("2024");
   });
 
   it("reports an amount whose sign contradicts its kind", () => {
@@ -78,8 +89,9 @@ describe("validateStatements", () => {
     const findings = validateStatements(makeTaxReturn(), [statement], [], [], "nl");
 
     expect(findings).toHaveLength(1);
-    expect(findings[0].kind).toBe("signContradiction");
-    expect(findings[0].proposedCorrection).toEqual({ before: -75, after: 75 });
+    const finding = findings[0];
+    assertKind(finding, "signContradiction");
+    expect(finding.proposedCorrection).toEqual({ before: -75, after: 75 });
   });
 
   it("does not flag a negative bank balance (a legitimate overdraft)", () => {
@@ -123,8 +135,9 @@ describe("validateStatements", () => {
     const findings = validateStatements(makeTaxReturn(), [statement], [], [], "nl");
 
     expect(findings).toHaveLength(1);
-    expect(findings[0].kind).toBe("unknownAmountKind");
-    expect(findings[0].field).toBe("crypto");
+    const finding = findings[0];
+    assertKind(finding, "unknownAmountKind");
+    expect(finding.field).toBe("crypto");
   });
 
   it("does not treat a negative amount inside an unknown category as a sign contradiction", () => {
@@ -185,9 +198,10 @@ describe("validateStatements", () => {
     const findings = validateStatements(makeTaxReturn(), [], [statement], [], "nl");
 
     expect(findings).toHaveLength(1);
-    expect(findings[0].kind).toBe("unknownAmountKind");
-    expect(findings[0].field).toBe("Administratiekosten");
-    expect(findings[0].institution).toBe("Notaris Jansen");
+    const finding = findings[0];
+    assertKind(finding, "unknownAmountKind");
+    expect(finding.field).toBe("Administratiekosten");
+    expect(finding.institution).toBe("Notaris Jansen");
   });
 
   it("reports a property bewijsstuk whose tax year differs from the aangifte", () => {
@@ -207,9 +221,10 @@ describe("validateStatements", () => {
     );
 
     expect(findings).toHaveLength(1);
-    expect(findings[0].kind).toBe("unrecognizedDocument");
-    expect(findings[0].institution).toBe("Onbekend BV");
-    expect(findings[0].detail).toContain("Onbekend BV");
+    const finding = findings[0];
+    assertKind(finding, "unrecognizedDocument");
+    expect(finding.institution).toBe("Onbekend BV");
+    expect(finding.detail).toContain("Onbekend BV");
   });
 
   it("reports an unrecognized document with no legible institution without crashing", () => {
@@ -222,7 +237,8 @@ describe("validateStatements", () => {
     );
 
     expect(findings).toHaveLength(1);
-    expect(findings[0].kind).toBe("unrecognizedDocument");
-    expect(findings[0].institution).toBeUndefined();
+    const finding = findings[0];
+    assertKind(finding, "unrecognizedDocument");
+    expect(finding.institution).toBeUndefined();
   });
 });
