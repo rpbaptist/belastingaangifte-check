@@ -353,7 +353,6 @@ EOF
 
 # Comment posted on an issue's first orphan recovery.
 hard_kill_reap_comment() {
-  local n="$1"
   cat <<EOF
 Recovered: found labeled \`in-progress-by-agent\` with no corresponding run — the prior attempt was likely killed out from under it (container OOM, host restart, etc.). Re-labeled \`ready-for-agent\` to retry. (loop.sh startup reap)
 EOF
@@ -361,7 +360,6 @@ EOF
 
 # Comment posted when the same issue orphans a second time in a row.
 hard_kill_anomaly_comment() {
-  local n="$1"
   cat <<EOF
 Blocked: this issue was found labeled \`in-progress-by-agent\` with no corresponding run for the second time in a row. Re-labeled \`blocked-for-agent\` instead of retrying blind again. A human should check \`ralph-logs/\` if still present, then re-label \`ready-for-agent\` to resume. (loop.sh startup reap)
 EOF
@@ -381,7 +379,7 @@ EOF
 # (hard-kill-seen already present): escalate to blocked-for-agent instead
 # of retrying blind again, mirroring is_session_limit_anomaly.
 reap_orphaned_in_progress_issues() {
-  local orphans_json n labels
+  local orphans_json n
   orphans_json="$(gh issue list --repo "$REPO" --label in-progress-by-agent \
     --json number,labels --limit 50)"
   while IFS= read -r issue_json; do
@@ -391,13 +389,13 @@ reap_orphaned_in_progress_issues() {
       gh issue edit "$n" --repo "$REPO" \
         --remove-label in-progress-by-agent --remove-label hard-kill-seen \
         --add-label blocked-for-agent
-      gh issue comment "$n" --repo "$REPO" --body "$(hard_kill_anomaly_comment "$n")"
+      gh issue comment "$n" --repo "$REPO" --body "$(hard_kill_anomaly_comment)"
       echo "Issue #$n orphaned twice in a row — blocked for human review." >&2
     else
       gh issue edit "$n" --repo "$REPO" \
         --remove-label in-progress-by-agent \
         --add-label hard-kill-seen --add-label ready-for-agent
-      gh issue comment "$n" --repo "$REPO" --body "$(hard_kill_reap_comment "$n")"
+      gh issue comment "$n" --repo "$REPO" --body "$(hard_kill_reap_comment)"
       echo "Issue #$n found in-progress-by-agent at startup with no live run — recovered to ready-for-agent." >&2
     fi
   done < <(jq -c '.[]' <<<"$orphans_json")
