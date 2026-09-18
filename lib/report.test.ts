@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
-import type { AnnualStatementData, PropertyStatementData, TaxReturnData } from "./types";
+import type { AnnualStatementData, Finding, PropertyStatementData, TaxReturnData } from "./types";
 import { buildReport } from "./report";
+
+// Narrows a Finding to one variant by its kind, the way ReportSections.tsx does with
+// `"field" in f`. Mirrors the helper in validation.test.ts.
+function assertKind<K extends Finding["kind"]>(
+  finding: Finding,
+  kind: K
+): asserts finding is Extract<Finding, { kind: K }> {
+  expect(finding.kind).toBe(kind);
+}
 
 function makeTaxReturn(overrides: Partial<TaxReturnData> = {}): TaxReturnData {
   return {
@@ -199,8 +208,9 @@ describe("buildReport", () => {
 
     expect(result.covered).toEqual([]);
     expect(result.findings).toHaveLength(1);
-    expect(result.findings[0].kind).toBe("unresolvedAmount");
-    expect(result.findings[0].field).toBe("Onbekend veld");
+    const finding = result.findings[0];
+    assertKind(finding, "unresolvedAmount");
+    expect(finding.field).toBe("Onbekend veld");
   });
 
   it("reports a bewijsstuk in a different tax year as a finding, not an attention point", () => {
