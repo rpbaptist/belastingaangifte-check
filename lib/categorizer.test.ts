@@ -565,6 +565,20 @@ describe("categorize — mid-year closed mortgage", () => {
     );
     expect(result.notFilledIn).toHaveLength(1);
   });
+
+  it("excludes a mortgage with only an opening debt and no interestPaid from notFilledIn", () => {
+    // openingDebt is a balance (schuld op 1 januari), not a declarable amount — like
+    // remainingDebt, it must never stand in as the item's display amount. Without an
+    // interestPaid figure there is nothing to declare, so the account should not surface
+    // in notFilledIn with the debt balance misrepresented as its amount (#114).
+    const statement = makeStatement("Rabobank", "mortgage", "Nummer192658069", {
+      mortgage: { openingDebt: 89956 },
+    });
+    const result = categorize(
+      makeMatchResult({ onlyInJaaropgave: [{ statement, account: statement.accounts[0] }] })
+    );
+    expect(result.notFilledIn).toHaveLength(0);
+  });
 });
 
 describe("isEndOfYearAccount", () => {
