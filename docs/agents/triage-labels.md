@@ -44,7 +44,6 @@ triage — only by the loop itself.
 | `blocked`              | A `## Blocked by` issue is still open; not actually ready yet           |
 | `in-progress-by-agent` | The loop has claimed this issue and is actively working it in a sandbox |
 | `blocked-for-agent`    | A loop iteration failed; needs human inspection before retrying         |
-| `session-limit-seen`   | This issue already survived one Claude session-limit hit                |
 | `hard-kill-seen`       | This issue already survived one hard-killed sandbox run                 |
 
 The loop also applies `ready-for-human` — from the five-role vocabulary above,
@@ -55,16 +54,12 @@ rejected, or review findings are outstanding. `main.mts` signals this by exiting
 tell "finished, a person must take it from here" apart from
 `blocked-for-agent`, which means an iteration crashed.
 
-`session-limit-seen` backs the anomaly detector in `is_session_limit_anomaly`
-(`loop.sh`): the host-side progress note a session-limit hit leaves on
-`ralph/issue-N` only updates a local, unpushed git ref, so it doesn't
-survive the host's local state being lost (restart, redeploy, disk reset,
-a deleted branch). The label lives on GitHub instead, so it does survive.
-A second session-limit hit with the label already present but no surviving
-progress-note commit means local state was lost between attempts — the
-loop relabels `blocked-for-agent` instead of retrying blind. The label is
-added on an issue's first session-limit hit and cleared again once the
-issue succeeds, so a later reopen of the same issue number starts clean.
+A session-limit hit is no longer counted on the issue. The loop used to add a
+`session-limit-seen` label and write a progress-note commit on `ralph/issue-N`,
+then compare the two to guess whether host state had been lost between
+attempts. The note carried no information beyond "a retry happened", so the
+detector was machinery guarding machinery; both are gone, and a session limit
+is simply retried. See ADR 0012, which supersedes ADR 0009.
 
 `hard-kill-seen` guards against the same "retry forever" failure mode for
 a different cause: a sandbox run that gets hard-killed (container OOM,
@@ -80,8 +75,8 @@ happens for an issue, it's relabeled `ready-for-agent` and marked
 `hard-kill-seen` (auto-retry, same trust level as a checkpoint-timeout
 retry). If the same issue is found orphaned _again_ on a later startup
 (`hard-kill-seen` already present), the loop escalates it to
-`blocked-for-agent` instead of retrying blind a second time. Like
-`session-limit-seen`, the label is cleared once the issue succeeds.
+`blocked-for-agent` instead of retrying blind a second time. The label is
+cleared once the issue succeeds.
 
 State machine: at the top of every iteration the loop re-checks every
 `blocked` issue's `## Blocked by` list and promotes it back to

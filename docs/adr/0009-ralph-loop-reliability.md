@@ -1,5 +1,9 @@
 # ADR 0009: RALPH loop reliability — local progress notes, GitHub as the durable backstop
 
+> **Superseded by [ADR 0012](0012-ralph-loop-drops-state-loss-detection.md).** The
+> loop no longer writes progress notes, and the state-loss detector and its
+> `session-limit-seen` label are removed.
+
 The unattended RALPH loop (`loop.sh` + `.sandcastle/`) retries an issue across Claude
 session-limit resets. A retry that re-explores the codebase from scratch every time
 burns a full session budget on rediscovery instead of finishing the issue (#106
