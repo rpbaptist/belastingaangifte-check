@@ -93,32 +93,6 @@ function readCallLog(callLogPath: string): string[] {
   }
 }
 
-// Stub `gh` for reap_orphaned_in_progress_issues tests: logs every call,
-// and answers `gh issue list ... --label in-progress-by-agent ...` with
-// the caller-supplied orphan list (number + label names), same shape
-// `gh issue list --json number,labels` returns for real.
-function stubGhForReap(orphans: { number: number; labels: string[] }[]): { callLogPath: string } {
-  const callLogPath = path.join(repoDir, "gh-calls.log");
-  const orphansJson = JSON.stringify(
-    orphans.map((o) => ({ number: o.number, labels: o.labels.map((name) => ({ name })) }))
-  );
-  writeFileSync(
-    path.join(stubBinDir, "gh"),
-    [
-      "#!/usr/bin/env bash",
-      `echo "$@" >> "${callLogPath}"`,
-      'if [[ "$1 $2" == "issue list" ]]; then',
-      `  cat <<'REAP_EOF'`,
-      orphansJson,
-      "REAP_EOF",
-      "fi",
-      "exit 0",
-    ].join("\n")
-  );
-  execFileSync("chmod", ["+x", path.join(stubBinDir, "gh")]);
-  return { callLogPath };
-}
-
 beforeEach(() => {
   repoDir = mkdtempSync(path.join(tmpdir(), "loop-sh-test-"));
   git(["init", "-q", "-b", "master"]);
@@ -168,10 +142,6 @@ describe("run_build_iteration writes no notes of its own (#147)", () => {
     const calls = readCallLog(callLogPath);
     expect(calls.some((c) => c.includes("session-limit-seen"))).toBe(false);
     expect(calls.some((c) => c.includes("blocked-for-agent"))).toBe(false);
-    // The issue stays ready-for-agent, so the next sweep retries it.
-    expect(calls).toContain(
-      "issue edit 55 --repo rpbaptist/belastingaangifte-check --remove-label in-progress-by-agent"
-    );
   });
 
   it("commits no note on a checkpoint-timeout failure either", () => {
@@ -195,21 +165,31 @@ describe("run_build_iteration writes no notes of its own (#147)", () => {
 // Stub `gh` so `gh issue list --label ready-for-agent --json ...` answers with
 // the caller's candidates, in the shape pick_issue parses. Everything else is
 // a silent no-op, so an issue's blockers read as closed.
-function stubGhWithCandidates(issues: { number: number; title: string; body: string }[]) {
+function stubGhWithCandidates(issues: { number: number; title: string; body: string }[]): {
+  callLogPath: string;
+} {
+  const callLogPath = path.join(repoDir, "gh-calls.log");
   const candidatesJson = JSON.stringify(issues.map((i) => ({ ...i, labels: [] })));
   writeFileSync(
     path.join(stubBinDir, "gh"),
     [
       "#!/usr/bin/env bash",
+      `echo "$@" >> "${callLogPath}"`,
       'if [[ "$1 $2" == "issue list" ]]; then',
       "  cat <<'LIST_EOF'",
       candidatesJson,
       "LIST_EOF",
       "fi",
+      // Any issue looked up as a blocker answers OPEN, so a "## Blocked by"
+      // section in a candidate's body means a real open blocker.
+      'if [[ "$1 $2" == "issue view" ]]; then',
+      '  echo "OPEN"',
+      "fi",
       "exit 0",
     ].join("\n")
   );
   execFileSync("chmod", ["+x", path.join(stubBinDir, "gh")]);
+  return { callLogPath };
 }
 
 describe("failure handling without classification (#148)", () => {
@@ -229,12 +209,9 @@ describe("failure handling without classification (#148)", () => {
 
     expect(output).toContain("SET_ASIDE");
 
-    const calls = readCallLog(callLogPath);
-    expect(calls.some((c) => c.includes("blocked-for-agent"))).toBe(false);
-    expect(calls.some((c) => c.includes("--remove-label ready-for-agent"))).toBe(false);
-    expect(calls).toContain(
-      "issue edit 90 --repo rpbaptist/belastingaangifte-check --remove-label in-progress-by-agent"
-    );
+    // Nothing is written to the tracker at all: the issue is already
+    // ready-for-agent, which is exactly the state a retry wants.
+    expect(readCallLog(callLogPath)).toEqual([]);
   });
 
   it("backs off after a failure", () => {
@@ -304,6 +281,61 @@ describe("pick_issue and the set-aside list (#148)", () => {
   });
 });
 
+describe("blocked issues in selection (#149)", () => {
+  // Selection already computes open blockers, so the loop no longer relabels
+  // an issue `blocked` and comments about it, only to undo both once the
+  // blocker closes. It skips the issue and says nothing.
+  it("skips an issue with an open blocker without writing to the tracker", () => {
+    const { callLogPath } = stubGhWithCandidates([
+      { number: 10, title: "Blocked", body: "## Blocked by\n\n- #9 (prerequisite)\n" },
+      { number: 11, title: "Workable", body: "No blockers here." },
+    ]);
+
+    const picked = runLoopFn(`pick_issue`);
+
+    expect(JSON.parse(picked.trim()).number).toBe(11);
+
+    const calls = readCallLog(callLogPath);
+    expect(calls.some((c) => c.startsWith("issue edit"))).toBe(false);
+    expect(calls.some((c) => c.startsWith("issue comment"))).toBe(false);
+  });
+
+  it("picks the issue on its own once the blocker closes", () => {
+    // Same issue, same body — only the blocker's state differs, and the stub
+    // now reports it closed. Nothing relabels the issue in between.
+    const { callLogPath } = stubGhWithCandidates([
+      { number: 10, title: "Was blocked", body: "## Blocked by\n\n- #9 (prerequisite)\n" },
+    ]);
+    writeFileSync(
+      path.join(stubBinDir, "gh"),
+      readFileSync(path.join(stubBinDir, "gh"), "utf-8").replace('echo "OPEN"', 'echo "CLOSED"')
+    );
+
+    const picked = runLoopFn(`pick_issue`);
+
+    expect(JSON.parse(picked.trim()).number).toBe(10);
+    expect(readCallLog(callLogPath).some((c) => c.startsWith("issue edit"))).toBe(false);
+  });
+});
+
+describe("run_build_iteration on success", () => {
+  // Two labels, not six: ready-for-agent in, ready-for-human out. A merged
+  // issue just loses its input label.
+  it("clears ready-for-agent and touches nothing else", () => {
+    stubNpx(['echo "sandbox succeeded"', "exit 0"]);
+    const { callLogPath } = stubGhWithCallLog([]);
+
+    const issueJsonPath = path.join(repoDir, "issue.json");
+    writeFileSync(issueJsonPath, JSON.stringify({ number: 63, title: "Test issue", body: "body" }));
+
+    runLoopFn(`run_build_iteration "$(cat '${issueJsonPath}')"`);
+
+    expect(readCallLog(callLogPath)).toEqual([
+      "issue edit 63 --repo rpbaptist/belastingaangifte-check --remove-label ready-for-agent",
+    ]);
+  });
+});
+
 describe("run_build_iteration when main.mts reports needs-human (exit 2)", () => {
   it("hands the issue to a person rather than clearing it or reporting a crash", () => {
     writeFileSync(
@@ -335,89 +367,5 @@ describe("run_build_iteration when main.mts reports needs-human (exit 2)", () =>
     expect(editCall).toContain("--add-label ready-for-human");
     expect(editCall).toContain("--remove-label ready-for-agent");
     expect(calls.some((c) => c.includes("blocked-for-agent"))).toBe(false);
-  });
-});
-
-describe("reap_orphaned_in_progress_issues (#137)", () => {
-  it("does nothing when no issue is labeled in-progress-by-agent", () => {
-    const { callLogPath } = stubGhForReap([]);
-
-    runLoopFn("reap_orphaned_in_progress_issues");
-
-    const calls = readCallLog(callLogPath);
-    expect(calls.some((c) => c.startsWith("issue edit"))).toBe(false);
-    expect(calls.some((c) => c.startsWith("issue comment"))).toBe(false);
-  });
-
-  it("recovers a first-time orphan to ready-for-agent and marks hard-kill-seen", () => {
-    const { callLogPath } = stubGhForReap([{ number: 114, labels: ["in-progress-by-agent"] }]);
-
-    runLoopFn("reap_orphaned_in_progress_issues");
-
-    const calls = readCallLog(callLogPath);
-    const editCall = calls.find((c) => c.startsWith("issue edit 114"));
-    expect(editCall).toContain("--remove-label in-progress-by-agent");
-    expect(editCall).toContain("--add-label hard-kill-seen");
-    expect(editCall).toContain("--add-label ready-for-agent");
-    expect(editCall).not.toContain("blocked-for-agent");
-    expect(calls.some((c) => c.startsWith("issue comment 114"))).toBe(true);
-  });
-
-  it("escalates a second consecutive orphan to blocked-for-agent", () => {
-    const { callLogPath } = stubGhForReap([
-      { number: 115, labels: ["in-progress-by-agent", "hard-kill-seen"] },
-    ]);
-
-    runLoopFn("reap_orphaned_in_progress_issues");
-
-    const calls = readCallLog(callLogPath);
-    const editCall = calls.find((c) => c.startsWith("issue edit 115"));
-    expect(editCall).toContain("--remove-label in-progress-by-agent");
-    expect(editCall).toContain("--remove-label hard-kill-seen");
-    expect(editCall).toContain("--add-label blocked-for-agent");
-    expect(editCall).not.toContain("--add-label ready-for-agent");
-    expect(calls.some((c) => c.startsWith("issue comment 115"))).toBe(true);
-  });
-
-  it("handles multiple orphaned issues found at once", () => {
-    const { callLogPath } = stubGhForReap([
-      { number: 200, labels: ["in-progress-by-agent"] },
-      { number: 201, labels: ["in-progress-by-agent", "hard-kill-seen"] },
-    ]);
-
-    runLoopFn("reap_orphaned_in_progress_issues");
-
-    const calls = readCallLog(callLogPath);
-    expect(calls.some((c) => c.startsWith("issue edit 200") && c.includes("ready-for-agent"))).toBe(
-      true
-    );
-    expect(
-      calls.some((c) => c.startsWith("issue edit 201") && c.includes("blocked-for-agent"))
-    ).toBe(true);
-  });
-});
-
-describe("run_build_iteration on success", () => {
-  it("success path clears hard-kill-seen alongside the other labels (#137)", () => {
-    writeFileSync(
-      path.join(stubBinDir, "npx"),
-      ["#!/usr/bin/env bash", 'echo "sandbox succeeded"', "exit 0"].join("\n")
-    );
-    execFileSync("chmod", ["+x", path.join(stubBinDir, "npx")]);
-
-    const { callLogPath } = stubGhWithCallLog(["hard-kill-seen"]);
-
-    const issueJson = JSON.stringify({ number: 116, title: "Test issue", body: "body" });
-    const issueJsonPath = path.join(repoDir, "issue.json");
-    writeFileSync(issueJsonPath, issueJson);
-
-    runLoopFn(`run_build_iteration "$(cat '${issueJsonPath}')"`);
-
-    const calls = readCallLog(callLogPath);
-    expect(
-      calls.some(
-        (c) => c.includes("--remove-label hard-kill-seen") && c.startsWith("issue edit 116")
-      )
-    ).toBe(true);
   });
 });
