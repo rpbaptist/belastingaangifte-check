@@ -88,10 +88,7 @@ export async function runReview(args: {
     },
     hooks: {
       sandbox: {
-        onSandboxReady: [
-          { command: GIT_IDENTITY_COMMAND },
-          { command: "npm ci" },
-        ],
+        onSandboxReady: [{ command: GIT_IDENTITY_COMMAND }, { command: "npm ci" }],
       },
     },
     output: Output.object({
@@ -320,10 +317,7 @@ async function fixCiFailures(args: {
     },
     hooks: {
       sandbox: {
-        onSandboxReady: [
-          { command: GIT_IDENTITY_COMMAND },
-          { command: "npm ci" },
-        ],
+        onSandboxReady: [{ command: GIT_IDENTITY_COMMAND }, { command: "npm ci" }],
       },
     },
   });
