@@ -130,31 +130,67 @@ try {
   execFileSync("git", ["push", "-u", "origin", result.branch], {
     stdio: "inherit",
   });
-  const prUrl = execFileSync(
+  // A retried issue resumes onto the same branch, so a PR from an earlier
+  // attempt may already be open. `gh pr create` fails hard in that case, which
+  // used to strand finished work: the loop recorded a failure and runReview
+  // never ran. Reuse instead — every attempt after the first depends on it.
+  const existingPrNumber = execFileSync(
     "gh",
     [
       "pr",
-      "create",
+      "list",
       "--head",
       result.branch,
-      "--title",
-      issueTitle,
-      "--body",
-      `${result.output || "No description provided."}\n\nCloses #${issueNumber}`,
+      "--base",
+      "master",
+      "--state",
+      "open",
+      "--json",
+      "number",
+      "-q",
+      ".[0].number",
     ],
     { encoding: "utf-8" }
   ).trim();
-  console.log(`PR opened: ${prUrl}`);
-  prNumber = prUrl.split("/").pop()!;
+  if (existingPrNumber) {
+    prNumber = existingPrNumber;
+    console.log(`PR #${prNumber} already open for ${result.branch} — reusing it.`);
+  } else {
+    const prUrl = execFileSync(
+      "gh",
+      [
+        "pr",
+        "create",
+        "--head",
+        result.branch,
+        "--title",
+        issueTitle,
+        "--body",
+        `${result.output || "No description provided."}\n\nCloses #${issueNumber}`,
+      ],
+      { encoding: "utf-8" }
+    ).trim();
+    console.log(`PR opened: ${prUrl}`);
+    prNumber = prUrl.split("/").pop()!;
+  }
 } catch (err) {
-  console.error(`Push or PR creation failed for ${result.branch}:`, err);
+  console.error(`Push, PR lookup, or PR creation failed for ${result.branch}:`, err);
   process.exit(1);
 }
 
 // Self-review pass, per AGENTS.md: "Review the PR and leave findings as
 // comments. Address small review issues directly." Shared with review.mts
 // — see review-lib.mts.
-await runReview({ prNumber, issueNumber, branch: result.branch });
+const outcome = await runReview({ prNumber, issueNumber, branch: result.branch });
 
-console.log(`Success: ${result.branch}, PR #${prNumber} built and reviewed.`);
+// Three outcomes, not two. Exit 2 means the work exists but a person has to
+// take it from here (CI still red, merge rejected, or review findings
+// outstanding), so loop.sh can label the issue ready-for-human instead of
+// clearing it as done. Exit 1 stays reserved for a genuine failure.
+if (outcome === "needs-human") {
+  console.log(`Needs human: ${result.branch}, PR #${prNumber} left open.`);
+  process.exit(2);
+}
+
+console.log(`Success: ${result.branch}, PR #${prNumber} merged.`);
 process.exit(0);

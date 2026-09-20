@@ -2,6 +2,7 @@ import { run, claudeCode, Output } from "@ai-hero/sandcastle";
 import { docker } from "@ai-hero/sandcastle/sandboxes/docker";
 import { execFileSync } from "node:child_process";
 import { z } from "zod";
+import { reviewOutcome, type ReviewOutcome } from "./review-outcome.mts";
 
 // Shared by main.mts (build → review) and review.mts (review-only, any
 // existing PR). Previously duplicated between the two — pulled out after
@@ -26,7 +27,7 @@ export async function runReview(args: {
   readonly prNumber: string;
   readonly issueNumber: string;
   readonly branch: string;
-}): Promise<void> {
+}): Promise<ReviewOutcome> {
   const { prNumber, issueNumber, branch } = args;
 
   const allComments = JSON.parse(
@@ -138,9 +139,10 @@ export async function runReview(args: {
   // only exists for something that still needs action — so its absence is
   // exactly the merge gate. A pending comment means human/agent
   // follow-up is expected first, so leave the PR open.
-  if (comments.length === 0) {
-    await mergeAndCleanUp(prNumber, branch);
-  }
+  // Findings mean follow-up is expected before this can land, so the merge is
+  // not attempted at all — which is itself a "did not merge" outcome.
+  const merged = comments.length === 0 ? await mergeAndCleanUp(prNumber, branch) : false;
+  return reviewOutcome(merged);
 }
 
 // `ci`'s format/lint checks fail on drift the build/review agents don't run
@@ -192,8 +194,12 @@ const MAX_CI_FIX_ATTEMPTS = 2;
 // called once review found nothing outstanding. Still gated on CI passing —
 // a clean review says nothing about build/test health — but a failing run
 // gets up to MAX_CI_FIX_ATTEMPTS agent fix passes before giving up on it.
-async function mergeAndCleanUp(prNumber: string, branch: string): Promise<void> {
-  if (!(await ensureChecksPass(prNumber, branch))) return;
+//
+// Returns whether the merge happened. False means the PR is still open and a
+// human has to pick it up, which the caller turns into a "needs-human"
+// outcome rather than reporting success.
+async function mergeAndCleanUp(prNumber: string, branch: string): Promise<boolean> {
+  if (!(await ensureChecksPass(prNumber, branch))) return false;
 
   try {
     execFileSync("gh", ["pr", "merge", prNumber, "--squash", "--delete-branch"], {
@@ -201,7 +207,7 @@ async function mergeAndCleanUp(prNumber: string, branch: string): Promise<void> 
     });
   } catch (err) {
     console.error(`Merge failed for PR #${prNumber} — leaving open for a human.`, err);
-    return;
+    return false;
   }
 
   // gh's --delete-branch removes the remote branch; the host's local
@@ -212,6 +218,7 @@ async function mergeAndCleanUp(prNumber: string, branch: string): Promise<void> 
     // No local ref to remove — fine.
   }
   console.log(`Merged PR #${prNumber} and deleted branch ${branch}.`);
+  return true;
 }
 
 // Watches checks to completion, and on a failure hands off to an agent fix
