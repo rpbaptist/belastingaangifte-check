@@ -306,6 +306,31 @@ describe("run_build_iteration on a checkpoint-timeout failure (#128)", () => {
   });
 });
 
+describe("run_build_iteration on a generic (non-transient) failure", () => {
+  it("clears ready-for-agent alongside adding blocked-for-agent, so the issue can't linger as both", () => {
+    writeFileSync(
+      path.join(stubBinDir, "npx"),
+      ["#!/usr/bin/env bash", 'echo "some unrelated agent error"', "exit 1"].join("\n")
+    );
+    execFileSync("chmod", ["+x", path.join(stubBinDir, "npx")]);
+
+    const { callLogPath } = stubGhWithCallLog(["ready-for-agent"]);
+
+    const issueJson = JSON.stringify({ number: 90, title: "Test issue", body: "body" });
+    const issueJsonPath = path.join(repoDir, "issue.json");
+    writeFileSync(issueJsonPath, issueJson);
+
+    runLoopFn(`run_build_iteration "$(cat '${issueJsonPath}')"`);
+
+    const calls = readCallLog(callLogPath);
+    const editCall = calls.find(
+      (c) => c.startsWith("issue edit 90") && c.includes("blocked-for-agent")
+    );
+    expect(editCall).toContain("--add-label blocked-for-agent");
+    expect(editCall).toContain("--remove-label ready-for-agent");
+  });
+});
+
 describe("reap_orphaned_in_progress_issues (#137)", () => {
   it("does nothing when no issue is labeled in-progress-by-agent", () => {
     const { callLogPath } = stubGhForReap([]);
@@ -428,6 +453,7 @@ describe("session-limit anomaly detection (#121)", () => {
     const calls = readCallLog(callLogPath);
     expect(calls.some((c) => c.includes("--add-label blocked-for-agent"))).toBe(true);
     expect(calls.some((c) => c.includes("--remove-label session-limit-seen"))).toBe(true);
+    expect(calls.some((c) => c.includes("--remove-label ready-for-agent"))).toBe(true);
     expect(calls.some((c) => c.startsWith("issue comment 62"))).toBe(true);
 
     // No note written, no branch created for this run.
