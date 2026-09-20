@@ -331,6 +331,40 @@ describe("run_build_iteration on a generic (non-transient) failure", () => {
   });
 });
 
+describe("run_build_iteration when main.mts reports needs-human (exit 2)", () => {
+  it("hands the issue to a person rather than clearing it or reporting a crash", () => {
+    writeFileSync(
+      path.join(stubBinDir, "npx"),
+      [
+        "#!/usr/bin/env bash",
+        'echo "Needs human: ralph/issue-91, PR #200 left open."',
+        "exit 2",
+      ].join("\n")
+    );
+    execFileSync("chmod", ["+x", path.join(stubBinDir, "npx")]);
+
+    const { callLogPath } = stubGhWithCallLog(["ready-for-agent"]);
+
+    const issueJson = JSON.stringify({ number: 91, title: "Test issue", body: "body" });
+    const issueJsonPath = path.join(repoDir, "issue.json");
+    writeFileSync(issueJsonPath, issueJson);
+
+    runLoopFn(`run_build_iteration "$(cat '${issueJsonPath}')"`);
+
+    const calls = readCallLog(callLogPath);
+    const editCall = calls.find(
+      (c) => c.startsWith("issue edit 91") && c.includes("ready-for-human")
+    );
+    // Exit 2 means the work landed but the PR is parked — CI red, merge
+    // rejected, or findings outstanding. Clearing ready-for-agent stops the
+    // loop re-picking finished work; blocked-for-agent would wrongly report a
+    // crash, which is what used to happen before main.mts had a third outcome.
+    expect(editCall).toContain("--add-label ready-for-human");
+    expect(editCall).toContain("--remove-label ready-for-agent");
+    expect(calls.some((c) => c.includes("blocked-for-agent"))).toBe(false);
+  });
+});
+
 describe("reap_orphaned_in_progress_issues (#137)", () => {
   it("does nothing when no issue is labeled in-progress-by-agent", () => {
     const { callLogPath } = stubGhForReap([]);
