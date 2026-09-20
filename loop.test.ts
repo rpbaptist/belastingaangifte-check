@@ -49,41 +49,40 @@ function stubGhWithCallLog(labels: string[] = []): { callLogPath: string } {
   return { callLogPath };
 }
 
-function stubSessionLimitNpx() {
-  writeFileSync(
-    path.join(stubBinDir, "npx"),
-    [
-      "#!/usr/bin/env bash",
-      'echo "agent output"',
-      'echo "You\'ve hit your session limit \\xc2\\xb7 resets 11:50am (UTC)"',
-      "exit 1",
-    ].join("\n")
-  );
+function stubNpx(lines: string[]) {
+  writeFileSync(path.join(stubBinDir, "npx"), ["#!/usr/bin/env bash", ...lines].join("\n"));
   execFileSync("chmod", ["+x", path.join(stubBinDir, "npx")]);
-  writeFileSync(path.join(stubBinDir, "sleep"), "#!/usr/bin/env bash\nexit 0\n");
-  execFileSync("chmod", ["+x", path.join(stubBinDir, "sleep")]);
 }
 
-// Fails like main.mts does on a checkpoint-timeout: prints the sentinel
-// line classifyRunError()/is_checkpoint_timeout() key off, exits non-zero.
-// Also stubs `sleep` as a hard failure — a checkpoint-timeout retry must
-// never call it (no wait_out_session_limit-style backoff, see #128).
+function stubSessionLimitNpx() {
+  stubNpx([
+    'echo "agent output"',
+    'echo "You\'ve hit your session limit \\xc2\\xb7 resets 11:50am (UTC)"',
+    "exit 1",
+  ]);
+}
+
+// Fails like main.mts does when its wall-clock ceiling fires: prints the
+// sentinel line and exits non-zero. The loop no longer reads that line — it
+// is here because this is what a real timed-out run looks like.
 function stubCheckpointTimeoutNpx() {
-  writeFileSync(
-    path.join(stubBinDir, "npx"),
-    [
-      "#!/usr/bin/env bash",
-      'echo "agent output"',
-      'echo "RALPH_CHECKPOINT_TIMEOUT_HIT: run exceeded 90m (5400000ms)"',
-      "exit 1",
-    ].join("\n")
-  );
-  execFileSync("chmod", ["+x", path.join(stubBinDir, "npx")]);
-  writeFileSync(
-    path.join(stubBinDir, "sleep"),
-    ["#!/usr/bin/env bash", 'echo "sleep should not be called" >&2', "exit 1"].join("\n")
-  );
-  execFileSync("chmod", ["+x", path.join(stubBinDir, "sleep")]);
+  stubNpx([
+    'echo "agent output"',
+    'echo "RALPH_CHECKPOINT_TIMEOUT_HIT: run exceeded 90m (5400000ms)"',
+    "exit 1",
+  ]);
+}
+
+function sleepCallLogPath() {
+  return path.join(repoDir, "sleep-calls.log");
+}
+
+function readSleepCalls(): string[] {
+  try {
+    return readFileSync(sleepCallLogPath(), "utf-8").trim().split("\n").filter(Boolean);
+  } catch {
+    return [];
+  }
 }
 
 function readCallLog(callLogPath: string): string[] {
@@ -134,6 +133,14 @@ beforeEach(() => {
   // so PATH is consistent as more behaviors are added.
   writeFileSync(path.join(stubBinDir, "gh"), "#!/usr/bin/env bash\nexit 0\n");
   execFileSync("chmod", ["+x", path.join(stubBinDir, "gh")]);
+
+  // The loop backs off after a failure and sleeps when nothing is workable.
+  // Log the durations instead of waiting them out.
+  writeFileSync(
+    path.join(stubBinDir, "sleep"),
+    ["#!/usr/bin/env bash", `echo "$@" >> "${sleepCallLogPath()}"`, "exit 0"].join("\n")
+  );
+  execFileSync("chmod", ["+x", path.join(stubBinDir, "sleep")]);
 });
 
 afterEach(() => {
@@ -185,78 +192,115 @@ describe("run_build_iteration writes no notes of its own (#147)", () => {
   });
 });
 
-describe("session-limit detection", () => {
-  it("matches a differently-cased session-limit message", () => {
-    const logFile = path.join(repoDir, "cased.log");
-    writeFileSync(logFile, "You've Hit Your SESSION LIMIT · resets 9:00am (UTC)\n");
+// Stub `gh` so `gh issue list --label ready-for-agent --json ...` answers with
+// the caller's candidates, in the shape pick_issue parses. Everything else is
+// a silent no-op, so an issue's blockers read as closed.
+function stubGhWithCandidates(issues: { number: number; title: string; body: string }[]) {
+  const candidatesJson = JSON.stringify(issues.map((i) => ({ ...i, labels: [] })));
+  writeFileSync(
+    path.join(stubBinDir, "gh"),
+    [
+      "#!/usr/bin/env bash",
+      'if [[ "$1 $2" == "issue list" ]]; then',
+      "  cat <<'LIST_EOF'",
+      candidatesJson,
+      "LIST_EOF",
+      "fi",
+      "exit 0",
+    ].join("\n")
+  );
+  execFileSync("chmod", ["+x", path.join(stubBinDir, "gh")]);
+}
 
-    const output = runLoopFn(`is_transient_failure "${logFile}" && echo MATCHED || echo NO_MATCH`);
-    expect(output.trim()).toBe("MATCHED");
-  });
-});
-
-describe("config-lock contention (#145)", () => {
-  it("is no longer treated as transient, because the sandbox can no longer cause it", () => {
-    // The sandbox writes its git identity to the container's own global
-    // config (.sandcastle/git-identity.mts), so it never writes the config
-    // file the host shares. A lock error here would therefore come from
-    // something else, and retrying it forever would hide that.
-    const logFile = path.join(repoDir, "config-lock.log");
-    writeFileSync(logFile, "error: could not lock config file .git/config: File exists\n");
-
-    const output = runLoopFn(`is_transient_failure "${logFile}" && echo MATCHED || echo NO_MATCH`);
-    expect(output.trim()).toBe("NO_MATCH");
-  });
-});
-
-describe("checkpoint-timeout detection (#128)", () => {
-  it("is_checkpoint_timeout matches the sentinel line", () => {
-    const logFile = path.join(repoDir, "checkpoint.log");
-    writeFileSync(logFile, "RALPH_CHECKPOINT_TIMEOUT_HIT: run exceeded 90m (5400000ms)\n");
-
-    const output = runLoopFn(`is_checkpoint_timeout "${logFile}" && echo MATCHED || echo NO_MATCH`);
-    expect(output.trim()).toBe("MATCHED");
-  });
-
-  it("is_checkpoint_timeout does not match an unrelated failure", () => {
-    const logFile = path.join(repoDir, "other.log");
-    writeFileSync(logFile, "some unrelated agent error\n");
-
-    const output = runLoopFn(`is_checkpoint_timeout "${logFile}" && echo MATCHED || echo NO_MATCH`);
-    expect(output.trim()).toBe("NO_MATCH");
-  });
-
-  it("is_transient_failure treats a checkpoint-timeout as transient", () => {
-    const logFile = path.join(repoDir, "checkpoint2.log");
-    writeFileSync(logFile, "RALPH_CHECKPOINT_TIMEOUT_HIT: run exceeded 90m (5400000ms)\n");
-
-    const output = runLoopFn(`is_transient_failure "${logFile}" && echo MATCHED || echo NO_MATCH`);
-    expect(output.trim()).toBe("MATCHED");
-  });
-});
-
-describe("run_build_iteration on a generic (non-transient) failure", () => {
-  it("clears ready-for-agent alongside adding blocked-for-agent, so the issue can't linger as both", () => {
-    writeFileSync(
-      path.join(stubBinDir, "npx"),
-      ["#!/usr/bin/env bash", 'echo "some unrelated agent error"', "exit 1"].join("\n")
-    );
-    execFileSync("chmod", ["+x", path.join(stubBinDir, "npx")]);
-
+describe("failure handling without classification (#148)", () => {
+  // The loop no longer asks why a run failed. Log-grepping classification was
+  // wrong for a quarter of recorded runs — those logs hold only a pointer to
+  // the real log — and every branch it chose between ended in "try again".
+  it("keeps ready-for-agent and sets the issue aside instead of blocking it", () => {
+    stubNpx(['echo "some unrelated agent error"', "exit 1"]);
     const { callLogPath } = stubGhWithCallLog(["ready-for-agent"]);
 
-    const issueJson = JSON.stringify({ number: 90, title: "Test issue", body: "body" });
     const issueJsonPath = path.join(repoDir, "issue.json");
-    writeFileSync(issueJsonPath, issueJson);
+    writeFileSync(issueJsonPath, JSON.stringify({ number: 90, title: "Test issue", body: "body" }));
+
+    const output = runLoopFn(
+      `run_build_iteration "$(cat '${issueJsonPath}')"; issue_set_aside 90 && echo SET_ASIDE`
+    );
+
+    expect(output).toContain("SET_ASIDE");
+
+    const calls = readCallLog(callLogPath);
+    expect(calls.some((c) => c.includes("blocked-for-agent"))).toBe(false);
+    expect(calls.some((c) => c.includes("--remove-label ready-for-agent"))).toBe(false);
+    expect(calls).toContain(
+      "issue edit 90 --repo rpbaptist/belastingaangifte-check --remove-label in-progress-by-agent"
+    );
+  });
+
+  it("backs off after a failure", () => {
+    stubNpx(['echo "some unrelated agent error"', "exit 1"]);
+    stubGhWithCallLog([]);
+
+    const issueJsonPath = path.join(repoDir, "issue.json");
+    writeFileSync(issueJsonPath, JSON.stringify({ number: 92, title: "Test issue", body: "body" }));
 
     runLoopFn(`run_build_iteration "$(cat '${issueJsonPath}')"`);
 
-    const calls = readCallLog(callLogPath);
-    const editCall = calls.find(
-      (c) => c.startsWith("issue edit 90") && c.includes("blocked-for-agent")
+    expect(readSleepCalls()).toEqual(["60"]);
+  });
+
+  // A session limit is 15 of 37 recorded failures and is account-global, not
+  // issue-specific. It gets no special path: the same set-aside and backoff
+  // apply, and the limit resets while the loop sleeps between sweeps.
+  it("treats a session limit like any other failure", () => {
+    stubSessionLimitNpx();
+    const { callLogPath } = stubGhWithCallLog([]);
+
+    const issueJsonPath = path.join(repoDir, "issue.json");
+    writeFileSync(issueJsonPath, JSON.stringify({ number: 93, title: "Test issue", body: "body" }));
+
+    const output = runLoopFn(
+      `run_build_iteration "$(cat '${issueJsonPath}')"; issue_set_aside 93 && echo SET_ASIDE`
     );
-    expect(editCall).toContain("--add-label blocked-for-agent");
-    expect(editCall).toContain("--remove-label ready-for-agent");
+
+    expect(output).toContain("SET_ASIDE");
+    // Not the reset time parsed out of the log, which is gone with the
+    // classifier: one fixed backoff, whatever the failure was.
+    expect(readSleepCalls()).toEqual(["60"]);
+    expect(readCallLog(callLogPath).some((c) => c.includes("blocked-for-agent"))).toBe(false);
+  });
+});
+
+describe("pick_issue and the set-aside list (#148)", () => {
+  it("skips an issue set aside earlier in this sweep", () => {
+    stubGhWithCandidates([
+      { number: 10, title: "First", body: "no blockers" },
+      { number: 11, title: "Second", body: "no blockers" },
+    ]);
+
+    const picked = runLoopFn(`set_aside_issue 10; pick_issue`);
+
+    expect(JSON.parse(picked.trim()).number).toBe(11);
+  });
+
+  // The list is a space-padded string matched with a glob, so issue 1 must not
+  // stand in for issue 11 or 21.
+  it("matches whole issue numbers, not prefixes or suffixes", () => {
+    const output = runLoopFn(
+      `set_aside_issue 1; issue_set_aside 11 && echo WRONG_11; issue_set_aside 21 && echo WRONG_21; issue_set_aside 1 && echo RIGHT_1`
+    );
+
+    expect(output.trim()).toBe("RIGHT_1");
+  });
+
+  it("picks the set-aside issue again once a new sweep starts", () => {
+    stubGhWithCandidates([{ number: 10, title: "First", body: "no blockers" }]);
+
+    const skipped = runLoopFn(`set_aside_issue 10; pick_issue`);
+    expect(skipped.trim()).toBe("");
+
+    const picked = runLoopFn(`set_aside_issue 10; start_new_sweep; pick_issue`);
+    expect(JSON.parse(picked.trim()).number).toBe(10);
   });
 });
 

@@ -3,10 +3,11 @@
 #
 # main.mts (.sandcastle/main.mts) owns sandboxing, branch strategy, commit
 # verification, push, and PR creation. loop.sh stays dumb: pick an issue,
-# label it, run main.mts, read its exit code, relabel.
+# label it, run main.mts, read its exit code, relabel. It never inspects a
+# run's output — a failure means "try this one again later", whatever it was.
 #
 # Usage:
-#   ./loop.sh                          # unlimited iterations (build: claude)
+#   ./loop.sh                          # runs until stopped (build: claude)
 #   ./loop.sh 20                       # cap at 20 iterations (build: claude)
 #   ./loop.sh --agent opencode         # use opencode for build, review stays claude
 #   ./loop.sh --agent opencode 20      # cap at 20 iterations, build: opencode
@@ -61,6 +62,34 @@ case "$AGENT" in
     exit 2
     ;;
 esac
+
+# Issues that failed during this sweep, as a space-padded list of numbers.
+# The loop never asks why a run failed: the issue is set aside here, the loop
+# backs off and moves on, and start_new_sweep clears the list so the issue is
+# retried later. Nothing about a failure is recorded anywhere durable, so a
+# fresh loop.sh process starts with a clean slate by construction.
+SET_ASIDE_ISSUES=" "
+
+# Seconds to wait after a failed iteration, and seconds to sleep when nothing
+# is workable. The idle sleep is what makes a Claude session limit
+# self-resolving: the limit resets while the loop waits, and no code here
+# knows that session limits exist. Overridable for tests.
+FAILURE_BACKOFF_SECS="${RALPH_FAILURE_BACKOFF_SECS:-60}"
+IDLE_SLEEP_SECS="${RALPH_IDLE_SLEEP_SECS:-1800}"
+
+set_aside_issue() {
+  SET_ASIDE_ISSUES="${SET_ASIDE_ISSUES}${1} "
+}
+
+issue_set_aside() {
+  [[ "$SET_ASIDE_ISSUES" == *" ${1} "* ]]
+}
+
+# Called when the loop runs out of workable issues: the next pass is a new
+# sweep, and everything set aside is eligible again.
+start_new_sweep() {
+  SET_ASIDE_ISSUES=" "
+}
 
 # Issues created by to-tickets carry a "## Blocked by" section listing
 # prerequisite issues as "- #NNN (reason)" bullets. Print the numbers.
@@ -129,6 +158,11 @@ pick_issue() {
     [[ -z "$issue_json" ]] && continue
     n="$(jq -r '.number' <<<"$issue_json")"
     body="$(jq -r '.body' <<<"$issue_json")"
+    # An issue that already failed this sweep waits for the next one, so one
+    # broken issue cannot starve every other ready issue.
+    if issue_set_aside "$n"; then
+      continue
+    fi
     still_open="$(open_blockers "$body")"
     if [[ -n "$still_open" ]]; then
       block_on_dependency "$n" "$still_open"
@@ -137,76 +171,6 @@ pick_issue() {
     echo "$issue_json"
     return
   done < <(jq -c '.[]' <<<"$candidates")
-}
-
-is_transient_failure() {
-  local log_file="$1"
-  # Claude session limit — resets on its own, not an agent/issue problem.
-  # See ralph-logs/issue-{106,107,108,109}-20260914-*.log.
-  is_session_limit "$log_file" && return 0
-  # main.mts's self-imposed wall-clock ceiling — retry, don't block (#128).
-  is_checkpoint_timeout "$log_file" && return 0
-  return 1
-}
-
-# Whether a log shows a Claude session-limit exit. Shared by
-# is_transient_failure and run_build_iteration's session-limit branch so
-# the two never drift apart on the match string. Case-insensitive: this
-# text comes from the CLI, not us, and a wording tweak there shouldn't
-# silently stop matching.
-is_session_limit() {
-  local log_file="$1"
-  grep -qi "hit your session limit" "$log_file" 2>/dev/null
-}
-
-# Whether a log shows main.mts's checkpoint-timeout sentinel — its
-# AbortController fired because the run exceeded RALPH_CHECKPOINT_TIMEOUT_MS
-# (default 90 minutes). Parallel to is_session_limit: both mean retry.
-is_checkpoint_timeout() {
-  local log_file="$1"
-  grep -q "RALPH_CHECKPOINT_TIMEOUT_HIT" "$log_file" 2>/dev/null
-}
-
-# Session-limit hits used to retry immediately on every iteration with no
-# backoff, hammering the API for hours until the limit reset on its own
-# (see ralph-logs/issue-105-20260914-1534*.log — 6 retries in under 5 min).
-# Sleep until the stated reset time instead of spinning.
-wait_out_session_limit() {
-  local log_file="$1"
-  local FALLBACK_SECS=900
-  local MAX_SECS=21600 # 6h safety cap in case parsing goes wrong
-
-  local reset_str
-  reset_str="$(grep -o "resets [0-9]\{1,2\}:[0-9]\{2\}[ap]m (UTC)" "$log_file" 2>/dev/null \
-    | head -1 | sed -E 's/resets (.*) \(UTC\)/\1/')"
-
-  if [[ -z "$reset_str" ]]; then
-    echo "Session limit hit but reset time not found in log — sleeping ${FALLBACK_SECS}s."
-    sleep "$FALLBACK_SECS"
-    return
-  fi
-
-  local now_epoch target_epoch
-  now_epoch="$(date -u +%s)"
-  target_epoch="$(date -u -d "$reset_str UTC" +%s 2>/dev/null || echo "")"
-
-  if [[ -z "$target_epoch" ]]; then
-    echo "Session limit hit but reset time \"$reset_str\" didn't parse — sleeping ${FALLBACK_SECS}s."
-    sleep "$FALLBACK_SECS"
-    return
-  fi
-
-  if (( target_epoch <= now_epoch )); then
-    target_epoch="$(date -u -d "tomorrow $reset_str UTC" +%s)"
-  fi
-
-  local sleep_secs=$(( target_epoch - now_epoch + 60 )) # 60s buffer past reset
-  if (( sleep_secs > MAX_SECS )); then
-    sleep_secs="$MAX_SECS"
-  fi
-
-  echo "Session limit hit, resets $reset_str (UTC) — sleeping ${sleep_secs}s."
-  sleep "$sleep_secs"
 }
 
 # Comment posted on an issue's first orphan recovery.
@@ -305,26 +269,24 @@ run_build_iteration() {
       --remove-label hard-kill-seen \
       --add-label ready-for-human
   else
-    echo "Iteration for issue #$n failed (see $log_file)."
-    if is_transient_failure "$log_file"; then
-      echo "Transient infra failure detected — not marking blocked, will retry."
-      if is_session_limit "$log_file"; then
-        wait_out_session_limit "$log_file"
-      elif is_checkpoint_timeout "$log_file"; then
-        echo "Checkpoint timeout — retrying next iteration immediately, no wait."
+    # Every failure ends here, whatever caused it. The loop used to grep the
+    # log to decide between branches that all ended in "try again", and got it
+    # wrong for a quarter of runs, whose log holds only a pointer to the real
+    # log. So: keep ready-for-agent, set the issue aside for the rest of this
+    # sweep, back off, and move to the next issue. Repetition is the recovery
+    # strategy, including for failure modes not yet seen.
+    echo "Iteration for issue #$n failed (see $log_file). Set aside for this sweep."
+    gh issue edit "$n" --repo "$REPO" --remove-label in-progress-by-agent
+    set_aside_issue "$n"
+    # Remove empty branch left by failed sandbox setup so next retry
+    # starts clean (no zero-commit branch to confuse verification).
+    if git rev-parse --verify "ralph/issue-$n" >/dev/null 2>&1; then
+      if git diff --quiet "master..ralph/issue-$n" 2>/dev/null; then
+        git branch -D "ralph/issue-$n" 2>/dev/null || true
+        git push origin --delete "ralph/issue-$n" 2>/dev/null || true
       fi
-      gh issue edit "$n" --repo "$REPO" --remove-label in-progress-by-agent
-      # Remove empty branch left by failed sandbox setup so next retry
-      # starts clean (no zero-commit branch to confuse verification).
-      if git rev-parse --verify "ralph/issue-$n" >/dev/null 2>&1; then
-        if git diff --quiet "master..ralph/issue-$n" 2>/dev/null; then
-          git branch -D "ralph/issue-$n" 2>/dev/null || true
-          git push origin --delete "ralph/issue-$n" 2>/dev/null || true
-        fi
-      fi
-    else
-      gh issue edit "$n" --repo "$REPO" --remove-label in-progress-by-agent --remove-label ready-for-agent --add-label blocked-for-agent
     fi
+    sleep "$FAILURE_BACKOFF_SECS"
   fi
 }
 
@@ -347,16 +309,25 @@ main() {
 
     if [[ -n "$issue_json" ]]; then
       run_build_iteration "$issue_json"
-    else
-      echo "No ready-for-agent issues. Stopping."
+    elif [[ "$MAX_ITER" != "0" ]]; then
+      # A capped run is a test run. Waiting half an hour for work to appear
+      # would defeat the point, so stop instead.
+      echo "No workable issues. Stopping (iteration cap set)."
       exit 0
+    else
+      # The sweep is over: every ready issue is either done or set aside.
+      # Sleeping rather than exiting is what lets the loop recover on its own
+      # — a session limit resets, a blocker closes, a new issue is queued —
+      # with no one restarting it.
+      echo "No workable issues. Sleeping ${IDLE_SLEEP_SECS}s, then re-checking."
+      sleep "$IDLE_SLEEP_SECS"
+      start_new_sweep
     fi
   done
 }
 
-# Guard so tests can `source` this file (to call functions like
-# is_transient_failure or run_build_iteration directly) without kicking
-# off the live loop.
+# Guard so tests can `source` this file (to call functions like pick_issue
+# or run_build_iteration directly) without kicking off the live loop.
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   main "$@"
 fi
