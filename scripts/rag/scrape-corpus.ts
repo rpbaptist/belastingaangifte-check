@@ -154,7 +154,7 @@ function writeCorpus(chunks: Chunk[], textChunks: TextChunk[]) {
 }
 
 async function main() {
-  const client = createVoyageClient();
+  const client = createVoyageClient(process.env.VOYAGE_API_KEY);
   const { textChunks, chunksByTopic } = await scrapeAllPages();
   logChunksByTopic(chunksByTopic);
 
