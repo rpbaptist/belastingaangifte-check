@@ -10,8 +10,8 @@ export function formatCheckpointDuration(timeoutMs: number): string {
 }
 
 // Thrown as the AbortController's abort reason when the wall-clock
-// ceiling fires. Its message is the sentinel line loop.sh's
-// is_checkpoint_timeout() greps for in the run's log output.
+// ceiling fires. Its message names the ceiling in the run's log, for a
+// person reading it afterwards — loop.sh does not read the log.
 export class CheckpointTimeoutError extends Error {
   constructor(timeoutMs: number) {
     super(

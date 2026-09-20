@@ -43,16 +43,24 @@ triage — only by the loop itself.
 | ---------------------- | ----------------------------------------------------------------------- |
 | `blocked`              | A `## Blocked by` issue is still open; not actually ready yet           |
 | `in-progress-by-agent` | The loop has claimed this issue and is actively working it in a sandbox |
-| `blocked-for-agent`    | A loop iteration failed; needs human inspection before retrying         |
+| `blocked-for-agent`    | Legacy: a loop iteration failed. Only startup reaping still applies it  |
 | `hard-kill-seen`       | This issue already survived one hard-killed sandbox run                 |
 
 The loop also applies `ready-for-human` — from the five-role vocabulary above,
 not a loop-owned label. It means the agent finished and pushed, but the pull
 request is parked: CI stayed red after the automated fix attempts, the merge was
 rejected, or review findings are outstanding. `main.mts` signals this by exiting
-2, distinct from exit 0 (merged) and exit 1 (failed); see ADR 0011. Use it to
-tell "finished, a person must take it from here" apart from
-`blocked-for-agent`, which means an iteration crashed.
+2, distinct from exit 0 (merged) and exit 1 (failed); see ADR 0011. It is the
+loop's only handoff to a person: a failed iteration is retried rather than
+labelled.
+
+A failed iteration is no longer classified at all. The loop used to grep the
+run's log to decide whether the failure was transient, and to label
+`blocked-for-agent` when it could not tell — which it could not for the quarter
+of runs whose log holds only a pointer to the real log. Now every failure is
+handled identically: the issue keeps `ready-for-agent`, is set aside for the
+rest of the sweep so it cannot starve the queue, and is retried on the next
+sweep. Nothing durable records the failure.
 
 A session-limit hit is no longer counted on the issue. The loop used to add a
 `session-limit-seen` label and write a progress-note commit on `ralph/issue-N`,
@@ -90,9 +98,15 @@ candidate. Only once an issue clears that gate does it proceed:
 ends, keyed off `main.mts`'s exit code (ADR 0011): the labels are cleared
 because the PR merged (exit 0, success); the issue becomes
 `ready-for-human` because the PR is open but parked on red CI, a rejected
-merge, or outstanding findings (exit 2); or it becomes `blocked-for-agent`
-because the iteration failed outright (exit 1 — human must clear it before
-the loop will touch the issue again). The picker always excludes `in-progress-by-agent`
-and `blocked-for-agent`, so an issue carrying either is never re-claimed
+merge, or outstanding findings (exit 2); or the iteration failed (exit 1), in
+which case only `in-progress-by-agent` comes off and the issue waits for the
+next sweep. The picker always excludes `in-progress-by-agent` and
+`blocked-for-agent`, so an issue carrying either is never re-claimed
 automatically — same for `blocked`, which only the promotion check above
 can clear.
+
+When nothing is workable the loop does not exit. It sleeps for 30 minutes,
+clears the set-aside list and looks again, so a session limit, a closing
+blocker or a newly queued issue is picked up without anyone restarting it. A
+run given an iteration cap (`./loop.sh 1`) stops instead of sleeping, because
+a capped run is a test run.
