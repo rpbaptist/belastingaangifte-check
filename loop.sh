@@ -99,60 +99,29 @@ extract_blockers() {
     | grep -oE '#[0-9]+' | tr -d '#' | sort -un
 }
 
-# Of an issue's blockers, print only those still open.
+# Of an issue's blockers, print only those still open. A blocker whose state
+# cannot be read — network blip, rate limit, deleted issue — counts as open.
+# Failing that way round means the loop defers an issue it could perhaps have
+# worked on, and the next sweep asks again; failing the other way would start
+# a run on an issue whose prerequisite is unfinished.
 open_blockers() {
   local body="$1" n state
   for n in $(extract_blockers "$body"); do
-    state="$(gh issue view "$n" --repo "$REPO" --json state -q '.state' 2>/dev/null || echo "")"
-    if [[ "$state" == "OPEN" ]]; then
+    if ! state="$(gh issue view "$n" --repo "$REPO" --json state -q '.state' 2>/dev/null)"; then
+      echo "$n"
+      continue
+    fi
+    if [[ "$state" != "CLOSED" ]]; then
       echo "$n"
     fi
   done
   return 0
 }
 
-# Dependency gate: a ready-for-agent issue whose blockers aren't closed
-# yet is not actually ready, whatever its label says (see
-# docs/agents/triage-labels.md). Relabel it blocked instead of claiming
-# it, with a comment naming the open blockers, and re-check on every
-# loop iteration via promote_unblocked_issues so it comes back on its own
-# once they close.
-block_on_dependency() {
-  local n="$1" open_list="$2" fmt
-  fmt="$(sed 's/^/#/' <<<"$open_list" | paste -sd, -)"
-  gh issue edit "$n" --repo "$REPO" \
-    --remove-label ready-for-agent --remove-label in-progress-by-agent \
-    --add-label blocked
-  gh issue comment "$n" --repo "$REPO" --body "Blocked: dependency issue(s) $fmt are still open. The loop will not pick this up until they're closed — re-labeled \`blocked\` (was \`ready-for-agent\`). It'll be re-labeled \`ready-for-agent\` automatically once they close. (loop.sh dependency gate)"
-  echo "Issue #$n has open blocker(s) $fmt — labeled blocked, deferring." >&2
-}
-
-# Runs once per outer loop iteration, before picking. Anything labeled
-# blocked whose blockers have all closed since the last check goes back
-# to ready-for-agent on its own — no human needs to notice and flip it.
-promote_unblocked_issues() {
-  local blocked_json n body still_open
-  blocked_json="$(gh issue list --repo "$REPO" --label blocked \
-    --json number,body --limit 50)"
-  while IFS= read -r issue_json; do
-    [[ -z "$issue_json" ]] && continue
-    n="$(jq -r '.number' <<<"$issue_json")"
-    body="$(jq -r '.body' <<<"$issue_json")"
-    still_open="$(open_blockers "$body")"
-    if [[ -z "$still_open" ]]; then
-      gh issue edit "$n" --repo "$REPO" --remove-label blocked --add-label ready-for-agent
-      gh issue comment "$n" --repo "$REPO" --body "Unblocked: all dependency issues are now closed. Re-labeled \`ready-for-agent\`. (loop.sh dependency gate)"
-      echo "Issue #$n unblocked — dependencies closed, back to ready-for-agent." >&2
-    fi
-  done < <(jq -c '.[]' <<<"$blocked_json")
-}
-
 pick_issue() {
-  local candidates n body still_open
+  local candidates n body
   candidates="$(gh issue list --repo "$REPO" --label ready-for-agent \
-    --json number,title,body,labels --limit 50 \
-    | jq -c '[.[] | select([.labels[].name] | (index("in-progress-by-agent") or index("blocked-for-agent")) | not)]
-              | sort_by(.number)')"
+    --json number,title,body --limit 50 | jq -c 'sort_by(.number)')"
 
   while IFS= read -r issue_json; do
     [[ -z "$issue_json" ]] && continue
@@ -163,64 +132,17 @@ pick_issue() {
     if issue_set_aside "$n"; then
       continue
     fi
-    still_open="$(open_blockers "$body")"
-    if [[ -n "$still_open" ]]; then
-      block_on_dependency "$n" "$still_open"
+    # An issue whose blockers are still open is skipped silently. The loop
+    # used to relabel it and comment, then undo both once the blockers
+    # closed; recomputing the blockers here costs one lookup per blocker and
+    # needs no state to keep in sync. The issue becomes workable again on its
+    # own the moment its blockers close.
+    if [[ -n "$(open_blockers "$body")" ]]; then
       continue
     fi
     echo "$issue_json"
     return
   done < <(jq -c '.[]' <<<"$candidates")
-}
-
-# Comment posted on an issue's first orphan recovery.
-hard_kill_reap_comment() {
-  cat <<EOF
-Recovered: found labeled \`in-progress-by-agent\` with no corresponding run — the prior attempt was likely killed out from under it (container OOM, host restart, etc.). Re-labeled \`ready-for-agent\` to retry. (loop.sh startup reap)
-EOF
-}
-
-# Comment posted when the same issue orphans a second time in a row.
-hard_kill_anomaly_comment() {
-  cat <<EOF
-Blocked: this issue was found labeled \`in-progress-by-agent\` with no corresponding run for the second time in a row. Re-labeled \`blocked-for-agent\` instead of retrying blind again. A human should check \`ralph-logs/\` if still present, then re-label \`ready-for-agent\` to resume. (loop.sh startup reap)
-EOF
-}
-
-# Runs once at loop.sh startup, before the main iteration loop. loop.sh
-# handles one issue at a time in a single synchronous process and only
-# sets in-progress-by-agent for the duration of its own
-# run_build_iteration call — so any issue still carrying that label when
-# a *fresh* loop.sh process starts is proof the process that set it is
-# gone (crashed/killed), not a live run. No staleness timer or
-# container/PID probing needed; the label alone is the signal. See #134,
-# #137.
-#
-# First orphan: reset to ready-for-agent and mark hard-kill-seen, same
-# trust level as a checkpoint-timeout retry. Second orphan in a row
-# (hard-kill-seen already present): escalate to blocked-for-agent instead
-# of retrying blind again.
-reap_orphaned_in_progress_issues() {
-  local orphans_json n
-  orphans_json="$(gh issue list --repo "$REPO" --label in-progress-by-agent \
-    --json number,labels --limit 50)"
-  while IFS= read -r issue_json; do
-    [[ -z "$issue_json" ]] && continue
-    n="$(jq -r '.number' <<<"$issue_json")"
-    if jq -e '[.labels[].name] | index("hard-kill-seen")' <<<"$issue_json" >/dev/null; then
-      gh issue edit "$n" --repo "$REPO" \
-        --remove-label in-progress-by-agent --remove-label hard-kill-seen \
-        --add-label blocked-for-agent
-      gh issue comment "$n" --repo "$REPO" --body "$(hard_kill_anomaly_comment)"
-      echo "Issue #$n orphaned twice in a row — blocked for human review." >&2
-    else
-      gh issue edit "$n" --repo "$REPO" \
-        --remove-label in-progress-by-agent \
-        --add-label hard-kill-seen --add-label ready-for-agent
-      gh issue comment "$n" --repo "$REPO" --body "$(hard_kill_reap_comment)"
-      echo "Issue #$n found in-progress-by-agent at startup with no live run — recovered to ready-for-agent." >&2
-    fi
-  done < <(jq -c '.[]' <<<"$orphans_json")
 }
 
 run_build_iteration() {
@@ -231,7 +153,9 @@ run_build_iteration() {
   title="$(jq -r '.title' <<<"$issue_json")"
   body="$(jq -r '.body' <<<"$issue_json")"
 
-  gh issue edit "$n" --repo "$REPO" --add-label in-progress-by-agent
+  # No in-progress label: the loop works one issue at a time in a single
+  # synchronous process, so the label only ever restated what this process
+  # already knew — and left state to reconcile when the process died.
 
   local ts log_file
   ts="$(date +%Y%m%d-%H%M%S)"
@@ -258,16 +182,14 @@ run_build_iteration() {
     # issue stays eligible for re-selection forever, and the next
     # iteration re-picks it, finds nothing new to commit, and reports a
     # false "blocked" failure. Success means done, not queue-again.
-    gh issue edit "$n" --repo "$REPO" --remove-label in-progress-by-agent --remove-label ready-for-agent --remove-label hard-kill-seen
+    gh issue edit "$n" --repo "$REPO" --remove-label ready-for-agent
   elif [[ "$status" -eq 2 ]]; then
     # The work landed but CI stayed red, the merge was rejected, or review
     # findings are outstanding. The PR is open and already explains itself,
     # so hand the issue to a person rather than clearing or retrying it.
     echo "Issue #$n needs a human — PR left open (see $log_file)."
     gh issue edit "$n" --repo "$REPO" \
-      --remove-label in-progress-by-agent --remove-label ready-for-agent \
-      --remove-label hard-kill-seen \
-      --add-label ready-for-human
+      --remove-label ready-for-agent --add-label ready-for-human
   else
     # Every failure ends here, whatever caused it. The loop used to grep the
     # log to decide between branches that all ended in "try again", and got it
@@ -276,7 +198,6 @@ run_build_iteration() {
     # sweep, back off, and move to the next issue. Repetition is the recovery
     # strategy, including for failure modes not yet seen.
     echo "Iteration for issue #$n failed (see $log_file). Set aside for this sweep."
-    gh issue edit "$n" --repo "$REPO" --remove-label in-progress-by-agent
     set_aside_issue "$n"
     # Remove empty branch left by failed sandbox setup so next retry
     # starts clean (no zero-commit branch to confuse verification).
@@ -291,10 +212,9 @@ run_build_iteration() {
 }
 
 main() {
-  # Once, before the loop starts: recover any issue left in-progress by
-  # a hard-killed prior run (see reap_orphaned_in_progress_issues).
-  reap_orphaned_in_progress_issues
-
+  # Nothing to reconcile at startup. The loop holds no durable state of its
+  # own, so a killed run leaves nothing behind and restarting is safe at any
+  # moment, by construction rather than by recovery code.
   local i=0
   while :; do
     i=$((i + 1))
@@ -304,7 +224,6 @@ main() {
     fi
 
     echo "=== Ralph iteration $i (build: $AGENT, review: claude) ==="
-    promote_unblocked_issues
     issue_json="$(pick_issue)"
 
     if [[ -n "$issue_json" ]]; then
