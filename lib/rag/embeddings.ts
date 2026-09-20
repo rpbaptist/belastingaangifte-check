@@ -21,8 +21,10 @@ function isRetryableVoyageError(err: unknown): boolean {
 
 // VOYAGE_API_KEY is a fixed server-side secret paying only for embedding this project's
 // own fixed corpus and its own analysis-time queries — unlike the Anthropic key, it is
-// never user-supplied, so there's no per-request override.
-export function createVoyageClient(apiKey = process.env.VOYAGE_API_KEY): EmbeddingClient {
+// never user-supplied, so there's no per-request override. The key is passed in rather
+// than defaulted from the environment, so that what this function does depends only on
+// its argument.
+export function createVoyageClient(apiKey: string | undefined): EmbeddingClient {
   if (!apiKey) throw new Error("VOYAGE_API_KEY is not set");
 
   return {
