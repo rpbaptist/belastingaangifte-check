@@ -99,12 +99,19 @@ extract_blockers() {
     | grep -oE '#[0-9]+' | tr -d '#' | sort -un
 }
 
-# Of an issue's blockers, print only those still open.
+# Of an issue's blockers, print only those still open. A blocker whose state
+# cannot be read — network blip, rate limit, deleted issue — counts as open.
+# Failing that way round means the loop defers an issue it could perhaps have
+# worked on, and the next sweep asks again; failing the other way would start
+# a run on an issue whose prerequisite is unfinished.
 open_blockers() {
   local body="$1" n state
   for n in $(extract_blockers "$body"); do
-    state="$(gh issue view "$n" --repo "$REPO" --json state -q '.state' 2>/dev/null || echo "")"
-    if [[ "$state" == "OPEN" ]]; then
+    if ! state="$(gh issue view "$n" --repo "$REPO" --json state -q '.state' 2>/dev/null)"; then
+      echo "$n"
+      continue
+    fi
+    if [[ "$state" != "CLOSED" ]]; then
       echo "$n"
     fi
   done

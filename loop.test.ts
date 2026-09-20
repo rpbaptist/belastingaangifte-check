@@ -27,23 +27,13 @@ function runLoopFn(fn: string, cwd = repoDir) {
 }
 
 // Replaces the stub `gh` with one that logs every invocation's argv (one
-// line per call) to a file the test can assert against, and answers
-// `gh issue view ... --json labels -q '.labels[].name'` with a
-// caller-supplied label list — everything else is a silent no-op, same
-// as the default stub.
-function stubGhWithCallLog(labels: string[] = []): { callLogPath: string } {
+// line per call) to a file the test can assert against — everything else is
+// a silent no-op, same as the default stub.
+function stubGhWithCallLog(): { callLogPath: string } {
   const callLogPath = path.join(repoDir, "gh-calls.log");
-  const labelsLine = labels.join("\\n");
   writeFileSync(
     path.join(stubBinDir, "gh"),
-    [
-      "#!/usr/bin/env bash",
-      `echo "$@" >> "${callLogPath}"`,
-      'if [[ "$1 $2" == "issue view" ]]; then',
-      `  printf '${labelsLine}\\n'`,
-      "fi",
-      "exit 0",
-    ].join("\n")
+    ["#!/usr/bin/env bash", `echo "$@" >> "${callLogPath}"`, "exit 0"].join("\n")
   );
   execFileSync("chmod", ["+x", path.join(stubBinDir, "gh")]);
   return { callLogPath };
@@ -129,7 +119,7 @@ describe("run_build_iteration writes no notes of its own (#147)", () => {
   // remain the resume mechanism.
   it("commits no note and touches no counter label on a session-limit failure", () => {
     stubSessionLimitNpx();
-    const { callLogPath } = stubGhWithCallLog([]);
+    const { callLogPath } = stubGhWithCallLog();
     git(["branch", "ralph/issue-55"]);
 
     const issueJsonPath = path.join(repoDir, "issue.json");
@@ -146,7 +136,7 @@ describe("run_build_iteration writes no notes of its own (#147)", () => {
 
   it("commits no note on a checkpoint-timeout failure either", () => {
     stubCheckpointTimeoutNpx();
-    const { callLogPath } = stubGhWithCallLog([]);
+    const { callLogPath } = stubGhWithCallLog();
     git(["branch", "ralph/issue-71"]);
 
     const issueJsonPath = path.join(repoDir, "issue.json");
@@ -163,8 +153,9 @@ describe("run_build_iteration writes no notes of its own (#147)", () => {
 });
 
 // Stub `gh` so `gh issue list --label ready-for-agent --json ...` answers with
-// the caller's candidates, in the shape pick_issue parses. Everything else is
-// a silent no-op, so an issue's blockers read as closed.
+// the caller's candidates, in the shape pick_issue parses, and every blocker
+// looked up answers OPEN. Tests that want a closed or unreadable blocker
+// rewrite that one line.
 function stubGhWithCandidates(issues: { number: number; title: string; body: string }[]): {
   callLogPath: string;
 } {
@@ -198,7 +189,7 @@ describe("failure handling without classification (#148)", () => {
   // the real log — and every branch it chose between ended in "try again".
   it("keeps ready-for-agent and sets the issue aside instead of blocking it", () => {
     stubNpx(['echo "some unrelated agent error"', "exit 1"]);
-    const { callLogPath } = stubGhWithCallLog(["ready-for-agent"]);
+    const { callLogPath } = stubGhWithCallLog();
 
     const issueJsonPath = path.join(repoDir, "issue.json");
     writeFileSync(issueJsonPath, JSON.stringify({ number: 90, title: "Test issue", body: "body" }));
@@ -216,7 +207,7 @@ describe("failure handling without classification (#148)", () => {
 
   it("backs off after a failure", () => {
     stubNpx(['echo "some unrelated agent error"', "exit 1"]);
-    stubGhWithCallLog([]);
+    stubGhWithCallLog();
 
     const issueJsonPath = path.join(repoDir, "issue.json");
     writeFileSync(issueJsonPath, JSON.stringify({ number: 92, title: "Test issue", body: "body" }));
@@ -231,7 +222,7 @@ describe("failure handling without classification (#148)", () => {
   // apply, and the limit resets while the loop sleeps between sweeps.
   it("treats a session limit like any other failure", () => {
     stubSessionLimitNpx();
-    const { callLogPath } = stubGhWithCallLog([]);
+    const { callLogPath } = stubGhWithCallLog();
 
     const issueJsonPath = path.join(repoDir, "issue.json");
     writeFileSync(issueJsonPath, JSON.stringify({ number: 93, title: "Test issue", body: "body" }));
@@ -300,6 +291,24 @@ describe("blocked issues in selection (#149)", () => {
     expect(calls.some((c) => c.startsWith("issue comment"))).toBe(false);
   });
 
+  it("treats a blocker whose state cannot be read as still open", () => {
+    stubGhWithCandidates([
+      { number: 10, title: "Blocked", body: "## Blocked by\n\n- #9 (prerequisite)\n" },
+    ]);
+    // `gh issue view` fails the way a rate limit or a network blip fails.
+    writeFileSync(
+      path.join(stubBinDir, "gh"),
+      readFileSync(path.join(stubBinDir, "gh"), "utf-8").replace(
+        '  echo "OPEN"',
+        '  echo "gh: could not reach GitHub" >&2\n  exit 1'
+      )
+    );
+
+    // Nothing is picked: deferring costs a sweep, whereas claiming an issue
+    // whose prerequisite may be unfinished costs a run.
+    expect(runLoopFn(`pick_issue`).trim()).toBe("");
+  });
+
   it("picks the issue on its own once the blocker closes", () => {
     // Same issue, same body — only the blocker's state differs, and the stub
     // now reports it closed. Nothing relabels the issue in between.
@@ -323,7 +332,7 @@ describe("run_build_iteration on success", () => {
   // issue just loses its input label.
   it("clears ready-for-agent and touches nothing else", () => {
     stubNpx(['echo "sandbox succeeded"', "exit 0"]);
-    const { callLogPath } = stubGhWithCallLog([]);
+    const { callLogPath } = stubGhWithCallLog();
 
     const issueJsonPath = path.join(repoDir, "issue.json");
     writeFileSync(issueJsonPath, JSON.stringify({ number: 63, title: "Test issue", body: "body" }));
@@ -348,7 +357,7 @@ describe("run_build_iteration when main.mts reports needs-human (exit 2)", () =>
     );
     execFileSync("chmod", ["+x", path.join(stubBinDir, "npx")]);
 
-    const { callLogPath } = stubGhWithCallLog(["ready-for-agent"]);
+    const { callLogPath } = stubGhWithCallLog();
 
     const issueJson = JSON.stringify({ number: 91, title: "Test issue", body: "body" });
     const issueJsonPath = path.join(repoDir, "issue.json");
