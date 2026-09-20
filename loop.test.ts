@@ -283,6 +283,16 @@ describe("pick_issue and the set-aside list (#148)", () => {
     expect(JSON.parse(picked.trim()).number).toBe(11);
   });
 
+  // The list is a space-padded string matched with a glob, so issue 1 must not
+  // stand in for issue 11 or 21.
+  it("matches whole issue numbers, not prefixes or suffixes", () => {
+    const output = runLoopFn(
+      `set_aside_issue 1; issue_set_aside 11 && echo WRONG_11; issue_set_aside 21 && echo WRONG_21; issue_set_aside 1 && echo RIGHT_1`
+    );
+
+    expect(output.trim()).toBe("RIGHT_1");
+  });
+
   it("picks the set-aside issue again once a new sweep starts", () => {
     stubGhWithCandidates([{ number: 10, title: "First", body: "no blockers" }]);
 
