@@ -62,13 +62,8 @@ try {
     hooks: {
       sandbox: {
         onSandboxReady: [
-          // --global, and both writes in one command. The sandbox runs in a
-          // git worktree whose .git points at the bind-mounted parent, so a
-          // repo-level `git config` writes the config file the host is also
-          // using — the cause of every "could not lock config file" failure.
-          // --global writes /home/agent/.gitconfig, which only the container
-          // has. One command because Sandcastle runs onSandboxReady hooks
-          // concurrently, so two separate writes would race each other.
+          // One command, and --global — see git-identity.mts for why both
+          // matter.
           { command: GIT_IDENTITY_COMMAND },
           { command: "npm ci" },
         ],

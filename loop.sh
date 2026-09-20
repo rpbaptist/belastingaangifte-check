@@ -141,10 +141,6 @@ pick_issue() {
 
 is_transient_failure() {
   local log_file="$1"
-  # No config.lock signatures here any more: the sandbox writes its git
-  # identity to the container's own global config (.sandcastle/git-identity.mts),
-  # so it no longer writes the config file the host shares, and the
-  # contention these lines matched cannot occur.
   # Claude session limit — resets on its own, not an agent/issue problem.
   # See ralph-logs/issue-{106,107,108,109}-20260914-*.log.
   is_session_limit "$log_file" && return 0
