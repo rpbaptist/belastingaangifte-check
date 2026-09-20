@@ -5,6 +5,7 @@ import { runReview } from "./review-lib.mts";
 import { getBuildAgent, type BuildHarness } from "./harness.mts";
 import { CheckpointTimeoutError, classifyRunError } from "./classify-run-error.mts";
 import { GIT_IDENTITY_COMMAND } from "./git-identity.mts";
+import { resolvePullRequest } from "./pr-resolution.mts";
 
 // Invoked per-issue by loop.sh:
 //   ISSUE_NUMBER=42 ISSUE_TITLE="..." ISSUE_BODY="..." npx tsx .sandcastle/main.mts
@@ -121,54 +122,21 @@ if (!hasRealWork) {
   process.exit(1);
 }
 
+// Push, lookup and creation live in pr-resolution.mts so they can be tested
+// without a sandbox; only the reporting and the exit code stay here.
 let prNumber: string;
 try {
-  execFileSync("git", ["push", "-u", "origin", result.branch], {
-    stdio: "inherit",
+  const resolved = resolvePullRequest({
+    branch: result.branch,
+    title: issueTitle,
+    body: `${result.output || "No description provided."}\n\nCloses #${issueNumber}`,
   });
-  // A retried issue resumes onto the same branch, so a PR from an earlier
-  // attempt may already be open. `gh pr create` fails hard in that case, which
-  // used to strand finished work: the loop recorded a failure and runReview
-  // never ran. Reuse instead — every attempt after the first depends on it.
-  const existingPrNumber = execFileSync(
-    "gh",
-    [
-      "pr",
-      "list",
-      "--head",
-      result.branch,
-      "--base",
-      "master",
-      "--state",
-      "open",
-      "--json",
-      "number",
-      "-q",
-      ".[0].number",
-    ],
-    { encoding: "utf-8" }
-  ).trim();
-  if (existingPrNumber) {
-    prNumber = existingPrNumber;
-    console.log(`PR #${prNumber} already open for ${result.branch} — reusing it.`);
-  } else {
-    const prUrl = execFileSync(
-      "gh",
-      [
-        "pr",
-        "create",
-        "--head",
-        result.branch,
-        "--title",
-        issueTitle,
-        "--body",
-        `${result.output || "No description provided."}\n\nCloses #${issueNumber}`,
-      ],
-      { encoding: "utf-8" }
-    ).trim();
-    console.log(`PR opened: ${prUrl}`);
-    prNumber = prUrl.split("/").pop()!;
-  }
+  prNumber = resolved.number;
+  console.log(
+    resolved.reused
+      ? `PR #${prNumber} already open for ${result.branch} — reusing it.`
+      : `PR opened: ${resolved.url}`
+  );
 } catch (err) {
   console.error(`Push, PR lookup, or PR creation failed for ${result.branch}:`, err);
   process.exit(1);
