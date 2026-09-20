@@ -141,12 +141,6 @@ pick_issue() {
 
 is_transient_failure() {
   local log_file="$1"
-  # Transient infra signatures (not agent logic): git config.lock
-  # contention from bind-mounted .git/config between host + sandbox.
-  # See ralph-logs/issue-105-20260914-124532.log.
-  grep -q "could not lock config file" "$log_file" 2>/dev/null && return 0
-  grep -q "config\.lock" "$log_file" 2>/dev/null && return 0
-  grep -q "ExecError.*git config" "$log_file" 2>/dev/null && return 0
   # Claude session limit — resets on its own, not an agent/issue problem.
   # See ralph-logs/issue-{106,107,108,109}-20260914-*.log.
   is_session_limit "$log_file" && return 0
@@ -415,10 +409,6 @@ run_build_iteration() {
   ts="$(date +%Y%m%d-%H%M%S)"
   log_file="$LOG_DIR/issue-${n}-${ts}.log"
 
-  # Proactive stale-lock cleanup before sandbox (host + sandbox share
-  # .git/config via bind mount — host git ops can leave config.lock).
-  rm -f .git/config.lock
-
   # main.mts reports three outcomes, so the exit code matters, not just
   # pass/fail. Take main.mts's own status from PIPESTATUS[0] rather than `$?`:
   # under `set -o pipefail` (line 14) `$?` is the whole pipeline's status, so a
@@ -471,7 +461,6 @@ run_build_iteration() {
         echo "Checkpoint timeout — retrying next iteration immediately, no wait."
       fi
       gh issue edit "$n" --repo "$REPO" --remove-label in-progress-by-agent
-      rm -f .git/config.lock
       # Remove empty branch left by failed sandbox setup so next retry
       # starts clean (no zero-commit branch to confuse verification).
       if git rev-parse --verify "ralph/issue-$n" >/dev/null 2>&1; then
