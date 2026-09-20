@@ -161,10 +161,7 @@ is_session_limit() {
 
 # Whether a log shows main.mts's checkpoint-timeout sentinel — its
 # AbortController fired because the run exceeded RALPH_CHECKPOINT_TIMEOUT_MS
-# (default 90 minutes). Parallel to is_session_limit; deliberately NOT
-# folded into #121/#124's session-limit-seen anomaly counter/auto-block
-# path — a checkpoint timeout is expected to retry indefinitely on its
-# own, unlike a repeated session-limit hit with no surviving note.
+# (default 90 minutes). Parallel to is_session_limit: both mean retry.
 is_checkpoint_timeout() {
   local log_file="$1"
   grep -q "RALPH_CHECKPOINT_TIMEOUT_HIT" "$log_file" 2>/dev/null
@@ -212,139 +209,6 @@ wait_out_session_limit() {
   sleep "$sleep_secs"
 }
 
-# Writes a minimal progress note directly onto ralph/issue-N (creating it
-# from master first if the sandbox never got that far) so the next
-# attempt's "Resuming" prompt path finds it via git log/git show and
-# skips re-exploration. Uses plumbing (read-tree/commit-tree/update-ref)
-# rather than checkout, so it never touches the host's own working tree
-# or index — this can run at any point without disturbing whatever
-# branch the host currently has checked out.
-#
-# Only updates the local ref — never pushes to origin. That's consistent
-# with main.mts's push gate, which already refuses to push a branch
-# whose only commits are progress notes. Anything reading commit history
-# to detect these notes (e.g. #121's anomaly check) must read local
-# refs, not the remote.
-write_progress_note() {
-  local n="$1" log_file="$2" reason="${3:-session-limit}"
-  local branch="ralph/issue-$n"
-  local note_path=".sandcastle/progress/issue-${n}.md"
-
-  local base_ref
-  if git rev-parse --verify "refs/heads/$branch" >/dev/null 2>&1; then
-    base_ref="refs/heads/$branch"
-  else
-    base_ref="refs/heads/master"
-  fi
-  local parent_sha
-  parent_sha="$(git rev-parse "$base_ref")"
-
-  local body resume_note
-  if [[ "$reason" == "checkpoint-timeout" ]]; then
-    local duration
-    duration="$(grep -o "run exceeded [0-9]*m" "$log_file" 2>/dev/null | head -1 | sed 's/run exceeded //')"
-    [[ -z "$duration" ]] && duration="the configured ceiling"
-    body="Checkpoint timeout hit after $duration."
-    resume_note="this note only confirms a checkpoint-timeout retry happened"
-  else
-    local reset_str
-    reset_str="$(grep -io "resets [0-9]\{1,2\}:[0-9]\{2\}[ap]m (UTC)" "$log_file" 2>/dev/null | head -1)"
-    [[ -z "$reset_str" ]] && reset_str="reset time not found in log"
-    body="Session-limit hit, $reset_str."
-    resume_note="this note only confirms a session-limit retry happened"
-  fi
-
-  local note_content
-  note_content="$(cat <<EOF
-# Progress — issue #$n — $(date -u +"%Y-%m-%d %H:%M UTC")
-
-$body
-Log: $log_file
-
-Resume: $resume_note. Check
-\`git log --oneline\` / \`git show\` on this branch for any real prior
-work before re-exploring the issue from scratch.
-EOF
-)"
-
-  local tmp_index
-  tmp_index="$(mktemp)"
-  rm -f "$tmp_index"
-  GIT_INDEX_FILE="$tmp_index" git read-tree "$parent_sha"
-  local blob_sha
-  blob_sha="$(printf '%s\n' "$note_content" | git hash-object -w --stdin)"
-  GIT_INDEX_FILE="$tmp_index" git update-index --add --cacheinfo "100644,$blob_sha,$note_path"
-  local tree_sha
-  tree_sha="$(GIT_INDEX_FILE="$tmp_index" git write-tree)"
-  rm -f "$tmp_index"
-
-  local commit_sha
-  commit_sha="$(GIT_AUTHOR_NAME="${GIT_AUTHOR_NAME:-Ralph (belastingaangifte-check agent)}" \
-    GIT_AUTHOR_EMAIL="${GIT_AUTHOR_EMAIL:-ralph-agent@users.noreply.github.com}" \
-    GIT_COMMITTER_NAME="${GIT_COMMITTER_NAME:-Ralph (belastingaangifte-check agent)}" \
-    GIT_COMMITTER_EMAIL="${GIT_COMMITTER_EMAIL:-ralph-agent@users.noreply.github.com}" \
-    git commit-tree "$tree_sha" -p "$parent_sha" -m "Progress notes: issue #$n")"
-  git update-ref "refs/heads/$branch" "$commit_sha"
-}
-
-# Whether issue N currently carries a given label on the tracker. Real
-# lookup, not the possibly-stale labels captured when pick_issue built
-# the candidate list — a sandbox run can take a long time, and the label
-# set on GitHub is the only state this check can trust to still be
-# accurate (see is_session_limit_anomaly).
-#
-# A `gh` failure (network blip, auth) and a genuine "label not present"
-# both return 1 here, so callers fail safe (e.g. is_session_limit_anomaly
-# treats either as "not an anomaly", never wrongly blocking an issue over
-# a transient API hiccup) — but a `gh` failure specifically is echoed to
-# stderr first, so it still shows up in the run's log instead of being
-# silently indistinguishable from "no such label".
-issue_has_label() {
-  local n="$1" label="$2"
-  local labels_output
-  if ! labels_output="$(gh issue view "$n" --repo "$REPO" --json labels -q '.labels[].name' 2>&1)"; then
-    echo "Warning: gh issue view failed for #$n while checking for label \"$label\" — treating as absent: $labels_output" >&2
-    return 1
-  fi
-  grep -qx "$label" <<<"$labels_output"
-}
-
-# Count of "Progress notes: issue #N" commits on ralph/issue-N ahead of
-# master — the exact detection source #121 specifies. Zero if the branch
-# doesn't exist locally at all (the state-loss case this exists to catch).
-progress_note_count() {
-  local n="$1" branch="ralph/issue-$n"
-  if ! git rev-parse --verify "refs/heads/$branch" >/dev/null 2>&1; then
-    echo 0
-    return
-  fi
-  git log --oneline --grep="Progress notes: issue #$n" "master..$branch" 2>/dev/null | wc -l | tr -d ' '
-}
-
-# True when this session-limit hit is the second (or later) in a row for
-# issue N (the `session-limit-seen` label already present, applied on a
-# prior hit) but the progress note that hit should have left behind is
-# gone. write_progress_note only updates a local, unpushed ref (see its
-# comment), so this can only happen if local RALPH-host state was lost
-# between attempts — a host restart/redeploy/disk reset, or someone
-# deleting the branch. Not reachable via write_progress_note itself
-# failing: that runs under `set -euo pipefail` and would crash loop.sh
-# outright rather than leave this silently undetected.
-is_session_limit_anomaly() {
-  local n="$1"
-  issue_has_label "$n" "session-limit-seen" || return 1
-  [[ "$(progress_note_count "$n")" -eq 0 ]]
-}
-
-# Comment posted when is_session_limit_anomaly trips. Broken out so it
-# can be asserted on directly without invoking gh.
-session_limit_anomaly_comment() {
-  local n="$1"
-  cat <<EOF
-Blocked: session limit hit twice in a row for this issue, and the progress note from the first hit is no longer on \`ralph/issue-$n\` (likely local RALPH-host state was reset). Re-labeled \`blocked-for-agent\` instead of retrying blind. A human should check \`ralph-logs/\` if still present, then re-label \`ready-for-agent\` to resume. (loop.sh anomaly detector)
-EOF
-}
-
 # Comment posted on an issue's first orphan recovery.
 hard_kill_reap_comment() {
   cat <<EOF
@@ -371,7 +235,7 @@ EOF
 # First orphan: reset to ready-for-agent and mark hard-kill-seen, same
 # trust level as a checkpoint-timeout retry. Second orphan in a row
 # (hard-kill-seen already present): escalate to blocked-for-agent instead
-# of retrying blind again, mirroring is_session_limit_anomaly.
+# of retrying blind again.
 reap_orphaned_in_progress_issues() {
   local orphans_json n
   orphans_json="$(gh issue list --repo "$REPO" --label in-progress-by-agent \
@@ -430,7 +294,7 @@ run_build_iteration() {
     # issue stays eligible for re-selection forever, and the next
     # iteration re-picks it, finds nothing new to commit, and reports a
     # false "blocked" failure. Success means done, not queue-again.
-    gh issue edit "$n" --repo "$REPO" --remove-label in-progress-by-agent --remove-label ready-for-agent --remove-label session-limit-seen --remove-label hard-kill-seen
+    gh issue edit "$n" --repo "$REPO" --remove-label in-progress-by-agent --remove-label ready-for-agent --remove-label hard-kill-seen
   elif [[ "$status" -eq 2 ]]; then
     # The work landed but CI stayed red, the merge was rejected, or review
     # findings are outstanding. The PR is open and already explains itself,
@@ -438,26 +302,15 @@ run_build_iteration() {
     echo "Issue #$n needs a human — PR left open (see $log_file)."
     gh issue edit "$n" --repo "$REPO" \
       --remove-label in-progress-by-agent --remove-label ready-for-agent \
-      --remove-label session-limit-seen --remove-label hard-kill-seen \
+      --remove-label hard-kill-seen \
       --add-label ready-for-human
   else
     echo "Iteration for issue #$n failed (see $log_file)."
-    if is_session_limit "$log_file" && is_session_limit_anomaly "$n"; then
-      echo "Session-limit anomaly detected — no surviving progress note after a repeat hit, blocking for human review."
-      gh issue edit "$n" --repo "$REPO" \
-        --remove-label in-progress-by-agent --remove-label session-limit-seen \
-        --remove-label ready-for-agent --add-label blocked-for-agent
-      gh issue comment "$n" --repo "$REPO" --body "$(session_limit_anomaly_comment "$n")"
-    elif is_transient_failure "$log_file"; then
+    if is_transient_failure "$log_file"; then
       echo "Transient infra failure detected — not marking blocked, will retry."
       if is_session_limit "$log_file"; then
-        if ! issue_has_label "$n" "session-limit-seen"; then
-          gh issue edit "$n" --repo "$REPO" --add-label session-limit-seen
-        fi
-        write_progress_note "$n" "$log_file" "session-limit"
         wait_out_session_limit "$log_file"
       elif is_checkpoint_timeout "$log_file"; then
-        write_progress_note "$n" "$log_file" "checkpoint-timeout"
         echo "Checkpoint timeout — retrying next iteration immediately, no wait."
       fi
       gh issue edit "$n" --repo "$REPO" --remove-label in-progress-by-agent
@@ -502,7 +355,7 @@ main() {
 }
 
 # Guard so tests can `source` this file (to call functions like
-# is_transient_failure or write_progress_note directly) without kicking
+# is_transient_failure or run_build_iteration directly) without kicking
 # off the live loop.
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   main "$@"

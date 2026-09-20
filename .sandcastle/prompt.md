@@ -16,11 +16,13 @@ files a `needs-triage` issue for anything out of scope.
 
 # Resuming
 
-Check `git log --oneline` on this branch before exploring. If a prior,
-interrupted run left a `Progress notes: issue #{{ISSUE_NUMBER}}` commit,
-read the note it added (`git show <sha> --stat` to find the file) before
-re-deriving anything — it records what was already ruled in/out so you
-don't repeat that work.
+Check `git log --oneline` on this branch before exploring. If an earlier
+attempt checkpointed before it was interrupted, it left a
+`Progress notes: issue #{{ISSUE_NUMBER}}` commit holding
+`.sandcastle/progress/issue-{{ISSUE_NUMBER}}.md` (see "Checkpoint
+routinely" below — you write these yourself, nothing else does). Read that
+file before re-deriving anything: it records what was already ruled in and
+out, so you don't repeat the work.
 
 # Task
 
