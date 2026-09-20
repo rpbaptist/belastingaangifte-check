@@ -3,6 +3,7 @@ import { docker } from "@ai-hero/sandcastle/sandboxes/docker";
 import { execFileSync } from "node:child_process";
 import { z } from "zod";
 import { reviewOutcome, type ReviewOutcome } from "./review-outcome.mts";
+import { GIT_IDENTITY_COMMAND } from "./git-identity.mts";
 
 // Shared by main.mts (build → review) and review.mts (review-only, any
 // existing PR). Previously duplicated between the two — pulled out after
@@ -88,8 +89,7 @@ export async function runReview(args: {
     hooks: {
       sandbox: {
         onSandboxReady: [
-          { command: 'git config user.name "Ralph (belastingaangifte-check agent)"' },
-          { command: 'git config user.email "ralph-agent@users.noreply.github.com"' },
+          { command: GIT_IDENTITY_COMMAND },
           { command: "npm ci" },
         ],
       },
@@ -321,8 +321,7 @@ async function fixCiFailures(args: {
     hooks: {
       sandbox: {
         onSandboxReady: [
-          { command: 'git config user.name "Ralph (belastingaangifte-check agent)"' },
-          { command: 'git config user.email "ralph-agent@users.noreply.github.com"' },
+          { command: GIT_IDENTITY_COMMAND },
           { command: "npm ci" },
         ],
       },

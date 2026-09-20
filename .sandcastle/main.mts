@@ -4,6 +4,7 @@ import { execFileSync } from "node:child_process";
 import { runReview } from "./review-lib.mts";
 import { getBuildAgent, type BuildHarness } from "./harness.mts";
 import { CheckpointTimeoutError, classifyRunError } from "./classify-run-error.mts";
+import { GIT_IDENTITY_COMMAND } from "./git-identity.mts";
 
 // Invoked per-issue by loop.sh:
 //   ISSUE_NUMBER=42 ISSUE_TITLE="..." ISSUE_BODY="..." npx tsx .sandcastle/main.mts
@@ -61,14 +62,14 @@ try {
     hooks: {
       sandbox: {
         onSandboxReady: [
-          {
-            command:
-              'for i in 1 2 3 4 5; do rm -f .git/config.lock; git config user.name "Ralph (belastingaangifte-check agent)" && break || { ec=$?; if [ "$i" -eq 5 ]; then echo "git config user.name failed after 5 attempts (exit $ec)"; exit $ec; fi; echo "git config user.name failed (attempt $i/5, exit $ec) — retrying..."; sleep $((i*2)); }; done',
-          },
-          {
-            command:
-              'for i in 1 2 3 4 5; do rm -f .git/config.lock; git config user.email "ralph-agent@users.noreply.github.com" && break || { ec=$?; if [ "$i" -eq 5 ]; then echo "git config user.email failed after 5 attempts (exit $ec)"; exit $ec; fi; echo "git config user.email failed (attempt $i/5, exit $ec) — retrying..."; sleep $((i*2)); }; done',
-          },
+          // --global, and both writes in one command. The sandbox runs in a
+          // git worktree whose .git points at the bind-mounted parent, so a
+          // repo-level `git config` writes the config file the host is also
+          // using — the cause of every "could not lock config file" failure.
+          // --global writes /home/agent/.gitconfig, which only the container
+          // has. One command because Sandcastle runs onSandboxReady hooks
+          // concurrently, so two separate writes would race each other.
+          { command: GIT_IDENTITY_COMMAND },
           { command: "npm ci" },
         ],
       },
