@@ -432,7 +432,7 @@ run_build_iteration() {
       echo "Session-limit anomaly detected — no surviving progress note after a repeat hit, blocking for human review."
       gh issue edit "$n" --repo "$REPO" \
         --remove-label in-progress-by-agent --remove-label session-limit-seen \
-        --add-label blocked-for-agent
+        --remove-label ready-for-agent --add-label blocked-for-agent
       gh issue comment "$n" --repo "$REPO" --body "$(session_limit_anomaly_comment "$n")"
     elif is_transient_failure "$log_file"; then
       echo "Transient infra failure detected — not marking blocked, will retry."
@@ -457,7 +457,7 @@ run_build_iteration() {
         fi
       fi
     else
-      gh issue edit "$n" --repo "$REPO" --remove-label in-progress-by-agent --add-label blocked-for-agent
+      gh issue edit "$n" --repo "$REPO" --remove-label in-progress-by-agent --remove-label ready-for-agent --add-label blocked-for-agent
     fi
   fi
 }
