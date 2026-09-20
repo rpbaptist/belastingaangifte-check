@@ -73,15 +73,13 @@ function unrecognizedDocumentFinding(doc: UnrecognizedDocument, language: Langua
 function propertyAmountFindings(statement: PropertyStatementData, language: Language): Finding[] {
   return statement.amounts
     .filter((a) => a.kind === null)
-    .map(
-      (a): Finding => ({
-        kind: "unknownAmountKind",
-        title: translate("unknownAmountKindTitle", language),
-        detail: formatUnknownAmountKind(a.label, statement.institution, language),
-        institution: statement.institution,
-        field: a.label,
-      })
-    );
+    .map((a): Finding => ({
+      kind: "unknownAmountKind",
+      title: translate("unknownAmountKindTitle", language),
+      detail: formatUnknownAmountKind(a.label, statement.institution, language),
+      institution: statement.institution,
+      field: a.label,
+    }));
 }
 
 function unknownKindFinding(
