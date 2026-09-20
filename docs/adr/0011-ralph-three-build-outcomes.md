@@ -39,8 +39,11 @@ board.
 
 ## Consequences
 
-- The loop reads `PIPESTATUS[0]`, not `$?`, because the harness runs through
-  `tee` and `$?` is always tee's status.
+- The loop reads `PIPESTATUS[0]`, not `$?`. The harness runs through `tee`, and
+  under `set -o pipefail` `$?` is the pipeline's status, which cannot
+  distinguish an outcome `main.mts` chose from `tee` failing. The cost is that
+  a `tee`-only failure reads as success: the label is still right, but an
+  unwritable log is silent.
 - The decision lives in one pure function, `reviewOutcome` in its own module, so
   it is unit-testable without importing the review module's Docker and sandbox
   dependencies — the same split already used for `classify-run-error.mts`.

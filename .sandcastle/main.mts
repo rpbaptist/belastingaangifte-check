@@ -141,6 +141,8 @@ try {
       "list",
       "--head",
       result.branch,
+      "--base",
+      "master",
       "--state",
       "open",
       "--json",
@@ -172,7 +174,7 @@ try {
     prNumber = prUrl.split("/").pop()!;
   }
 } catch (err) {
-  console.error(`Push or PR creation failed for ${result.branch}:`, err);
+  console.error(`Push, PR lookup, or PR creation failed for ${result.branch}:`, err);
   process.exit(1);
 }
 

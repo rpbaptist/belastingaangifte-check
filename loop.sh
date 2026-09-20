@@ -420,9 +420,13 @@ run_build_iteration() {
   rm -f .git/config.lock
 
   # main.mts reports three outcomes, so the exit code matters, not just
-  # pass/fail. Read it from PIPESTATUS: `$?` would be tee's status, which is
-  # always 0. Capturing it in the else branch is safe because nothing runs
-  # between the pipeline and the assignment to overwrite PIPESTATUS.
+  # pass/fail. Take main.mts's own status from PIPESTATUS[0] rather than `$?`:
+  # under `set -o pipefail` (line 14) `$?` is the whole pipeline's status, so a
+  # tee failure would be indistinguishable from an outcome main.mts chose.
+  # The trade is that tee failing on its own then reads as success — the label
+  # contract stays right, but an unwritable log goes unnoticed.
+  # Capturing in the else branch is safe: nothing runs between the pipeline and
+  # the assignment to overwrite PIPESTATUS.
   local status
   if RALPH_AGENT="$AGENT" ISSUE_NUMBER="$n" ISSUE_TITLE="$title" ISSUE_BODY="$body" \
        npx tsx .sandcastle/main.mts 2>&1 | tee "$log_file"; then
