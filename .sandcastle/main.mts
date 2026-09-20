@@ -130,22 +130,47 @@ try {
   execFileSync("git", ["push", "-u", "origin", result.branch], {
     stdio: "inherit",
   });
-  const prUrl = execFileSync(
+  // A retried issue resumes onto the same branch, so a PR from an earlier
+  // attempt may already be open. `gh pr create` fails hard in that case, which
+  // used to strand finished work: the loop recorded a failure and runReview
+  // never ran. Reuse instead — every attempt after the first depends on it.
+  const existing = execFileSync(
     "gh",
     [
       "pr",
-      "create",
+      "list",
       "--head",
       result.branch,
-      "--title",
-      issueTitle,
-      "--body",
-      `${result.output || "No description provided."}\n\nCloses #${issueNumber}`,
+      "--state",
+      "open",
+      "--json",
+      "number",
+      "-q",
+      ".[0].number",
     ],
     { encoding: "utf-8" }
   ).trim();
-  console.log(`PR opened: ${prUrl}`);
-  prNumber = prUrl.split("/").pop()!;
+  if (existing) {
+    prNumber = existing;
+    console.log(`PR #${prNumber} already open for ${result.branch} — reusing it.`);
+  } else {
+    const prUrl = execFileSync(
+      "gh",
+      [
+        "pr",
+        "create",
+        "--head",
+        result.branch,
+        "--title",
+        issueTitle,
+        "--body",
+        `${result.output || "No description provided."}\n\nCloses #${issueNumber}`,
+      ],
+      { encoding: "utf-8" }
+    ).trim();
+    console.log(`PR opened: ${prUrl}`);
+    prNumber = prUrl.split("/").pop()!;
+  }
 } catch (err) {
   console.error(`Push or PR creation failed for ${result.branch}:`, err);
   process.exit(1);
