@@ -139,8 +139,10 @@ export async function runReview(args: {
   // only exists for something that still needs action — so its absence is
   // exactly the merge gate. A pending comment means human/agent
   // follow-up is expected first, so leave the PR open.
+  // Findings mean follow-up is expected before this can land, so the merge is
+  // not attempted at all — which is itself a "did not merge" outcome.
   const merged = comments.length === 0 ? await mergeAndCleanUp(prNumber, branch) : false;
-  return reviewOutcome({ hasFindings: comments.length > 0, merged });
+  return reviewOutcome(merged);
 }
 
 // `ci`'s format/lint checks fail on drift the build/review agents don't run

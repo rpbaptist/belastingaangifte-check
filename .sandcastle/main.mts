@@ -134,7 +134,7 @@ try {
   // attempt may already be open. `gh pr create` fails hard in that case, which
   // used to strand finished work: the loop recorded a failure and runReview
   // never ran. Reuse instead — every attempt after the first depends on it.
-  const existing = execFileSync(
+  const existingPrNumber = execFileSync(
     "gh",
     [
       "pr",
@@ -150,8 +150,8 @@ try {
     ],
     { encoding: "utf-8" }
   ).trim();
-  if (existing) {
-    prNumber = existing;
+  if (existingPrNumber) {
+    prNumber = existingPrNumber;
     console.log(`PR #${prNumber} already open for ${result.branch} — reusing it.`);
   } else {
     const prUrl = execFileSync(

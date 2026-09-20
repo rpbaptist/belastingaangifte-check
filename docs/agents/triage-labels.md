@@ -91,10 +91,13 @@ State machine: at the top of every iteration the loop re-checks every
 is still open, the issue is relabeled `blocked` (with a comment naming the
 open blockers) instead of being claimed, and the picker moves to the next
 candidate. Only once an issue clears that gate does it proceed:
-`ready-for-agent` → (loop claims it) `in-progress-by-agent` → either the
-label is cleared and a PR is opened (success), or it becomes
-`blocked-for-agent` (failure — human must clear it before the loop will
-touch the issue again). The picker always excludes `in-progress-by-agent`
+`ready-for-agent` → (loop claims it) `in-progress-by-agent` → one of three
+ends, keyed off `main.mts`'s exit code (ADR 0011): the labels are cleared
+because the PR merged (exit 0, success); the issue becomes
+`ready-for-human` because the PR is open but parked on red CI, a rejected
+merge, or outstanding findings (exit 2); or it becomes `blocked-for-agent`
+because the iteration failed outright (exit 1 — human must clear it before
+the loop will touch the issue again). The picker always excludes `in-progress-by-agent`
 and `blocked-for-agent`, so an issue carrying either is never re-claimed
 automatically — same for `blocked`, which only the promotion check above
 can clear.
