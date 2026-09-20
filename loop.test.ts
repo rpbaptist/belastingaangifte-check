@@ -237,6 +237,20 @@ describe("session-limit detection", () => {
   });
 });
 
+describe("config-lock contention (#145)", () => {
+  it("is no longer treated as transient, because the sandbox can no longer cause it", () => {
+    // The sandbox writes its git identity to the container's own global
+    // config (.sandcastle/git-identity.mts), so it never writes the config
+    // file the host shares. A lock error here would therefore come from
+    // something else, and retrying it forever would hide that.
+    const logFile = path.join(repoDir, "config-lock.log");
+    writeFileSync(logFile, "error: could not lock config file .git/config: File exists\n");
+
+    const output = runLoopFn(`is_transient_failure "${logFile}" && echo MATCHED || echo NO_MATCH`);
+    expect(output.trim()).toBe("NO_MATCH");
+  });
+});
+
 describe("checkpoint-timeout detection (#128)", () => {
   it("is_checkpoint_timeout matches the sentinel line", () => {
     const logFile = path.join(repoDir, "checkpoint.log");

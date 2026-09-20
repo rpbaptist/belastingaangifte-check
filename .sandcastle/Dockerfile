@@ -34,6 +34,11 @@ RUN curl -fsSL https://opencode.ai/install | bash || npm install -g opencode-ai 
 # Add Claude + opencode to PATH
 ENV PATH="/home/agent/.opencode/bin:/home/agent/.local/bin:$PATH"
 
+# USER above is numeric, so HOME is whatever Docker resolves from
+# /etc/passwd. The sandbox's git identity is written with --global, which
+# resolves through HOME, so pin it rather than leave it to that lookup.
+ENV HOME=/home/agent
+
 WORKDIR /home/agent
 
 # In worktree sandbox mode, Sandcastle bind-mounts the git worktree at /home/agent/workspace
