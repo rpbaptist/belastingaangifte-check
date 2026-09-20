@@ -122,28 +122,66 @@ export interface AnalysisReport {
   extractionErrors: ExtractionError[];
 }
 
-// The kinds of thing the deterministic Validation layer can fail to read. Distinct from
-// an aandachtspunt: a finding says the tool could not read something, not something about
-// the filer's tax position. See ADR 0008 — the check reports, it never repairs.
-export type FindingKind =
-  | "unresolvedAmount" // a matched pair whose bewijsstuk amount could not be resolved
-  | "taxYearMismatch" // a bewijsstuk covering a different tax year than the aangifte
-  | "signContradiction" // an amount whose sign contradicts its kind (a magnitude gone negative)
-  | "duplicateRow" // rows identical in every field, collapsed to one
-  | "unknownAmountKind" // an amount of a kind nothing downstream understands
-  | "unrecognizedDocument"; // a bewijsstuk that matched none of the known document kinds
+// The kinds of thing the deterministic Validation layer can fail to read, each carrying
+// exactly the fields its kind uses. Distinct from an aandachtspunt: a finding says the tool
+// could not read something, not something about the filer's tax position. See ADR 0008 —
+// the check reports, it never repairs.
 
-export interface Finding {
-  kind: FindingKind;
-  title: string;
-  detail: string;
-  institution?: string;
-  accountNumber?: string;
-  field?: string;
-  // ADR 0008: a rule may carry a proposed correction as data. Applying it is a separate,
-  // named, individually-tested transform — never something the check itself does.
-  proposedCorrection?: { before: number | null; after: number | null };
+// A bewijsstuk covering a different tax year than the aangifte.
+export interface TaxYearMismatchFinding {
+  kind: "taxYearMismatch";
+  institution: string;
 }
+
+// Rows identical in every field, collapsed to one.
+export interface DuplicateRowFinding {
+  kind: "duplicateRow";
+}
+
+// An amount of a kind nothing downstream understands. Property bewijsstukken carry no
+// rekeningnummer (see Property bewijsstuk in CONTEXT.md), so accountNumber is only present
+// when this is raised against a jaaropgave account.
+export interface UnknownAmountKindFinding {
+  kind: "unknownAmountKind";
+  institution: string;
+  accountNumber?: string;
+  field: string;
+}
+
+// A matched pair whose bewijsstuk amount could not be resolved.
+export interface UnresolvedAmountFinding {
+  kind: "unresolvedAmount";
+  institution: string;
+  accountNumber: string;
+  field: string;
+}
+
+// An amount whose sign contradicts its kind (a magnitude gone negative). ADR 0008: the
+// proposed correction is data the check attaches, never a mutation it performs.
+export interface SignContradictionFinding {
+  kind: "signContradiction";
+  institution: string;
+  accountNumber: string;
+  field: string;
+  proposedCorrection: { before: number | null; after: number | null };
+}
+
+// A bewijsstuk that matched none of the known document kinds. Institution is only present
+// when the extractor could read one.
+export interface UnrecognizedDocumentFinding {
+  kind: "unrecognizedDocument";
+  institution?: string;
+}
+
+export type FindingVariant =
+  | TaxYearMismatchFinding
+  | DuplicateRowFinding
+  | UnknownAmountKindFinding
+  | UnresolvedAmountFinding
+  | SignContradictionFinding
+  | UnrecognizedDocumentFinding;
+
+export type Finding = { title: string; detail: string } & FindingVariant;
 
 export interface CoveredItem {
   field: string;

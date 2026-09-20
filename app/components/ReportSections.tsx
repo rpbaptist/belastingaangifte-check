@@ -194,7 +194,7 @@ export function FindingsSection({ items }: { items: Finding[] }) {
       note={t("findingsNote")}
     >
       {items.map((f, i) => (
-        <div key={`${f.kind}|${f.field ?? ""}|${i}`} className="irow tone-find">
+        <div key={`${f.kind}|${"field" in f ? f.field : ""}|${i}`} className="irow tone-find">
           <div className="label-col">
             <div className="f">{f.title}</div>
             <div className="m">{f.detail}</div>
