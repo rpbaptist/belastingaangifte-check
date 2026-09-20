@@ -419,13 +419,33 @@ run_build_iteration() {
   # .git/config via bind mount — host git ops can leave config.lock).
   rm -f .git/config.lock
 
+  # main.mts reports three outcomes, so the exit code matters, not just
+  # pass/fail. Read it from PIPESTATUS: `$?` would be tee's status, which is
+  # always 0. Capturing it in the else branch is safe because nothing runs
+  # between the pipeline and the assignment to overwrite PIPESTATUS.
+  local status
   if RALPH_AGENT="$AGENT" ISSUE_NUMBER="$n" ISSUE_TITLE="$title" ISSUE_BODY="$body" \
        npx tsx .sandcastle/main.mts 2>&1 | tee "$log_file"; then
+    status=0
+  else
+    status="${PIPESTATUS[0]}"
+  fi
+
+  if [[ "$status" -eq 0 ]]; then
     # Also clear ready-for-agent: without this, a successfully completed
     # issue stays eligible for re-selection forever, and the next
     # iteration re-picks it, finds nothing new to commit, and reports a
     # false "blocked" failure. Success means done, not queue-again.
     gh issue edit "$n" --repo "$REPO" --remove-label in-progress-by-agent --remove-label ready-for-agent --remove-label session-limit-seen --remove-label hard-kill-seen
+  elif [[ "$status" -eq 2 ]]; then
+    # The work landed but CI stayed red, the merge was rejected, or review
+    # findings are outstanding. The PR is open and already explains itself,
+    # so hand the issue to a person rather than clearing or retrying it.
+    echo "Issue #$n needs a human — PR left open (see $log_file)."
+    gh issue edit "$n" --repo "$REPO" \
+      --remove-label in-progress-by-agent --remove-label ready-for-agent \
+      --remove-label session-limit-seen --remove-label hard-kill-seen \
+      --add-label ready-for-human
   else
     echo "Iteration for issue #$n failed (see $log_file)."
     if is_session_limit "$log_file" && is_session_limit_anomaly "$n"; then

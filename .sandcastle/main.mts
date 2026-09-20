@@ -179,7 +179,16 @@ try {
 // Self-review pass, per AGENTS.md: "Review the PR and leave findings as
 // comments. Address small review issues directly." Shared with review.mts
 // — see review-lib.mts.
-await runReview({ prNumber, issueNumber, branch: result.branch });
+const outcome = await runReview({ prNumber, issueNumber, branch: result.branch });
 
-console.log(`Success: ${result.branch}, PR #${prNumber} built and reviewed.`);
+// Three outcomes, not two. Exit 2 means the work exists but a person has to
+// take it from here (CI still red, merge rejected, or review findings
+// outstanding), so loop.sh can label the issue ready-for-human instead of
+// clearing it as done. Exit 1 stays reserved for a genuine failure.
+if (outcome === "needs-human") {
+  console.log(`Needs human: ${result.branch}, PR #${prNumber} left open.`);
+  process.exit(2);
+}
+
+console.log(`Success: ${result.branch}, PR #${prNumber} merged.`);
 process.exit(0);

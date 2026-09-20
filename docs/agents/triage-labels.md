@@ -47,6 +47,14 @@ triage — only by the loop itself.
 | `session-limit-seen`   | This issue already survived one Claude session-limit hit                |
 | `hard-kill-seen`       | This issue already survived one hard-killed sandbox run                 |
 
+The loop also applies `ready-for-human` — from the five-role vocabulary above,
+not a loop-owned label. It means the agent finished and pushed, but the pull
+request is parked: CI stayed red after the automated fix attempts, the merge was
+rejected, or review findings are outstanding. `main.mts` signals this by exiting
+2, distinct from exit 0 (merged) and exit 1 (failed); see ADR 0011. Use it to
+tell "finished, a person must take it from here" apart from
+`blocked-for-agent`, which means an iteration crashed.
+
 `session-limit-seen` backs the anomaly detector in `is_session_limit_anomaly`
 (`loop.sh`): the host-side progress note a session-limit hit leaves on
 `ralph/issue-N` only updates a local, unpushed git ref, so it doesn't
