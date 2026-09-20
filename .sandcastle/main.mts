@@ -27,11 +27,11 @@ const branch = `ralph/issue-${issueNumber}`;
 const buildHarness = (process.env.RALPH_AGENT ?? "claude") as BuildHarness;
 
 // Self-imposed wall-clock ceiling per build attempt, so a run can never
-// silently consume unlimited budget with nothing checkpointed. On expiry
-// the abort reason is a CheckpointTimeoutError carrying a sentinel line
-// that loop.sh's is_checkpoint_timeout() greps for, and that
+// silently consume unlimited budget with nothing checkpointed. On expiry the
+// abort reason is a CheckpointTimeoutError carrying a sentinel line, which
 // classifyRunError() below checks for to route this distinctly from an
-// arbitrary run() failure.
+// arbitrary run() failure. The line is for a person reading the log: loop.sh
+// no longer reads it, because every failure means the same thing to it.
 const DEFAULT_CHECKPOINT_TIMEOUT_MS = 90 * 60 * 1000;
 const CHECKPOINT_TIMEOUT_MS = process.env.RALPH_CHECKPOINT_TIMEOUT_MS
   ? Number(process.env.RALPH_CHECKPOINT_TIMEOUT_MS)
