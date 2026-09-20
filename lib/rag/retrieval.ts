@@ -32,7 +32,7 @@ export async function retrieveKennisbankContext(
   if (amountMismatches.length === 0) return [];
 
   const query = buildRetrievalQuery(amountMismatches);
-  const client = opts.embeddingClient ?? createVoyageClient();
+  const client = opts.embeddingClient ?? createVoyageClient(process.env.VOYAGE_API_KEY);
   const [queryEmbedding] = await client.embed([query], "query");
   if (!queryEmbedding) return [];
 
