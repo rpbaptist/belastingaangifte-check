@@ -38,22 +38,43 @@ function splitOversizedParagraph(paragraph: string, maxChars: number): string[] 
   return fragments.filter((f) => f.length > 0);
 }
 
-// Starts a new chunk carrying its owning heading and a tail of overlap from the
-// previous chunk, so the new chunk reads standalone — but never duplicates text
-// that's identical to the heading (e.g. a heading immediately followed by an
-// overflowing paragraph, where the "overlap" would just be the heading again).
-function buildChunkStart(
+// Starts a new chunk that continues a section: carries the section's heading and a
+// tail of overlap from the previous chunk, so the new chunk reads standalone.
+function buildContinuationStart(
   previousChunk: string,
   heading: string,
   paragraph: string,
   overlapChars: number
 ): string {
   const overlap = previousChunk.slice(-overlapChars);
-  const prefixParts: string[] = [];
-  if (heading && heading !== paragraph) prefixParts.push(heading);
-  if (overlap && overlap !== heading) prefixParts.push(overlap);
-  prefixParts.push(paragraph);
-  return prefixParts.join("\n\n");
+  return [heading, overlap, paragraph].filter((part) => part.length > 0).join("\n\n");
+}
+
+// Joins each heading — or run of consecutive headings — to the paragraph that follows
+// it, so the loop in chunkText only ever sees a heading together with its body and can
+// never flush one alone or leave one trailing at the end of a chunk. A heading run with
+// no paragraph after it (end of document) carries no content and is dropped.
+// `heading` is set only on a unit that opens a section: the last heading of its run.
+interface TextUnit {
+  text: string;
+  heading: string | null;
+}
+
+function attachHeadings(paragraphs: string[]): TextUnit[] {
+  const units: TextUnit[] = [];
+  let pendingHeadings: string[] = [];
+  for (const paragraph of paragraphs) {
+    if (HEADING_PATTERN.test(paragraph)) {
+      pendingHeadings.push(paragraph);
+    } else {
+      units.push({
+        text: [...pendingHeadings, paragraph].join("\n\n"),
+        heading: pendingHeadings.at(-1) ?? null,
+      });
+      pendingHeadings = [];
+    }
+  }
+  return units;
 }
 
 export function chunkText(
@@ -63,11 +84,13 @@ export function chunkText(
   const maxChars = opts.maxChars ?? DEFAULT_MAX_CHARS;
   const overlapChars = opts.overlapChars ?? DEFAULT_OVERLAP_CHARS;
 
-  const paragraphs = doc.text
-    .split(/\n\s*\n/)
-    .map((p) => p.trim())
-    .filter((p) => p.length > 0)
-    .flatMap((p) => splitOversizedParagraph(p, maxChars));
+  const units = attachHeadings(
+    doc.text
+      .split(/\n\s*\n/)
+      .map((p) => p.trim())
+      .filter((p) => p.length > 0)
+      .flatMap((p) => splitOversizedParagraph(p, maxChars))
+  );
 
   const chunks: TextChunk[] = [];
   let current = "";
@@ -79,12 +102,16 @@ export function chunkText(
     }
   };
 
-  for (const paragraph of paragraphs) {
-    if (HEADING_PATTERN.test(paragraph)) currentHeading = paragraph;
+  for (const unit of units) {
+    if (unit.heading) currentHeading = unit.heading;
 
-    const candidate = current ? `${current}\n\n${paragraph}` : paragraph;
+    const candidate = current ? `${current}\n\n${unit.text}` : unit.text;
     if (current && candidate.length > maxChars) {
-      const nextStart = buildChunkStart(current, currentHeading, paragraph, overlapChars);
+      // A new section brings its own heading; overlap from the previous section would
+      // only put that section's text under the wrong heading.
+      const nextStart = unit.heading
+        ? unit.text
+        : buildContinuationStart(current, currentHeading, unit.text, overlapChars);
       flush();
       current = nextStart;
     } else {
