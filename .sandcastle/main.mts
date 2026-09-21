@@ -101,7 +101,7 @@ const commitsAheadOfMaster = execFileSync(
   { encoding: "utf-8" }
 ).trim();
 if (commitsAheadOfMaster === "0") {
-  console.error(`No commits on ${result.branch}. Treating as blocked.`);
+  console.error(`No commits on ${result.branch}. Treating as a failed attempt.`);
   process.exit(1);
 }
 
@@ -118,7 +118,9 @@ const subjects = execFileSync(
   .split("\n");
 const hasRealWork = subjects.some((s) => !s.startsWith(`Progress notes: issue #${issueNumber}`));
 if (!hasRealWork) {
-  console.error(`Only progress notes on ${result.branch}, no real work yet. Treating as blocked.`);
+  console.error(
+    `Only progress notes on ${result.branch}, no real work yet. Treating as a failed attempt.`
+  );
   process.exit(1);
 }
 
