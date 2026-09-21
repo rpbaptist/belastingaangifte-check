@@ -1,15 +1,14 @@
 import { readFileSync } from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";
+import { HEADING_PATTERN } from "./chunker";
 import type { Chunk } from "./types";
 
 // Guards the committed Kennisbank artifact, not the chunker code: a corpus regenerated
-// with a regressed chunker would otherwise ship orphan headings unnoticed.
-const HEADING_PATTERN = /^#{1,6}\s/;
-
-const corpus: Chunk[] = JSON.parse(
-  readFileSync(path.join(__dirname, "corpus.json"), "utf-8")
-);
+// with a regressed chunker would otherwise ship orphan headings unnoticed. Overlap
+// crossing a section is not checked here: a repeated heading is not a reliable signal,
+// since a page can hold two sections with the same title; chunker.test.ts covers it.
+const corpus: Chunk[] = JSON.parse(readFileSync(path.join(__dirname, "corpus.json"), "utf-8"));
 
 const unitsOf = (chunk: Chunk) => chunk.text.split(/\n\s*\n/).map((u) => u.trim());
 
