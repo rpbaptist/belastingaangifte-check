@@ -13,7 +13,7 @@ export interface TextChunk {
 const DEFAULT_MAX_CHARS = 1000;
 const DEFAULT_OVERLAP_CHARS = 120;
 
-const HEADING_PATTERN = /^#{1,6}\s/;
+export const HEADING_PATTERN = /^#{1,6}\s/;
 
 // Splits a paragraph longer than maxChars into fragments that fit within it, so
 // the main loop below never sees a single unit of text it can't bound. Cuts at
@@ -39,27 +39,36 @@ function splitOversizedParagraph(paragraph: string, maxChars: number): string[] 
 }
 
 // Starts a new chunk that continues a section: carries the section's heading and a
-// tail of overlap from the previous chunk, so the new chunk reads standalone.
+// tail of overlap from the previous chunk, so the new chunk reads standalone. The
+// overlap is taken only from text after the section's heading — when the section
+// opened mid-chunk, anything before it belongs to the previous section.
 function buildContinuationStart(
   previousChunk: string,
-  heading: string,
+  heading: string | null,
   paragraph: string,
   overlapChars: number
 ): string {
-  const overlap = previousChunk.slice(-overlapChars);
-  return [heading, overlap, paragraph].filter((part) => part.length > 0).join("\n\n");
+  const sectionStart = heading ? previousChunk.lastIndexOf(heading) : -1;
+  const sectionBody =
+    heading && sectionStart >= 0
+      ? previousChunk.slice(sectionStart + heading.length)
+      : previousChunk;
+  const overlap = sectionBody.slice(-overlapChars).trim();
+  return [heading, overlap, paragraph].filter((part) => part).join("\n\n");
+}
+
+// A paragraph, or — when it opens a section — the heading run before it plus the
+// paragraph. `sectionHeading` is the last heading of that run; null on a unit that
+// continues a section.
+interface TextUnit {
+  text: string;
+  sectionHeading: string | null;
 }
 
 // Joins each heading — or run of consecutive headings — to the paragraph that follows
 // it, so the loop in chunkText only ever sees a heading together with its body and can
 // never flush one alone or leave one trailing at the end of a chunk. A heading run with
 // no paragraph after it (end of document) carries no content and is dropped.
-// `heading` is set only on a unit that opens a section: the last heading of its run.
-interface TextUnit {
-  text: string;
-  heading: string | null;
-}
-
 function attachHeadings(paragraphs: string[]): TextUnit[] {
   const units: TextUnit[] = [];
   let pendingHeadings: string[] = [];
@@ -69,7 +78,7 @@ function attachHeadings(paragraphs: string[]): TextUnit[] {
     } else {
       units.push({
         text: [...pendingHeadings, paragraph].join("\n\n"),
-        heading: pendingHeadings.at(-1) ?? null,
+        sectionHeading: pendingHeadings.at(-1) ?? null,
       });
       pendingHeadings = [];
     }
@@ -94,7 +103,7 @@ export function chunkText(
 
   const chunks: TextChunk[] = [];
   let current = "";
-  let currentHeading = "";
+  let currentHeading: string | null = null;
 
   const flush = () => {
     if (current) {
@@ -103,13 +112,13 @@ export function chunkText(
   };
 
   for (const unit of units) {
-    if (unit.heading) currentHeading = unit.heading;
+    if (unit.sectionHeading) currentHeading = unit.sectionHeading;
 
     const candidate = current ? `${current}\n\n${unit.text}` : unit.text;
     if (current && candidate.length > maxChars) {
       // A new section brings its own heading; overlap from the previous section would
       // only put that section's text under the wrong heading.
-      const nextStart = unit.heading
+      const nextStart = unit.sectionHeading
         ? unit.text
         : buildContinuationStart(current, currentHeading, unit.text, overlapChars);
       flush();

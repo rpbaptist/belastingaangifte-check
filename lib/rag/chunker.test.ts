@@ -112,6 +112,20 @@ describe("chunkText", () => {
     expect(chunks[1].text).toBe(`## Tweede sectie\n\n${paragraphB}`);
   });
 
+  it("takes continuation overlap only from the current section when it opened mid-chunk", () => {
+    const chunks = chunkText(
+      {
+        url: "https://example.org/e6",
+        title: "Sectie halverwege",
+        text: `## Eerste sectie\n\n${"A".repeat(500)}\n\n## Tweede sectie\n\nKort.\n\n${"C".repeat(600)}`,
+      },
+      { maxChars: 1000, overlapChars: 120 }
+    );
+
+    expect(chunks).toHaveLength(2);
+    expect(chunks[1].text).toBe(`## Tweede sectie\n\nKort.\n\n${"C".repeat(600)}`);
+  });
+
   it("keeps a run of consecutive headings together with the paragraph under them", () => {
     const paragraphA = "A".repeat(600);
     const paragraphB = "B".repeat(600);
@@ -200,7 +214,7 @@ describe("chunkText", () => {
     );
 
     expect(chunks.length).toBeGreaterThan(1);
-    const tailOfFirst = chunks[0].text.slice(-120);
+    const tailOfFirst = chunks[0].text.slice(-120).trim();
     expect(chunks[1].text.startsWith(`## Aftrekposten\n\n${tailOfFirst}`)).toBe(true);
   });
 
