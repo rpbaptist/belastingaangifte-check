@@ -12,7 +12,7 @@ Aandachtspunten judgment is seeded by `rules/aandachtspunten.md` (ADR 0001) plus
 
 Hand-rolled RAG behind small interfaces, entirely in `lib/rag/`:
 
-- **Chunking** (`chunker.ts`): heading-aware paragraph packing, ~1000 chars per chunk, ~120 chars of overlap with the neighbouring chunk. Pure and dependency-free.
+- **Chunking** (`chunker.ts`): heading-aware paragraph packing, ~1000 chars per chunk, ~120 chars of overlap with the preceding chunk of the same section. A heading always stays in the chunk with the text it introduces, and a chunk that opens a new section carries no overlap from the previous one (#93). Pure and dependency-free.
 - **Corpus**: an offline script (`scripts/rag/scrape-corpus.ts`, run by hand via `npm run scrape:kennisbank`) scrapes a curated 15-page set of belastingdienst.nl pages (box 3, hypotheekrenteaftrek, dividendbelasting, aftrekposten), chunks them, embeds them via Voyage AI, and writes the result to `lib/rag/corpus.json`, which is committed to git.
 - **Embeddings** (`embeddings.ts`): Voyage AI, model `voyage-4-lite`, 512 output dimensions, called via plain `fetch` (no SDK) so the wire format stays visible.
 - **Retrieval** (`vector-store.ts`, `retrieval.ts`): in-process cosine similarity over the committed corpus, behind a `VectorStore` interface (`search(queryEmbedding, k)`). The retrieval query is built purely from the current `AmountMismatch[]` (field, institution type, mortgage metadata) — not from the full uploaded-statement list — so an unrelated uploaded statement can't leak irrelevant topics into the query.
