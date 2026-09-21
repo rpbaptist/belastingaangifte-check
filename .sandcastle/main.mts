@@ -41,6 +41,14 @@ if (!Number.isFinite(CHECKPOINT_TIMEOUT_MS) || CHECKPOINT_TIMEOUT_MS <= 0) {
     `RALPH_CHECKPOINT_TIMEOUT_MS must be a positive number, got "${process.env.RALPH_CHECKPOINT_TIMEOUT_MS}"`
   );
 }
+// Every attempt starts from what is merged on GitHub, not from the host's
+// checked-out HEAD. The loop merges PRs through GitHub and never pulls, so
+// the host's master falls behind after every merge; a branch created from it
+// would redo or conflict with work that already landed. A resumed branch
+// already exists, and Sandcastle ignores baseBranch for it.
+const BASE_REF = "origin/master";
+execFileSync("git", ["fetch", "origin", "master"], { stdio: "inherit" });
+
 const checkpointController = new AbortController();
 const checkpointTimer = setTimeout(() => {
   checkpointController.abort(new CheckpointTimeoutError(CHECKPOINT_TIMEOUT_MS));
@@ -53,7 +61,7 @@ try {
     sandbox: docker({
       mounts: [{ hostPath: "~/.npm", sandboxPath: "/home/agent/.npm", readonly: true }],
     }),
-    branchStrategy: { type: "branch", branch },
+    branchStrategy: { type: "branch", branch, baseBranch: BASE_REF },
     promptFile: "./.sandcastle/prompt.md",
     promptArgs: {
       ISSUE_NUMBER: issueNumber,
@@ -94,10 +102,12 @@ try {
 // for #105 getting wrongly blocked this way after finishing on an
 // earlier run and never getting pushed.
 //
-// Check commits ahead of master directly instead.
+// Check commits ahead of master directly instead — BASE_REF, not the local
+// master, which would count work merged since the host last pulled as this
+// attempt's own.
 const commitsAheadOfMaster = execFileSync(
   "git",
-  ["rev-list", "--count", `master..refs/heads/${result.branch}`],
+  ["rev-list", "--count", `${BASE_REF}..refs/heads/${result.branch}`],
   { encoding: "utf-8" }
 ).trim();
 if (commitsAheadOfMaster === "0") {
@@ -111,7 +121,7 @@ if (commitsAheadOfMaster === "0") {
 // ahead of master isn't a progress note.
 const subjects = execFileSync(
   "git",
-  ["log", "--format=%s", `master..refs/heads/${result.branch}`],
+  ["log", "--format=%s", `${BASE_REF}..refs/heads/${result.branch}`],
   { encoding: "utf-8" }
 )
   .trim()
