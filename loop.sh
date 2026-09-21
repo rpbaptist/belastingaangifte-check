@@ -3,7 +3,7 @@
 #
 # main.mts (.sandcastle/main.mts) owns sandboxing, branch strategy, commit
 # verification, push, and PR creation. loop.sh stays dumb: pick an issue,
-# label it, run main.mts, read its exit code, relabel. It never inspects a
+# run main.mts, read its exit code, relabel. It never inspects a
 # run's output — a failure means "try this one again later", whatever it was.
 #
 # Usage:
@@ -163,7 +163,7 @@ run_build_iteration() {
 
   # main.mts reports three outcomes, so the exit code matters, not just
   # pass/fail. Take main.mts's own status from PIPESTATUS[0] rather than `$?`:
-  # under `set -o pipefail` (line 14) `$?` is the whole pipeline's status, so a
+  # under `set -o pipefail` `$?` is the whole pipeline's status, so a
   # tee failure would be indistinguishable from an outcome main.mts chose.
   # The trade is that tee failing on its own then reads as success — the label
   # contract stays right, but an unwritable log goes unnoticed.
@@ -180,8 +180,8 @@ run_build_iteration() {
   if [[ "$status" -eq 0 ]]; then
     # Also clear ready-for-agent: without this, a successfully completed
     # issue stays eligible for re-selection forever, and the next
-    # iteration re-picks it, finds nothing new to commit, and reports a
-    # false "blocked" failure. Success means done, not queue-again.
+    # iteration re-picks it, finds nothing new to commit, and fails.
+    # Success means done, not queue-again.
     gh issue edit "$n" --repo "$REPO" --remove-label ready-for-agent
   elif [[ "$status" -eq 2 ]]; then
     # The work landed but CI stayed red, the merge was rejected, or review
