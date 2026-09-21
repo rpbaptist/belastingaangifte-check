@@ -378,3 +378,53 @@ describe("run_build_iteration when main.mts reports needs-human (exit 2)", () =>
     expect(calls.some((c) => c.includes("blocked-for-agent"))).toBe(false);
   });
 });
+
+describe("run_build_iteration removes a failed attempt's empty branch", () => {
+  // New branches start from origin/master (main.mts fetches it first), and
+  // nothing in the loop keeps the host's local master current. A branch with
+  // no work of its own therefore has to be measured against origin/master:
+  // measured against a stale local master it looks like it holds work, and
+  // survives to confuse the next attempt.
+  function failOn(n: number) {
+    stubSessionLimitNpx();
+    stubGhWithCallLog();
+    const issueJsonPath = path.join(repoDir, "issue.json");
+    writeFileSync(issueJsonPath, JSON.stringify({ number: n, title: "Test issue", body: "body" }));
+    runLoopFn(`run_build_iteration "$(cat '${issueJsonPath}')"`);
+  }
+
+  function advanceOriginMaster() {
+    git(["switch", "-q", "-c", "upstream"]);
+    writeFileSync(path.join(repoDir, "merged.txt"), "merged elsewhere\n");
+    git(["add", "merged.txt"]);
+    git(["commit", "-q", "-m", "Merged on GitHub"]);
+    git(["update-ref", "refs/remotes/origin/master", "HEAD"]);
+    git(["switch", "-q", "master"]);
+  }
+
+  function branchExists(name: string): boolean {
+    return git(["branch", "--list", name]).trim() !== "";
+  }
+
+  it("deletes a branch identical to origin/master while local master is behind", () => {
+    advanceOriginMaster();
+    git(["branch", "ralph/issue-60", "origin/master"]);
+
+    failOn(60);
+
+    expect(branchExists("ralph/issue-60")).toBe(false);
+  });
+
+  it("keeps a branch that holds work beyond origin/master", () => {
+    advanceOriginMaster();
+    git(["switch", "-q", "-c", "ralph/issue-61", "origin/master"]);
+    writeFileSync(path.join(repoDir, "work.txt"), "real work\n");
+    git(["add", "work.txt"]);
+    git(["commit", "-q", "-m", "Real work"]);
+    git(["switch", "-q", "master"]);
+
+    failOn(61);
+
+    expect(branchExists("ralph/issue-61")).toBe(true);
+  });
+});

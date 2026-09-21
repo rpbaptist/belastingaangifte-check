@@ -201,8 +201,10 @@ run_build_iteration() {
     set_aside_issue "$n"
     # Remove empty branch left by failed sandbox setup so next retry
     # starts clean (no zero-commit branch to confuse verification).
+    # Compared with origin/master, which main.mts fetched and branched from:
+    # the host's local master is never updated by the loop.
     if git rev-parse --verify "ralph/issue-$n" >/dev/null 2>&1; then
-      if git diff --quiet "master..ralph/issue-$n" 2>/dev/null; then
+      if git diff --quiet "origin/master..ralph/issue-$n" 2>/dev/null; then
         git branch -D "ralph/issue-$n" 2>/dev/null || true
         git push origin --delete "ralph/issue-$n" 2>/dev/null || true
       fi
