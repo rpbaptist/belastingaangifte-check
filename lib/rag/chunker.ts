@@ -13,7 +13,7 @@ export interface TextChunk {
 const DEFAULT_MAX_CHARS = 1000;
 const DEFAULT_OVERLAP_CHARS = 120;
 
-const HEADING_PATTERN = /^#{1,6}\s/;
+export const HEADING_PATTERN = /^#{1,6}\s/;
 
 // Splits a paragraph longer than maxChars into fragments that fit within it, so
 // the main loop below never sees a single unit of text it can't bound. Cuts at
@@ -38,22 +38,52 @@ function splitOversizedParagraph(paragraph: string, maxChars: number): string[] 
   return fragments.filter((f) => f.length > 0);
 }
 
-// Starts a new chunk carrying its owning heading and a tail of overlap from the
-// previous chunk, so the new chunk reads standalone — but never duplicates text
-// that's identical to the heading (e.g. a heading immediately followed by an
-// overflowing paragraph, where the "overlap" would just be the heading again).
-function buildChunkStart(
+// Starts a new chunk that continues a section: carries the section's heading and a
+// tail of overlap from the previous chunk, so the new chunk reads standalone. The
+// overlap is taken only from text after the section's heading — when the section
+// opened mid-chunk, anything before it belongs to the previous section.
+function buildContinuationStart(
   previousChunk: string,
-  heading: string,
+  heading: string | null,
   paragraph: string,
   overlapChars: number
 ): string {
-  const overlap = previousChunk.slice(-overlapChars);
-  const prefixParts: string[] = [];
-  if (heading && heading !== paragraph) prefixParts.push(heading);
-  if (overlap && overlap !== heading) prefixParts.push(overlap);
-  prefixParts.push(paragraph);
-  return prefixParts.join("\n\n");
+  const sectionStart = heading ? previousChunk.lastIndexOf(heading) : -1;
+  const sectionBody =
+    heading && sectionStart >= 0
+      ? previousChunk.slice(sectionStart + heading.length)
+      : previousChunk;
+  const overlap = sectionBody.slice(-overlapChars).trim();
+  return [heading, overlap, paragraph].filter((part) => part).join("\n\n");
+}
+
+// A paragraph, or — when it opens a section — the heading run before it plus the
+// paragraph. `sectionHeading` is the last heading of that run; null on a unit that
+// continues a section.
+interface TextUnit {
+  text: string;
+  sectionHeading: string | null;
+}
+
+// Joins each heading — or run of consecutive headings — to the paragraph that follows
+// it, so the loop in chunkText only ever sees a heading together with its body and can
+// never flush one alone or leave one trailing at the end of a chunk. A heading run with
+// no paragraph after it (end of document) carries no content and is dropped.
+function attachHeadings(paragraphs: string[]): TextUnit[] {
+  const units: TextUnit[] = [];
+  let pendingHeadings: string[] = [];
+  for (const paragraph of paragraphs) {
+    if (HEADING_PATTERN.test(paragraph)) {
+      pendingHeadings.push(paragraph);
+    } else {
+      units.push({
+        text: [...pendingHeadings, paragraph].join("\n\n"),
+        sectionHeading: pendingHeadings.at(-1) ?? null,
+      });
+      pendingHeadings = [];
+    }
+  }
+  return units;
 }
 
 export function chunkText(
@@ -63,15 +93,17 @@ export function chunkText(
   const maxChars = opts.maxChars ?? DEFAULT_MAX_CHARS;
   const overlapChars = opts.overlapChars ?? DEFAULT_OVERLAP_CHARS;
 
-  const paragraphs = doc.text
-    .split(/\n\s*\n/)
-    .map((p) => p.trim())
-    .filter((p) => p.length > 0)
-    .flatMap((p) => splitOversizedParagraph(p, maxChars));
+  const units = attachHeadings(
+    doc.text
+      .split(/\n\s*\n/)
+      .map((p) => p.trim())
+      .filter((p) => p.length > 0)
+      .flatMap((p) => splitOversizedParagraph(p, maxChars))
+  );
 
   const chunks: TextChunk[] = [];
   let current = "";
-  let currentHeading = "";
+  let currentHeading: string | null = null;
 
   const flush = () => {
     if (current) {
@@ -79,12 +111,16 @@ export function chunkText(
     }
   };
 
-  for (const paragraph of paragraphs) {
-    if (HEADING_PATTERN.test(paragraph)) currentHeading = paragraph;
+  for (const unit of units) {
+    if (unit.sectionHeading) currentHeading = unit.sectionHeading;
 
-    const candidate = current ? `${current}\n\n${paragraph}` : paragraph;
+    const candidate = current ? `${current}\n\n${unit.text}` : unit.text;
     if (current && candidate.length > maxChars) {
-      const nextStart = buildChunkStart(current, currentHeading, paragraph, overlapChars);
+      // A new section brings its own heading; overlap from the previous section would
+      // only put that section's text under the wrong heading.
+      const nextStart = unit.sectionHeading
+        ? unit.text
+        : buildContinuationStart(current, currentHeading, unit.text, overlapChars);
       flush();
       current = nextStart;
     } else {

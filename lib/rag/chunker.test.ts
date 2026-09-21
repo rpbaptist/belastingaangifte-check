@@ -65,10 +65,7 @@ describe("chunkText", () => {
     expect(chunks[1].text.startsWith(tailOfFirst)).toBe(true);
   });
 
-  it("does not duplicate the heading when the overlap tail is the heading itself", () => {
-    // A short heading immediately followed by a paragraph that alone overflows maxChars:
-    // the heading-only first chunk's overlap tail equals the heading, which must not be
-    // prefixed twice into the next chunk.
+  it("keeps a heading with its body when the paragraph under it alone overflows maxChars", () => {
     const chunks = chunkText(
       {
         url: "https://example.org/e",
@@ -78,7 +75,86 @@ describe("chunkText", () => {
       { maxChars: 1000, overlapChars: 120 }
     );
 
-    expect(chunks[1].text.startsWith("## Heading\n\n## Heading")).toBe(false);
+    expect(chunks).toHaveLength(1);
+    expect(chunks[0].text).toBe(`## Heading\n\n${"A".repeat(990)}`);
+  });
+
+  it("moves a heading that would end a full chunk into the next chunk, with its body", () => {
+    const paragraphA = "A".repeat(600);
+    const paragraphB = "B".repeat(600);
+    const chunks = chunkText(
+      {
+        url: "https://example.org/e2",
+        title: "Nieuwe sectie",
+        text: `${paragraphA}\n\n## Nieuwe sectie\n\n${paragraphB}`,
+      },
+      { maxChars: 1000, overlapChars: 120 }
+    );
+
+    expect(chunks).toHaveLength(2);
+    expect(chunks[0].text).toBe(paragraphA);
+    expect(chunks[1].text).toContain(`## Nieuwe sectie\n\n${paragraphB}`);
+  });
+
+  it("starts a chunk that opens a new section without overlap from the previous section", () => {
+    const paragraphA = "A".repeat(600);
+    const paragraphB = "B".repeat(600);
+    const chunks = chunkText(
+      {
+        url: "https://example.org/e3",
+        title: "Sectiegrens",
+        text: `## Eerste sectie\n\n${paragraphA}\n\n## Tweede sectie\n\n${paragraphB}`,
+      },
+      { maxChars: 1000, overlapChars: 120 }
+    );
+
+    expect(chunks).toHaveLength(2);
+    expect(chunks[1].text).toBe(`## Tweede sectie\n\n${paragraphB}`);
+  });
+
+  it("takes continuation overlap only from the current section when it opened mid-chunk", () => {
+    const chunks = chunkText(
+      {
+        url: "https://example.org/e6",
+        title: "Sectie halverwege",
+        text: `## Eerste sectie\n\n${"A".repeat(500)}\n\n## Tweede sectie\n\nKort.\n\n${"C".repeat(600)}`,
+      },
+      { maxChars: 1000, overlapChars: 120 }
+    );
+
+    expect(chunks).toHaveLength(2);
+    expect(chunks[1].text).toBe(`## Tweede sectie\n\nKort.\n\n${"C".repeat(600)}`);
+  });
+
+  it("keeps a run of consecutive headings together with the paragraph under them", () => {
+    const paragraphA = "A".repeat(600);
+    const paragraphB = "B".repeat(600);
+    const chunks = chunkText(
+      {
+        url: "https://example.org/e4",
+        title: "Geneste koppen",
+        text: `${paragraphA}\n\n## Hoofdstuk\n\n### Paragraaf\n\n${paragraphB}`,
+      },
+      { maxChars: 1000, overlapChars: 120 }
+    );
+
+    expect(chunks).toHaveLength(2);
+    expect(chunks[0].text).toBe(paragraphA);
+    expect(chunks[1].text).toBe(`## Hoofdstuk\n\n### Paragraaf\n\n${paragraphB}`);
+  });
+
+  it("drops a heading with no body after it at the end of the document", () => {
+    const chunks = chunkText(
+      {
+        url: "https://example.org/e5",
+        title: "Loze kop",
+        text: `## Uitleg\n\nKorte alinea.\n\n## Actueel`,
+      },
+      { maxChars: 1000 }
+    );
+
+    expect(chunks).toHaveLength(1);
+    expect(chunks[0].text).toBe("## Uitleg\n\nKorte alinea.");
   });
 
   it("splits a single oversized paragraph with no blank line at the nearest whitespace", () => {
@@ -123,6 +199,23 @@ describe("chunkText", () => {
     for (const chunk of chunks) {
       expect(chunk.text.startsWith("## Aftrekposten")).toBe(true);
     }
+  });
+
+  it("carries only the heading line, not the section's first body, into continuation chunks", () => {
+    // Numbered words, so every position in the paragraph is distinguishable.
+    const bigParagraph = Array.from({ length: 200 }, (_, i) => `post${i}`).join(" ");
+    const chunks = chunkText(
+      {
+        url: "https://example.org/h2",
+        title: "Aftrekposten",
+        text: `## Aftrekposten\n\n${bigParagraph}`,
+      },
+      { maxChars: 1000, overlapChars: 120 }
+    );
+
+    expect(chunks.length).toBeGreaterThan(1);
+    const tailOfFirst = chunks[0].text.slice(-120).trim();
+    expect(chunks[1].text.startsWith(`## Aftrekposten\n\n${tailOfFirst}`)).toBe(true);
   });
 
   it("carries overlap between chunks produced by splitting the same oversized paragraph", () => {
