@@ -5,9 +5,12 @@ import { waitForCiCheck, type CheckLookup } from "./wait-for-checks.mts";
 // commit, and `gh pr checks --watch` exits 1 with "no checks reported". The
 // merge gate read that as a CI failure and left the PR for a human.
 
+const PUSHED = "b2";
+
 function lookupAnswering(...answers: (string[] | Error)[]): CheckLookup {
   let call = 0;
   return {
+    headSha: vi.fn(() => PUSHED),
     checkNames: vi.fn(() => {
       const answer = answers[Math.min(call++, answers.length - 1)]!;
       if (answer instanceof Error) throw answer;
@@ -23,14 +26,14 @@ describe("waitForCiCheck", () => {
   it("returns at once when the ci check is already reported", async () => {
     const lookup = lookupAnswering(["Vercel", "ci"]);
 
-    expect(await waitForCiCheck("7", lookup, options)).toBe(true);
+    expect(await waitForCiCheck("7", PUSHED, lookup, options)).toBe(true);
     expect(lookup.sleep).not.toHaveBeenCalled();
   });
 
   it("waits until the ci check appears", async () => {
     const lookup = lookupAnswering([], [], ["ci"]);
 
-    expect(await waitForCiCheck("7", lookup, options)).toBe(true);
+    expect(await waitForCiCheck("7", PUSHED, lookup, options)).toBe(true);
     expect(lookup.sleep).toHaveBeenCalledTimes(2);
   });
 
@@ -39,20 +42,31 @@ describe("waitForCiCheck", () => {
   it("keeps waiting while only other checks are reported", async () => {
     const lookup = lookupAnswering(["Vercel"], ["Vercel", "ci"]);
 
-    expect(await waitForCiCheck("7", lookup, options)).toBe(true);
+    expect(await waitForCiCheck("7", PUSHED, lookup, options)).toBe(true);
     expect(lookup.sleep).toHaveBeenCalledTimes(1);
   });
 
   it("treats a failed lookup as no checks yet", async () => {
     const lookup = lookupAnswering(new Error("no checks reported"), ["ci"]);
 
-    expect(await waitForCiCheck("7", lookup, options)).toBe(true);
+    expect(await waitForCiCheck("7", PUSHED, lookup, options)).toBe(true);
   });
 
   it("gives up after the timeout", async () => {
     const lookup = lookupAnswering([]);
 
-    expect(await waitForCiCheck("7", lookup, options)).toBe(false);
+    expect(await waitForCiCheck("7", PUSHED, lookup, options)).toBe(false);
     expect(lookup.sleep).toHaveBeenCalledTimes(12);
+  });
+
+  // After a CI-fix push, GitHub can briefly still report the previous head,
+  // whose ci check already exists (and failed). That check says nothing
+  // about the pushed commit.
+  it("ignores the ci check of a head that is not the pushed commit", async () => {
+    const lookup = lookupAnswering(["ci"]);
+    lookup.headSha = vi.fn().mockReturnValueOnce("a1").mockReturnValue(PUSHED);
+
+    expect(await waitForCiCheck("7", PUSHED, lookup, options)).toBe(true);
+    expect(lookup.sleep).toHaveBeenCalledTimes(1);
   });
 });

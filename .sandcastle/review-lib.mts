@@ -248,7 +248,7 @@ async function ensureChecksPass(prNumber: string, branch: string): Promise<boole
     // Every pass here follows a push (build, review, tidy or CI fix). Watched
     // too soon, gh exits 1 with "no checks reported", which reads as a CI
     // failure that has no log to fix — and the PR went to a human.
-    if (!(await waitForCiCheck(prNumber))) {
+    if (!(await waitForCiCheck(prNumber, revParse(branch)))) {
       console.error(`PR #${prNumber} never reported a ci check — leaving open for a human.`);
       await postPrComment(
         prNumber,
