@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import { z } from "zod";
 import { reviewOutcome, type ReviewOutcome } from "./review-outcome.mts";
 import { GIT_IDENTITY_COMMAND } from "./git-identity.mts";
+import { waitForCiCheck } from "./wait-for-checks.mts";
 
 // Shared by main.mts (build → review) and review.mts (review-only, any
 // existing PR). Previously duplicated between the two — pulled out after
@@ -244,6 +245,17 @@ async function mergeAndCleanUp(prNumber: string, branch: string): Promise<boolea
 // posted and the PR should stay open.
 async function ensureChecksPass(prNumber: string, branch: string): Promise<boolean> {
   for (let attempt = 1; ; attempt++) {
+    // Every pass here follows a push (build, review, tidy or CI fix). Watched
+    // too soon, gh exits 1 with "no checks reported", which reads as a CI
+    // failure that has no log to fix — and the PR went to a human.
+    if (!(await waitForCiCheck(prNumber))) {
+      console.error(`PR #${prNumber} never reported a ci check — leaving open for a human.`);
+      await postPrComment(
+        prNumber,
+        "GitHub never reported the `ci` check for this PR's latest commit, so it was not merged. Leaving it open for a human."
+      );
+      return false;
+    }
     try {
       execFileSync("gh", ["pr", "checks", prNumber, "--watch", "--fail-fast"], {
         stdio: "inherit",
@@ -349,13 +361,17 @@ async function fixCiFailures(args: {
 }
 
 async function postCiGaveUpComment(prNumber: string): Promise<void> {
-  const body = [
-    RALPH_MARKER,
-    `CI is still failing after ${MAX_CI_FIX_ATTEMPTS} automated fix attempt(s). Leaving this PR open for a human — check the latest check run for what's still broken.`,
-  ].join("\n");
+  await postPrComment(
+    prNumber,
+    `CI is still failing after ${MAX_CI_FIX_ATTEMPTS} automated fix attempt(s). Leaving this PR open for a human — check the latest check run for what's still broken.`
+  );
+}
+
+async function postPrComment(prNumber: string, text: string): Promise<void> {
+  const body = [RALPH_MARKER, text].join("\n");
   try {
     execFileSync("gh", ["pr", "comment", prNumber, "--body", body], { stdio: "inherit" });
   } catch (err) {
-    console.error(`Could not post give-up comment on PR #${prNumber}:`, err);
+    console.error(`Could not post comment on PR #${prNumber}:`, err);
   }
 }
