@@ -1,6 +1,7 @@
-import { run, claudeCode, Output } from "@ai-hero/sandcastle";
+import { run, claudeCode, createSandbox, Output } from "@ai-hero/sandcastle";
 import { docker } from "@ai-hero/sandcastle/sandboxes/docker";
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { z } from "zod";
 import { reviewOutcome, type ReviewOutcome } from "./review-outcome.mts";
 import { GIT_IDENTITY_COMMAND } from "./git-identity.mts";
@@ -103,7 +104,7 @@ export async function runReview(args: {
     console.log(`Review pass pushed ${reviewResult.commits.length} more commit(s).`);
   }
 
-  await autoFixFormatting(branch);
+  await tidyBranch(branch);
 
   const { summary, comments, newIssues } = reviewResult.output;
   // AGENTS.md: only comment on findings that may require action. A clean
@@ -142,33 +143,47 @@ export async function runReview(args: {
   return reviewOutcome(merged);
 }
 
-// `ci`'s format/lint checks fail on drift the build/review agents don't run
-// themselves (e.g. an edit to a file prettier or eslint's --fix disagrees
-// with). Rather than leave every such PR for a human — the CI failure gives
-// no other reason to stop — fix it deterministically on the host and push,
-// same as a review commit. Runs after every review pass, merge-bound or
-// not, so a PR is never left open over a purely mechanical, auto-fixable
-// issue. Lint runs first: eslint.config defers all formatting rules to
-// prettier (eslint-config-prettier), so a --fix can't produce output
-// prettier would then reformat out from under it.
-async function autoFixFormatting(branch: string): Promise<void> {
-  // --fix still exits non-zero when unfixable errors remain — that's not a
-  // failure of this step, just something for the (unchanged) CI lint check
-  // to catch and a human/agent to fix for real.
+const TIDY_SCRIPT = readFileSync(new URL("./tidy-branch.sh", import.meta.url), "utf-8");
+
+// Mechanical clean-up before the merge gate: drop the build agent's progress
+// notes, and fix the lint and format drift that would otherwise fail CI and
+// leave the PR for a human. See tidy-branch.sh for what it does.
+//
+// It runs in a sandbox checkout of the branch. It used to run on the host, in
+// whatever the host had checked out — master, not the branch — so it never
+// fixed a PR, and PRs parked on a red format check it existed to prevent.
+//
+// Best-effort: a tidy that fails is logged and the merge gate goes ahead,
+// because CI checks the same things and reports them.
+async function tidyBranch(branch: string): Promise<void> {
+  const tipBefore = revParse(branch);
+  const sandbox = await createSandbox({
+    branch,
+    sandbox: docker({
+      mounts: [{ hostPath: "~/.npm", sandboxPath: "/home/agent/.npm", readonly: true }],
+    }),
+    hooks: {
+      sandbox: {
+        onSandboxReady: [{ command: GIT_IDENTITY_COMMAND }, { command: "npm ci" }],
+      },
+    },
+  });
   try {
-    execFileSync("npx", ["eslint", ".", "--fix"], { stdio: "inherit" });
-  } catch {
-    // Unfixable lint errors remain — leave them for CI to report.
+    const result = await sandbox.exec("bash -s", { stdin: TIDY_SCRIPT });
+    if (result.exitCode !== 0) {
+      console.error(`Tidying ${branch} failed (exit ${result.exitCode}):\n${result.stderr}`);
+    }
+  } finally {
+    await sandbox.close();
   }
-  execFileSync("npm", ["run", "format"], { stdio: "inherit" });
-  const status = execFileSync("git", ["status", "--porcelain"], { encoding: "utf-8" });
-  if (status.trim() === "") {
-    return;
+  if (revParse(branch) !== tipBefore) {
+    execFileSync("git", ["push", "origin", branch], { stdio: "inherit" });
+    console.log(`Tidied ${branch} and pushed.`);
   }
-  execFileSync("git", ["add", "-A"], { stdio: "inherit" });
-  execFileSync("git", ["commit", "-m", "Fix lint and formatting"], { stdio: "inherit" });
-  execFileSync("git", ["push", "origin", branch], { stdio: "inherit" });
-  console.log(`Auto-fixed lint/formatting on ${branch}.`);
+}
+
+function revParse(ref: string): string {
+  return execFileSync("git", ["rev-parse", `refs/heads/${ref}`], { encoding: "utf-8" }).trim();
 }
 
 // Branch naming convention shared by main.mts (`ralph/issue-${n}`) and
