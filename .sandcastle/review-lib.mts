@@ -174,6 +174,11 @@ async function tidyBranch(branch: string): Promise<void> {
       console.error(`Tidying ${branch} failed (exit ${result.exitCode}):\n${result.stderr}`);
     }
   } finally {
+    // A tidy that failed part-way leaves edits uncommitted. Sandcastle keeps a
+    // dirty worktree on close, and the next pass on this branch would then
+    // collide with it. Committed work is unaffected; untracked build output
+    // is ignored, so clean -fd leaves node_modules alone.
+    await sandbox.exec("git reset -q --hard && git clean -fdq");
     await sandbox.close();
   }
   if (revParse(branch) !== tipBefore) {
