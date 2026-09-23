@@ -4,8 +4,9 @@ import { execFileSync } from "node:child_process";
 import { runReview } from "./review-lib.mts";
 import { getBuildAgent, type BuildHarness } from "./harness.mts";
 import { CheckpointTimeoutError, classifyRunError } from "./classify-run-error.mts";
-import { GIT_IDENTITY_COMMAND } from "./git-identity.mts";
+import { GIT_IDENTITY_COMMAND, GIT_IDENTITY_EMAIL } from "./git-identity.mts";
 import { resolvePullRequest } from "./pr-resolution.mts";
+import { syncResumedBranch } from "./resume-branch.mts";
 
 // Invoked per-issue by loop.sh:
 //   ISSUE_NUMBER=42 ISSUE_TITLE="..." ISSUE_BODY="..." npx tsx .sandcastle/main.mts
@@ -45,9 +46,24 @@ if (!Number.isFinite(CHECKPOINT_TIMEOUT_MS) || CHECKPOINT_TIMEOUT_MS <= 0) {
 // checked-out HEAD. The loop merges PRs through GitHub and never pulls, so
 // the host's master falls behind after every merge; a branch created from it
 // would redo or conflict with work that already landed. A resumed branch
-// already exists, and Sandcastle ignores baseBranch for it.
+// already exists, and Sandcastle ignores baseBranch for it, so it is rebased
+// here instead (see resume-branch.mts).
 const BASE_REF = "origin/master";
 execFileSync("git", ["fetch", "origin", "master"], { stdio: "inherit" });
+
+// A branch that cannot be rebased unattended is left as it was, for a person:
+// exit 2, like a finished PR that needs a human. A retry would hit the same
+// conflict or the same foreign commits.
+const resume = syncResumedBranch(branch, BASE_REF, GIT_IDENTITY_EMAIL);
+if (resume === "rebased") console.log(`Rebased resumed ${branch} onto ${BASE_REF}.`);
+if (resume === "foreign-commits" || resume === "conflict") {
+  console.error(
+    resume === "conflict"
+      ? `${branch} does not rebase cleanly onto ${BASE_REF}. Needs a human.`
+      : `${branch} holds commits not authored by the agent; not rebasing it unattended. Needs a human.`
+  );
+  process.exit(2);
+}
 
 const checkpointController = new AbortController();
 const checkpointTimer = setTimeout(() => {
