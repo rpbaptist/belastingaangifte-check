@@ -15,7 +15,7 @@ describe("chunkText", () => {
     expect(chunks[0].sourceTitle).toBe("Voorbeeldpagina");
   });
 
-  it("splits into multiple chunks once paragraphs exceed maxChars", () => {
+  it("splits into multiple chunks once paragraphs exceed targetChars", () => {
     const paragraphA = "A".repeat(600);
     const paragraphB = "B".repeat(600);
     const chunks = chunkText(
@@ -24,7 +24,7 @@ describe("chunkText", () => {
         title: "Lang document",
         text: `${paragraphA}\n\n${paragraphB}`,
       },
-      { maxChars: 1000 }
+      { targetChars: 1000 }
     );
 
     expect(chunks).toHaveLength(2);
@@ -41,7 +41,7 @@ describe("chunkText", () => {
         title: "Hypotheekrenteaftrek",
         text: `## Hypotheekrenteaftrek bij aflossingsvrije lening\n\n${paragraphA}\n\n${paragraphB}`,
       },
-      { maxChars: 1000 }
+      { targetChars: 1000 }
     );
 
     expect(chunks).toHaveLength(2);
@@ -57,7 +57,7 @@ describe("chunkText", () => {
     const paragraphB = "B".repeat(600);
     const chunks = chunkText(
       { url: "https://example.org/d", title: "Overlap", text: `${paragraphA}\n\n${paragraphB}` },
-      { maxChars: 1000, overlapChars: 120 }
+      { targetChars: 1000, overlapChars: 120 }
     );
 
     expect(chunks).toHaveLength(2);
@@ -65,14 +65,14 @@ describe("chunkText", () => {
     expect(chunks[1].text.startsWith(tailOfFirst)).toBe(true);
   });
 
-  it("keeps a heading with its body when the paragraph under it alone overflows maxChars", () => {
+  it("keeps a heading with its body when the paragraph under it alone overflows targetChars", () => {
     const chunks = chunkText(
       {
         url: "https://example.org/e",
         title: "Korte kop",
         text: `## Heading\n\n${"A".repeat(990)}`,
       },
-      { maxChars: 1000, overlapChars: 120 }
+      { targetChars: 1000, overlapChars: 120 }
     );
 
     expect(chunks).toHaveLength(1);
@@ -88,7 +88,7 @@ describe("chunkText", () => {
         title: "Nieuwe sectie",
         text: `${paragraphA}\n\n## Nieuwe sectie\n\n${paragraphB}`,
       },
-      { maxChars: 1000, overlapChars: 120 }
+      { targetChars: 1000, overlapChars: 120 }
     );
 
     expect(chunks).toHaveLength(2);
@@ -105,7 +105,7 @@ describe("chunkText", () => {
         title: "Sectiegrens",
         text: `## Eerste sectie\n\n${paragraphA}\n\n## Tweede sectie\n\n${paragraphB}`,
       },
-      { maxChars: 1000, overlapChars: 120 }
+      { targetChars: 1000, overlapChars: 120 }
     );
 
     expect(chunks).toHaveLength(2);
@@ -119,7 +119,7 @@ describe("chunkText", () => {
         title: "Sectie halverwege",
         text: `## Eerste sectie\n\n${"A".repeat(500)}\n\n## Tweede sectie\n\nKort.\n\n${"C".repeat(600)}`,
       },
-      { maxChars: 1000, overlapChars: 120 }
+      { targetChars: 1000, overlapChars: 120 }
     );
 
     expect(chunks).toHaveLength(2);
@@ -135,7 +135,7 @@ describe("chunkText", () => {
         title: "Geneste koppen",
         text: `${paragraphA}\n\n## Hoofdstuk\n\n### Paragraaf\n\n${paragraphB}`,
       },
-      { maxChars: 1000, overlapChars: 120 }
+      { targetChars: 1000, overlapChars: 120 }
     );
 
     expect(chunks).toHaveLength(2);
@@ -150,7 +150,7 @@ describe("chunkText", () => {
         title: "Loze kop",
         text: `## Uitleg\n\nKorte alinea.\n\n## Actueel`,
       },
-      { maxChars: 1000 }
+      { targetChars: 1000 }
     );
 
     expect(chunks).toHaveLength(1);
@@ -158,11 +158,11 @@ describe("chunkText", () => {
   });
 
   it("splits a single oversized paragraph with no blank line at the nearest whitespace", () => {
-    // One long paragraph, no blank line anywhere in it, well past maxChars.
+    // One long paragraph, no blank line anywhere in it, well past targetChars.
     const text = Array(200).fill("aftrekpost").join(" ");
     const chunks = chunkText(
       { url: "https://example.org/f", title: "Aaneengesloten alinea", text },
-      { maxChars: 1000 }
+      { targetChars: 1000 }
     );
 
     expect(chunks.length).toBeGreaterThan(1);
@@ -173,11 +173,11 @@ describe("chunkText", () => {
     expect(text[chunks[0].text.length]).toMatch(/\s/);
   });
 
-  it("hard-cuts at maxChars when the oversized paragraph has no whitespace to split on", () => {
+  it("hard-cuts at targetChars when the oversized paragraph has no whitespace to split on", () => {
     const text = "a".repeat(1500); // one unbroken token, no whitespace anywhere
     const chunks = chunkText(
       { url: "https://example.org/g", title: "Ononderbroken token", text },
-      { maxChars: 1000 }
+      { targetChars: 1000 }
     );
 
     expect(chunks.length).toBeGreaterThan(1);
@@ -192,7 +192,7 @@ describe("chunkText", () => {
         title: "Aftrekposten",
         text: `## Aftrekposten\n\n${bigParagraph}`,
       },
-      { maxChars: 1000 }
+      { targetChars: 1000 }
     );
 
     expect(chunks.length).toBeGreaterThan(1);
@@ -210,7 +210,7 @@ describe("chunkText", () => {
         title: "Aftrekposten",
         text: `## Aftrekposten\n\n${bigParagraph}`,
       },
-      { maxChars: 1000, overlapChars: 120 }
+      { targetChars: 1000, overlapChars: 120 }
     );
 
     expect(chunks.length).toBeGreaterThan(1);
@@ -222,7 +222,7 @@ describe("chunkText", () => {
     const bigParagraph = Array(200).fill("aftrekpost").join(" ");
     const chunks = chunkText(
       { url: "https://example.org/i", title: "Overlap binnen alinea", text: bigParagraph },
-      { maxChars: 1000, overlapChars: 120 }
+      { targetChars: 1000, overlapChars: 120 }
     );
 
     expect(chunks.length).toBeGreaterThan(1);
