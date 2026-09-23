@@ -6,7 +6,7 @@ import { getBuildAgent, type BuildHarness } from "./harness.mts";
 import { CheckpointTimeoutError, classifyRunError } from "./classify-run-error.mts";
 import { GIT_IDENTITY_COMMAND, GIT_IDENTITY_EMAIL } from "./git-identity.mts";
 import { resolvePullRequest } from "./pr-resolution.mts";
-import { syncResumedBranch } from "./resume-branch.mts";
+import { syncResumedBranch, type ResumeOutcome } from "./resume-branch.mts";
 
 // Invoked per-issue by loop.sh:
 //   ISSUE_NUMBER=42 ISSUE_TITLE="..." ISSUE_BODY="..." npx tsx .sandcastle/main.mts
@@ -51,16 +51,29 @@ if (!Number.isFinite(CHECKPOINT_TIMEOUT_MS) || CHECKPOINT_TIMEOUT_MS <= 0) {
 const BASE_REF = "origin/master";
 execFileSync("git", ["fetch", "origin", "master"], { stdio: "inherit" });
 
-// A branch that cannot be rebased unattended is left as it was, for a person:
+// A branch that cannot be synced unattended is left as it was, for a person:
 // exit 2, like a finished PR that needs a human. A retry would hit the same
-// conflict or the same foreign commits.
-const resume = syncResumedBranch(branch, BASE_REF, GIT_IDENTITY_EMAIL);
-if (resume === "rebased") console.log(`Rebased resumed ${branch} onto ${BASE_REF}.`);
-if (resume === "foreign-commits" || resume === "conflict") {
-  console.error(
-    resume === "conflict"
-      ? `${branch} does not rebase cleanly onto ${BASE_REF}. Needs a human.`
-      : `${branch} holds commits not authored by the agent; not rebasing it unattended. Needs a human.`
+// conflict. No PR may exist yet, so the reason goes on the issue itself.
+const NEEDS_HUMAN: Partial<Record<ResumeOutcome, string>> = {
+  diverged: `origin/${branch} holds commits the local branch does not have, most likely pushed by a person.`,
+  "foreign-commits": `${branch} holds commits not authored by the agent, so it was not rebased unattended.`,
+  conflict: `${branch} does not rebase cleanly onto ${BASE_REF}.`,
+};
+const resumeOutcome = syncResumedBranch(BASE_REF, branch, GIT_IDENTITY_EMAIL);
+if (resumeOutcome === "rebased") console.log(`Rebased resumed ${branch} onto ${BASE_REF}.`);
+const needsHuman = NEEDS_HUMAN[resumeOutcome];
+if (needsHuman) {
+  console.error(`${needsHuman} Needs a human.`);
+  execFileSync(
+    "gh",
+    [
+      "issue",
+      "comment",
+      issueNumber,
+      "--body",
+      `RALPH did not start: ${needsHuman} Bring the branch up to date with ${BASE_REF} by hand, then relabel ready-for-agent.`,
+    ],
+    { stdio: "inherit" }
   );
   process.exit(2);
 }

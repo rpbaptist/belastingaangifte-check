@@ -185,9 +185,10 @@ run_build_iteration() {
     gh issue edit "$n" --repo "$REPO" --remove-label ready-for-agent
   elif [[ "$status" -eq 2 ]]; then
     # The work landed but CI stayed red, the merge was rejected, or review
-    # findings are outstanding. The PR is open and already explains itself,
-    # so hand the issue to a person rather than clearing or retrying it.
-    echo "Issue #$n needs a human — PR left open (see $log_file)."
+    # findings are outstanding; or a resumed branch could not be synced with
+    # master. The PR or an issue comment explains which, so hand the issue to
+    # a person rather than clearing or retrying it.
+    echo "Issue #$n needs a human (see $log_file)."
     gh issue edit "$n" --repo "$REPO" \
       --remove-label ready-for-agent --add-label ready-for-human
   else
