@@ -20,7 +20,7 @@ type SplitStatements = {
 
 // One extraction call per bewijsstuk self-classifies (lib/prompts/statement.ts), so the
 // three outcomes are split back apart here rather than force-fit into a single shape.
-function splitStatements(extractions: StatementExtraction[]): SplitStatements {
+export function splitStatements(extractions: StatementExtraction[]): SplitStatements {
   const annualStatements: AnnualStatementData[] = [];
   const propertyStatements: PropertyStatementData[] = [];
   const unrecognizedDocuments: UnrecognizedDocument[] = [];

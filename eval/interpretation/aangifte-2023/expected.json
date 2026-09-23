@@ -1,0 +1,221 @@
+{
+  "taxYear": 2023,
+  "covered": {
+    "count": 7,
+    "rows": [
+      {
+        "field": "ABN AMRO Spaarrekening",
+        "accountNumber": "NL89ABNA0123456789",
+        "institution": "ABN AMRO",
+        "amountTaxReturn": 31400,
+        "amountStatement": 31400
+      },
+      {
+        "field": "ASN Themabeleggen",
+        "accountNumber": "NL77ASNB0456123789",
+        "institution": "ASN Bank",
+        "amountTaxReturn": 17630,
+        "amountStatement": 17630
+      },
+      {
+        "field": "ASN Themabeleggen",
+        "accountNumber": "NL77ASNB0456123789",
+        "institution": "ASN Bank",
+        "amountTaxReturn": 2140,
+        "amountStatement": 2140
+      },
+      {
+        "field": "ING Betaalrekening",
+        "accountNumber": "NL22INGB0673345785",
+        "institution": "ING Bank N.V.",
+        "amountTaxReturn": 5140,
+        "amountStatement": 5140
+      },
+      {
+        "field": "Loon in Nederland",
+        "accountNumber": "001739943L01",
+        "institution": "Beta B.V.",
+        "amountTaxReturn": 9800,
+        "amountStatement": 9800
+      },
+      {
+        "field": "Loon in Nederland",
+        "accountNumber": "135.689.600",
+        "institution": "Alpha B.V.",
+        "amountTaxReturn": 41200,
+        "amountStatement": 41200
+      },
+      {
+        "field": "Rabobank Spaarrekening",
+        "accountNumber": "NL18RABO0332211004",
+        "institution": "Rabobank",
+        "amountTaxReturn": 13250,
+        "amountStatement": 13250
+      }
+    ]
+  },
+  "amountMismatches": {
+    "count": 1,
+    "rows": [
+      {
+        "field": "Hypotheekrente en kosten voor de eigen woning",
+        "accountNumber": "NL64RABO0456789012",
+        "institution": "Rabobank",
+        "amountTaxReturn": 7310,
+        "amountStatement": -7310,
+        "knownWrong": {
+          "issue": 183,
+          "note": "Unsigned deduction compared against negated interest; figures agree."
+        }
+      }
+    ]
+  },
+  "missingStatement": {
+    "count": 6,
+    "rows": [
+      {
+        "field": "ASN Bank Ideaalsparen",
+        "accountNumber": "NL11ASNB0987654321",
+        "amount": 6100,
+        "box": "3"
+      },
+      {
+        "field": "Brutodividend op aandelen of rente op obligaties",
+        "accountNumber": "",
+        "amount": 610,
+        "box": "3"
+      },
+      {
+        "field": "DEGIRO",
+        "accountNumber": "johndoe / flatexDEGIRO Bank AG / 0532013000",
+        "amount": 22950,
+        "box": "3",
+        "knownWrong": {
+          "issue": 182,
+          "note": "Multi-fragment identifier does not match either DEGIRO account."
+        }
+      },
+      {
+        "field": "SNS Betaalrekening",
+        "accountNumber": "NL55SNSB0908070605",
+        "amount": 2240,
+        "box": "3"
+      },
+      {
+        "field": "Spaarrekening kinderen",
+        "accountNumber": "NL33TRIO1122334455",
+        "amount": 4980,
+        "box": "3"
+      },
+      {
+        "field": "bunq Spaarrekening",
+        "accountNumber": "NL42BUNQ2071234567",
+        "amount": 11070,
+        "box": "3"
+      }
+    ]
+  },
+  "notFilledIn": {
+    "count": 4,
+    "rows": [
+      {
+        "accountNumber": "******ist",
+        "institution": "DEGIRO",
+        "description": "DEGIRO beleggingsrekening",
+        "amount": 22450,
+        "knownWrong": {
+          "issue": 182,
+          "note": "Declared as the DEGIRO aangifte row; matching fails."
+        }
+      },
+      {
+        "accountNumber": "DE89370400440532013000",
+        "institution": "DEGIRO",
+        "description": "flatexDEGIRO Geldrekening EUR",
+        "amount": 500,
+        "knownWrong": {
+          "issue": 182,
+          "note": "Declared as the DEGIRO aangifte row; matching fails."
+        }
+      },
+      {
+        "accountNumber": "NL64RABO0456789077",
+        "institution": "Rabobank",
+        "description": "Hypotheek Zeeweg 12 (beleggingspand)",
+        "amount": 3120
+      },
+      {
+        "accountNumber": "SAXO1234567",
+        "institution": "Saxo Bank",
+        "description": "Beleggingsrekening",
+        "amount": -450,
+        "knownWrong": {
+          "issue": 184,
+          "note": "Shows the cash component only; the 14780 portfolio is not shown."
+        }
+      }
+    ]
+  },
+  "propertyStatements": {
+    "count": 3,
+    "rows": [
+      {
+        "documentKind": "makelaarsnota",
+        "institution": "Makelaarskantoor De Vries",
+        "amounts": [
+          {
+            "kind": "brokerCommission",
+            "amount": 3890
+          },
+          {
+            "kind": null,
+            "amount": 275
+          }
+        ]
+      },
+      {
+        "documentKind": "notarisafrekening",
+        "institution": "Notaris Jansen & Partners",
+        "amounts": [
+          {
+            "kind": "saleProceeds",
+            "amount": 398000
+          },
+          {
+            "kind": "loanRepayment",
+            "amount": 215000
+          },
+          {
+            "kind": "notaryCosts",
+            "amount": 920
+          },
+          {
+            "kind": null,
+            "amount": 140
+          }
+        ]
+      },
+      {
+        "documentKind": "wozBeschikking",
+        "institution": "Gemeente Amsterdam",
+        "amounts": [
+          {
+            "kind": "wozValue",
+            "amount": 362000
+          }
+        ]
+      }
+    ]
+  },
+  "findings": {
+    "count": 3,
+    "byKind": {
+      "unknownAmountKind": 2,
+      "duplicateRow": 1
+    }
+  },
+  "rulePoints": {
+    "count": 1,
+    "accountNumbers": []
+  }
+}

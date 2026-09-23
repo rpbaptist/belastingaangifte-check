@@ -1,0 +1,13 @@
+{
+  "institution": "ING Bank N.V.",
+  "institutionType": "bank",
+  "taxYear": 2023,
+  "accounts": [
+    {
+      "accountNumber": "NL22INGB0673345785",
+      "description": "Betaalrekening J. Fictief en/of A. Fictief",
+      "amounts": { "bank": { "balance": 5140 } }
+    }
+  ],
+  "metadata": {}
+}

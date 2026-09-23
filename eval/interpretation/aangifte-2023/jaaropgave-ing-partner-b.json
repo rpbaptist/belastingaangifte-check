@@ -1,0 +1,13 @@
+{
+  "institution": "ING",
+  "institutionType": "bank",
+  "taxYear": 2023,
+  "accounts": [
+    {
+      "accountNumber": "NL22 INGB 0673 3457 85",
+      "description": "Gezamenlijke betaalrekening",
+      "amounts": { "bank": { "balance": 5140 } }
+    }
+  ],
+  "metadata": {}
+}

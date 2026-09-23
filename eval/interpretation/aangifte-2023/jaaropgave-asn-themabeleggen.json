@@ -1,0 +1,16 @@
+{
+  "institution": "ASN Bank",
+  "institutionType": "broker",
+  "taxYear": 2023,
+  "accounts": [
+    {
+      "accountNumber": "NL77ASNB0456123789",
+      "description": "ASN Themabeleggen",
+      "amounts": {
+        "bank": { "balance": 17630 },
+        "broker": { "balance": 2140 }
+      }
+    }
+  ],
+  "metadata": {}
+}

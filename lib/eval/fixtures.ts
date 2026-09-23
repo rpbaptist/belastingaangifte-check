@@ -7,8 +7,14 @@ import path from "node:path";
 export const FIXTURES_DIR = path.join(process.cwd(), "eval", "fixtures");
 
 export function listFixtures(): string[] {
-  if (!existsSync(FIXTURES_DIR)) return [];
-  return readdirSync(FIXTURES_DIR, { withFileTypes: true })
+  return listSubdirectories(FIXTURES_DIR);
+}
+
+// Each fixture tier (perception here, interpretation in ./interpretation-scenario.ts) is one
+// directory per fixture, discovered by name.
+export function listSubdirectories(dir: string): string[] {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
     .sort();
