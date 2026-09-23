@@ -1,0 +1,28 @@
+{
+  "taxReturn": {
+    "fixture": "aangifte-2023",
+    "extraEntries": [
+      {
+        "box": "3",
+        "field": "ASN Themabeleggen",
+        "accountNumber": "NL77ASNB0456123789",
+        "amount": 2140
+      }
+    ]
+  },
+  "bewijsstukken": [
+    { "fixture": "jaaropgave-rabobank-multi" },
+    { "fixture": "jaaropgave-broker-cash-portfolio" },
+    { "fixture": "jaaropgave-degiro-masked" },
+    { "fixture": "jaaropgave-employer-nl" },
+    { "fixture": "jaaropgave-employer-en" },
+    { "fixture": "jaaropgave-mortgage-repaid" },
+    { "fixture": "jaaropgave-two-balance-columns" },
+    { "file": "jaaropgave-ing-partner-a.json" },
+    { "file": "jaaropgave-ing-partner-b.json" },
+    { "file": "jaaropgave-asn-themabeleggen.json" },
+    { "fixture": "notarisafrekening-2023" },
+    { "fixture": "woz-beschikking-2023" },
+    { "fixture": "makelaarsnota-2023" }
+  ]
+}
