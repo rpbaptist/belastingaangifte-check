@@ -90,3 +90,19 @@ fixture; `entries` means a tax-return fixture) rather than by filename conventio
 scaffolding stays reusable for jaaropgave next. As with `aangifte-2023`, the three new
 fixtures' PDFs still need `npm run eval:render` on a WeasyPrint-capable machine before their
 baseline can be recorded — see `eval/README.md`.
+
+## Amendment (#106)
+
+The third diff shape covers jaaropgave (`AnnualStatementData`), the most common bewijsstuk
+kind. `diffAnnualStatement` (`lib/eval/annual-statement-diff.ts`) matches accounts by
+normalised rekeningnummer, falling back to closest total amount when the identifier itself is
+the misread (e.g. a masked broker identifier read wrong), and then diffs each matched pair's
+amount fields individually so a wrong balance on an otherwise-correct account is reported as a
+misread, not a dropped-and-hallucinated pair. `scripts/eval/run.ts` extends its `expected.json`
+sniff to a third case: an `accounts` array means a jaaropgave fixture. Seven fixtures
+(`jaaropgave-rabobank-multi`, `jaaropgave-broker-cash-portfolio`, `jaaropgave-degiro-masked`,
+`jaaropgave-employer-nl`, `jaaropgave-employer-en`, `jaaropgave-mortgage-repaid`,
+`jaaropgave-two-balance-columns`), each tied to an observed extraction defect, share one
+taxpayer whose balances and wages reconcile against `aangifte-2023` — unlike the property
+fixtures, these also exercise the pipeline end-to-end rather than extraction alone. Their PDFs
+are rendered and committed; the baseline still needs recording on #106 per `eval/README.md`.
