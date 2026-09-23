@@ -1,0 +1,15 @@
+{
+  "institution": "Beta B.V.",
+  "institutionType": "other",
+  "taxYear": 2023,
+  "accounts": [
+    {
+      "accountNumber": "001739943L01",
+      "description": "Annual Wage Statement 2023",
+      "amounts": {
+        "wage": { "taxableWage": 9800, "withheldTax": 1960 }
+      }
+    }
+  ],
+  "metadata": {}
+}

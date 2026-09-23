@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <title>Alpha B.V. jaaropgave loonheffingen 2023 (synthetic fixture)</title>
+    <style>
+      /*
+        Synthetic jaaropgave fixture (#106, ADR 0009). Every text run is absolutely
+        positioned: there is NO table markup. All names, numbers and amounts are invented.
+
+        Layout under test: an employer's jaaropgave loonheffingen with Dutch labels. Pairs
+        with jaaropgave-employer-en, the English-labelled counterpart for the second
+        employer in eval/fixtures/aangifte-2023 — the aangifte fixture deliberately keeps
+        two employers under one shared "Loon in Nederland" label, which must never merge.
+      */
+      @page {
+        size: A4;
+        margin: 0;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      .page {
+        position: relative;
+        width: 210mm;
+        height: 297mm;
+        overflow: hidden;
+        font-family: "DejaVu Sans", sans-serif;
+        color: #111;
+      }
+      .run {
+        position: absolute;
+        font-size: 11px;
+        line-height: 14px;
+        white-space: nowrap;
+      }
+      .title {
+        font-size: 15px;
+        font-weight: bold;
+      }
+      .section {
+        font-size: 13px;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="page">
+      <div class="run title" style="top: 15mm; left: 24mm">Alpha B.V.</div>
+      <div class="run section" style="top: 22mm; left: 24mm">Jaaropgave loonheffingen 2023</div>
+      <div class="run" style="top: 29mm; left: 24mm">Werknemer: J. Fictief</div>
+      <div class="run" style="top: 36mm; left: 24mm">Loonheffingennummer: 135.689.600</div>
+
+      <div class="run" style="top: 50mm; left: 24mm">Fiscaal loon: € 41.200</div>
+      <div class="run" style="top: 58mm; left: 24mm">Ingehouden loonheffing: € 10.540</div>
+      <div class="run" style="top: 66mm; left: 24mm">Vakantiegeld: € 3.296</div>
+    </section>
+  </body>
+</html>

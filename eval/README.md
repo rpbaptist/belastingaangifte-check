@@ -19,18 +19,30 @@ eval/
     │   └── expected.json     # the known-correct TaxReturnData for that PDF
     ├── notarisafrekening-2023/
     ├── woz-beschikking-2023/
-    └── makelaarsnota-2023/
+    ├── makelaarsnota-2023/
+    │   ├── source.html      # same positioned-run rule, no table markup
+    │   ├── <name>.pdf        # rendered from source.html
+    │   └── expected.json     # the known-correct PropertyStatementData for that PDF
+    ├── jaaropgave-rabobank-multi/
+    ├── jaaropgave-broker-cash-portfolio/
+    ├── jaaropgave-degiro-masked/
+    ├── jaaropgave-employer-nl/
+    ├── jaaropgave-employer-en/
+    ├── jaaropgave-mortgage-repaid/
+    └── jaaropgave-two-balance-columns/
         ├── source.html      # same positioned-run rule, no table markup
         ├── <name>.pdf        # rendered from source.html
-        └── expected.json     # the known-correct PropertyStatementData for that PDF
+        └── expected.json     # the known-correct AnnualStatementData for that PDF
 ```
 
-A fixture whose `expected.json` has an `amounts` array (the three property fixtures above) is
-a `PropertyStatementData` fixture and runs through `extractStatement`; one with an `entries`
-array (`aangifte-2023`) is a `TaxReturnData` fixture and runs through `extractTaxReturn`. The
-runner (`scripts/eval/run.ts`) picks the right extractor and diff (`lib/eval/diff.ts`)
-automatically by inspecting `expected.json` — this is the "second diff shape" ADR 0010
-anticipated when extraction grew beyond the aangifte.
+A fixture whose `expected.json` has an `amounts` array (the three property fixtures) is a
+`PropertyStatementData` fixture; one with an `accounts` array (the seven `jaaropgave-*`
+fixtures) is an `AnnualStatementData` fixture — both run through `extractStatement`. One with
+an `entries` array (`aangifte-2023`) is a `TaxReturnData` fixture and runs through
+`extractTaxReturn`. The runner (`scripts/eval/run.ts`) picks the right extractor and diff
+(`lib/eval/diff.ts`, `lib/eval/annual-statement-diff.ts`) automatically by inspecting
+`expected.json` — this is the "second diff shape" ADR 0010 anticipated when extraction grew
+beyond the aangifte.
 
 Fixtures are **synthetic** — every name, BSN, IBAN and amount is invented, so the expected
 output is known exactly and no real financial data is involved.
@@ -74,6 +86,32 @@ extraction prompt's document-kind classification and the closed amount-kind voca
   #109. `PropertyStatementData` has no `accountNumber` field at all, so a correct extraction
   cannot carry one regardless.
 
+### The jaaropgave fixtures (#106)
+
+Seven layouts, each tied to an observed extraction defect for `AnnualStatementData`, all
+belonging to one taxpayer (J. Fictief / johndoe) whose bewijsstukken reconcile against
+`aangifte-2023` — the Rabobank savings balance, both employers' wages, and the ABN AMRO
+savings balance are the same figures declared there:
+
+- `jaaropgave-rabobank-multi` — one document reporting both a savings account and two
+  hypotheken; a single document-level `institutionType` can't describe every account it
+  contains.
+- `jaaropgave-broker-cash-portfolio` — a broker's cash and portfolio balance at the same date
+  on the same account, which must stay two amount fields, not one merged number or two
+  accounts.
+- `jaaropgave-degiro-masked` — DEGIRO's beleggingsrekening identifier arrives already masked
+  by the issuer (`******ist`); the correct reading copies the mask verbatim.
+- `jaaropgave-employer-nl` / `jaaropgave-employer-en` — the same jaaropgave loonheffingen
+  shape with Dutch and English labels (some payroll providers issue an English statement for
+  expat staff); the numeral convention stays Dutch either way. Together they cover the two
+  employers `aangifte-2023` deliberately keeps under one shared `Loon in Nederland` label.
+- `jaaropgave-mortgage-repaid` — a mortgage repaid mid-year via the home sale
+  `notarisafrekening-2023` settles, reporting the year-end debt as an explicit "Nihil" rather
+  than a numeral zero.
+- `jaaropgave-two-balance-columns` — start-of-year and end-of-year balances printed side by
+  side; Box 3 uses the 1 January peildatum, so the correct reading takes the left column, not
+  the right one or an average of the two.
+
 ## Re-rendering the PDFs
 
 The PDFs are committed, but you can re-render them from source:
@@ -88,7 +126,8 @@ This prints each `eval/fixtures/<name>/source.html` to `eval/fixtures/<name>/<na
 > `expected.json` only — their PDFs have not been rendered because no WeasyPrint-capable
 > environment was available when they were authored. Run `npm run eval:render` on a machine
 > with WeasyPrint installed and commit the resulting `<name>.pdf` files before relying on
-> `npm run eval` for these three; `aangifte-2023.pdf` is unaffected and already committed.
+> `npm run eval` for these three; `aangifte-2023.pdf` and the seven `jaaropgave-*.pdf` files
+> are unaffected and already committed.
 
 **Requires [WeasyPrint](https://weasyprint.org/)** (a standalone HTML→PDF renderer). It is not
 an npm dependency and does not run in CI or on build. Install it once, e.g.:
@@ -127,3 +166,8 @@ The whole point is a number to measure #100's prompt-rule deletions against. Rec
 baseline result of `npm run eval -- aangifte-2023` against current code as a comment on the
 originating issue before closing it. Because the runner needs an API key it is run outside the
 sandbox/CI, on a machine with a key.
+
+The seven `jaaropgave-*` fixtures need the same treatment for #106: record
+`npm run eval -- jaaropgave-rabobank-multi jaaropgave-broker-cash-portfolio jaaropgave-degiro-masked jaaropgave-employer-nl jaaropgave-employer-en jaaropgave-mortgage-repaid jaaropgave-two-balance-columns`
+(or a plain `npm run eval` for the whole set) against current code as a comment on #106 before
+closing it.

@@ -9,10 +9,11 @@
 // `npm test`. Exits non-zero if any fixture has a mismatch, so it doubles as a pass/fail gate
 // when comparing a prompt change against the recorded baseline.
 //
-// Two fixture shapes are supported (ADR 0010 anticipated "a second diff shape"): a
-// TaxReturnData fixture (expected.json has `entries`) runs through extractTaxReturn, and a
-// PropertyStatementData fixture (expected.json has `amounts`) runs through extractStatement,
-// asserting the document was classified as the expected property kind along the way.
+// Three fixture shapes are supported (ADR 0010 anticipated "a second diff shape"): a
+// TaxReturnData fixture (expected.json has `entries`) runs through extractTaxReturn; a
+// PropertyStatementData fixture (expected.json has `amounts`) and an AnnualStatementData
+// fixture (expected.json has `accounts`) run through extractStatement, asserting the document
+// was classified as the expected kind along the way.
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { createClient } from "@/lib/llm";
@@ -26,8 +27,13 @@ import {
   isPass,
   isPropertyStatementPass,
 } from "@/lib/eval/diff";
+import {
+  diffAnnualStatement,
+  formatAnnualStatementDiffReport,
+  isAnnualStatementPass,
+} from "@/lib/eval/annual-statement-diff";
 import { FIXTURES_DIR, listFixtures } from "@/lib/eval/fixtures";
-import type { PropertyStatementData } from "@/lib/types";
+import type { AnnualStatementData, PropertyStatementData } from "@/lib/types";
 
 function selectFixtures(): string[] {
   const requested = process.argv.slice(2);
@@ -79,6 +85,25 @@ async function runPropertyStatementFixture(
   return isPropertyStatementPass(diff);
 }
 
+async function runAnnualStatementFixture(
+  name: string,
+  pdfBase64: string,
+  expected: AnnualStatementData,
+  client: ReturnType<typeof createClient>
+): Promise<boolean> {
+  const extraction = await extractStatement(pdfBase64, client);
+  if (extraction.documentKind !== "jaaropgave") {
+    console.log(`${name}: FAIL`);
+    console.log(`  document kind: expected jaaropgave, got ${extraction.documentKind}`);
+    console.log("");
+    return false;
+  }
+  const diff = diffAnnualStatement(expected, extraction.annualStatement);
+  console.log(formatAnnualStatementDiffReport(name, diff));
+  console.log("");
+  return isAnnualStatementPass(diff);
+}
+
 function readFixtureFiles(name: string): { pdfBase64: string; expectedRaw: unknown } {
   const dir = path.join(FIXTURES_DIR, name);
   const pdfPath = path.join(dir, `${name}.pdf`);
@@ -102,12 +127,20 @@ function isPropertyFixture(expectedRaw: unknown): expectedRaw is PropertyStateme
   return typeof expectedRaw === "object" && expectedRaw !== null && "amounts" in expectedRaw;
 }
 
+function isAnnualStatementFixture(expectedRaw: unknown): expectedRaw is AnnualStatementData {
+  return typeof expectedRaw === "object" && expectedRaw !== null && "accounts" in expectedRaw;
+}
+
 async function runFixture(name: string, client: ReturnType<typeof createClient>): Promise<boolean> {
   const { pdfBase64, expectedRaw } = readFixtureFiles(name);
 
-  return isPropertyFixture(expectedRaw)
-    ? runPropertyStatementFixture(name, pdfBase64, expectedRaw, client)
-    : runTaxReturnFixture(name, pdfBase64, expectedRaw, client);
+  if (isPropertyFixture(expectedRaw)) {
+    return runPropertyStatementFixture(name, pdfBase64, expectedRaw, client);
+  }
+  if (isAnnualStatementFixture(expectedRaw)) {
+    return runAnnualStatementFixture(name, pdfBase64, expectedRaw, client);
+  }
+  return runTaxReturnFixture(name, pdfBase64, expectedRaw, client);
 }
 
 function requireApiKey(): void {

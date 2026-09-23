@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <title>Rabobank jaaroverzicht 2023 (synthetic fixture)</title>
+    <style>
+      /*
+        Synthetic jaaropgave fixture (#106, ADR 0009). Every text run is absolutely
+        positioned: there is NO table markup. All names, IBANs and amounts are invented.
+
+        Layout under test: one Rabobank document reports BOTH a savings account and two
+        hypotheken (leningdelen). A single document-level institutionType cannot describe
+        every account it contains — the savings account belongs under amounts.bank, the two
+        mortgages under amounts.mortgage, regardless of what "kind" of document this is
+        classified as overall.
+      */
+      @page {
+        size: A4;
+        margin: 0;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      .page {
+        position: relative;
+        width: 210mm;
+        height: 297mm;
+        overflow: hidden;
+        font-family: "DejaVu Sans", sans-serif;
+        color: #111;
+      }
+      .run {
+        position: absolute;
+        font-size: 11px;
+        line-height: 14px;
+        white-space: nowrap;
+      }
+      .title {
+        font-size: 15px;
+        font-weight: bold;
+      }
+      .section {
+        font-size: 13px;
+        font-weight: bold;
+      }
+      .head {
+        font-weight: bold;
+        color: #555;
+      }
+      .naam {
+        left: 24mm;
+      }
+      .nummer {
+        left: 90mm;
+      }
+      .waarde {
+        left: 150mm;
+        width: 36mm;
+        text-align: right;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="page">
+      <div class="run title" style="top: 15mm; left: 24mm">Rabobank</div>
+      <div class="run" style="top: 22mm; left: 24mm">Jaaroverzicht 2023</div>
+      <div class="run" style="top: 29mm; left: 24mm">
+        J. Fictief &nbsp; Klantnummer: 3092.44.117
+      </div>
+
+      <div class="run section" style="top: 45mm; left: 24mm">Betaalrekeningen en sparen</div>
+      <div class="run head naam" style="top: 54mm">Rekening</div>
+      <div class="run head nummer" style="top: 54mm">IBAN</div>
+      <div class="run head waarde" style="top: 54mm">Saldo per 01-01-2023</div>
+
+      <div class="run naam" style="top: 62mm">Rabobank Spaarrekening</div>
+      <div class="run nummer" style="top: 62mm">NL18 RABO 0332 2110 04</div>
+      <div class="run waarde" style="top: 62mm">€ 13.250</div>
+
+      <div class="run section" style="top: 80mm; left: 24mm">Hypotheken</div>
+      <div class="run head naam" style="top: 89mm">Leningdeel</div>
+      <div class="run head nummer" style="top: 89mm">Rekeningnummer</div>
+
+      <div class="run naam" style="top: 97mm">Hypotheek eigen woning</div>
+      <div class="run nummer" style="top: 97mm">NL64 RABO 0456 7890 12</div>
+      <div class="run" style="top: 104mm; left: 24mm">Betaalde rente 2023: € 7.310</div>
+      <div class="run" style="top: 111mm; left: 24mm">Schuld per 01-01-2023: € 215.000</div>
+      <div class="run" style="top: 118mm; left: 24mm">Schuld per 31-12-2023: € 207.690</div>
+
+      <div class="run naam" style="top: 133mm">Hypotheek Zeeweg 12 (beleggingspand)</div>
+      <div class="run nummer" style="top: 133mm">NL64 RABO 0456 7890 77</div>
+      <div class="run" style="top: 140mm; left: 24mm">Betaalde rente 2023: € 3.120</div>
+      <div class="run" style="top: 147mm; left: 24mm">Schuld per 01-01-2023: € 95.000</div>
+      <div class="run" style="top: 154mm; left: 24mm">Schuld per 31-12-2023: € 91.880</div>
+    </section>
+  </body>
+</html>

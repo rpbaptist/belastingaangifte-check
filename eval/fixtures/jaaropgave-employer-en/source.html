@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Beta B.V. annual wage statement 2023 (synthetic fixture)</title>
+    <style>
+      /*
+        Synthetic jaaropgave fixture (#106, ADR 0009). Every text run is absolutely
+        positioned: there is NO table markup. All names, numbers and amounts are invented.
+
+        Layout under test: an employer's jaaropgave loonheffingen with English labels — some
+        Dutch payroll providers issue an English-language annual statement for expat staff.
+        The amounts still use Dutch numeral formatting (period thousands, comma decimals):
+        the labels change, the numeral convention on a Dutch payroll document does not.
+      */
+      @page {
+        size: A4;
+        margin: 0;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      .page {
+        position: relative;
+        width: 210mm;
+        height: 297mm;
+        overflow: hidden;
+        font-family: "DejaVu Sans", sans-serif;
+        color: #111;
+      }
+      .run {
+        position: absolute;
+        font-size: 11px;
+        line-height: 14px;
+        white-space: nowrap;
+      }
+      .title {
+        font-size: 15px;
+        font-weight: bold;
+      }
+      .section {
+        font-size: 13px;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="page">
+      <div class="run title" style="top: 15mm; left: 24mm">Beta B.V.</div>
+      <div class="run section" style="top: 22mm; left: 24mm">Annual Wage Statement 2023</div>
+      <div class="run" style="top: 29mm; left: 24mm">Employee: J. Fictief</div>
+      <div class="run" style="top: 36mm; left: 24mm">Employer tax number: 001739943L01</div>
+
+      <div class="run" style="top: 50mm; left: 24mm">Taxable wage: € 9.800</div>
+      <div class="run" style="top: 58mm; left: 24mm">Tax withheld: € 1.960</div>
+    </section>
+  </body>
+</html>
