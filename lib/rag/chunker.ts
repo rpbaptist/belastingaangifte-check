@@ -88,20 +88,25 @@ function attachHeadings(paragraphs: string[]): TextUnit[] {
 
 // Splits doc.text into overlapping, heading-aware chunks of roughly targetChars each.
 // targetChars is a soft target, not a hard ceiling: a chunk that starts a new section
-// or continues one gets its heading and/or overlap tail prepended to a fragment that
-// was itself already sized up to targetChars, so the result can run over. The bound on
-// any chunk's text length is fixed, though:
+// or continues one gets its heading run and/or overlap tail prepended to a fragment
+// that was itself already sized up to targetChars, so the result can run over. The
+// bound on any chunk's text length is fixed, though:
 //
-//   chunk.text.length <= targetChars + heading.length + overlapChars + 4
+//   chunk.text.length <= targetChars + headingRun.length + overlapChars + 4
 //
-// (the "+ 4" is the two "\n\n" separators between heading, overlap and fragment). It
-// holds because a chunk that starts a section is heading + fragment (fragment already
-// <= targetChars, and headings are themselves split to <= targetChars by
-// splitOversizedParagraph), a chunk that continues one is heading + overlap + fragment,
-// and every unit appended afterwards only happens while the running total stays
-// <= targetChars. No downstream consumer needs a hard ceiling — the embedding model
-// accepts far larger inputs, and retrieval quality is not materially affected by the
-// soft target being exceeded by a small, fixed amount.
+// where headingRun is the text actually prepended to that chunk — one heading line
+// normally, but attachHeadings joins a run of consecutive headings (e.g. `## X`
+// immediately followed by `### Y`) to the paragraph below it as a single unit, so a
+// chunk that opens on such a run carries all of them, not just the last one. (The
+// "+ 4" is the two "\n\n" separators between heading run, overlap and fragment.) It
+// holds because a chunk that starts a section is headingRun + fragment (fragment
+// already <= targetChars, and paragraphs — including heading lines — are themselves
+// split to <= targetChars by splitOversizedParagraph before attachHeadings joins them),
+// a chunk that continues one is headingRun + overlap + fragment, and every unit
+// appended afterwards only happens while the running total stays <= targetChars. No
+// downstream consumer needs a hard ceiling — the embedding model accepts far larger
+// inputs, and retrieval quality is not materially affected by the soft target being
+// exceeded by a small, fixed amount.
 export function chunkText(
   doc: RawDocument,
   opts: { targetChars?: number; overlapChars?: number } = {}
