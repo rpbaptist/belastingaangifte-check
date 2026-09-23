@@ -106,3 +106,12 @@ sniff to a third case: an `accounts` array means a jaaropgave fixture. Seven fix
 taxpayer whose balances and wages reconcile against `aangifte-2023` — unlike the property
 fixtures, these also exercise the pipeline end-to-end rather than extraction alone. Their PDFs
 are rendered and committed; the baseline still needs recording on #106 per `eval/README.md`.
+
+## Amendment: Interpretation fixtures (#104)
+
+The fixtures' `expected.json` files now also feed a second, deterministic tier: the
+Interpretation fixture replay under `eval/interpretation/`, which runs them through
+`buildReport` under `npm test` and CI. It calls no API. The perception runner and renderer stay
+opt-in and out of CI as decided above. Consequence: an edit to a perception `expected.json` can
+fail `npm test`, so it must keep matching both its PDF and the recorded replay summary. See
+`eval/interpretation/README.md`.
