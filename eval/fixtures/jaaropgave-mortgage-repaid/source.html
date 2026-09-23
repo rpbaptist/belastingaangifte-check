@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <title>ABN AMRO jaaroverzicht hypotheek 2023 (synthetic fixture)</title>
+    <style>
+      /*
+        Synthetic jaaropgave fixture (#106, ADR 0009). Every text run is absolutely
+        positioned: there is NO table markup. All names, numbers and amounts are invented.
+
+        Layout under test: a mortgage repaid mid-year via the sale of the financed home
+        (the same sale eval/fixtures/notarisafrekening-2023 settles — "Aflossing hypotheek
+        ABN AMRO" there). The bank's own jaaropgave must report the remaining debt as an
+        explicit zero, printed as "Nihil" rather than a numeral "€ 0" — the observed failure
+        this fixture guards against is the extractor treating a repaid mortgage as a missing
+        field instead of a reported zero.
+      */
+      @page {
+        size: A4;
+        margin: 0;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      .page {
+        position: relative;
+        width: 210mm;
+        height: 297mm;
+        overflow: hidden;
+        font-family: "DejaVu Sans", sans-serif;
+        color: #111;
+      }
+      .run {
+        position: absolute;
+        font-size: 11px;
+        line-height: 14px;
+        white-space: nowrap;
+      }
+      .title {
+        font-size: 15px;
+        font-weight: bold;
+      }
+      .section {
+        font-size: 13px;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="page">
+      <div class="run title" style="top: 15mm; left: 24mm">ABN AMRO</div>
+      <div class="run" style="top: 22mm; left: 24mm">Jaaroverzicht hypotheek 2023</div>
+      <div class="run" style="top: 29mm; left: 24mm">
+        J. Fictief &nbsp; Financieringsnummer: 5372441180
+      </div>
+
+      <div class="run section" style="top: 45mm; left: 24mm">
+        Hypotheek Vredestraat 12, 1234 AB Amsterdam
+      </div>
+      <div class="run" style="top: 54mm; left: 24mm">Betaalde rente tot aflossing: € 1.290</div>
+      <div class="run" style="top: 62mm; left: 24mm">Schuld per 01-01-2023: € 216.500</div>
+      <div class="run" style="top: 70mm; left: 24mm">
+        Schuld per 31-12-2023: Nihil (afgelost op 14 maart 2023 bij verkoop van de woning)
+      </div>
+    </section>
+  </body>
+</html>

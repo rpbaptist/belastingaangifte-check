@@ -1,0 +1,15 @@
+{
+  "institution": "ABN AMRO",
+  "institutionType": "mortgage",
+  "taxYear": 2023,
+  "accounts": [
+    {
+      "accountNumber": "5372441180",
+      "description": "Hypotheek Vredestraat 12",
+      "amounts": {
+        "mortgage": { "interestPaid": 1290, "openingDebt": 216500, "remainingDebt": 0 }
+      }
+    }
+  ],
+  "metadata": {}
+}

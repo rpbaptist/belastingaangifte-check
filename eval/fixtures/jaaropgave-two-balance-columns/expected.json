@@ -1,0 +1,15 @@
+{
+  "institution": "ABN AMRO",
+  "institutionType": "bank",
+  "taxYear": 2023,
+  "accounts": [
+    {
+      "accountNumber": "NL89ABNA0123456789",
+      "description": "ABN AMRO Spaarrekening",
+      "amounts": {
+        "bank": { "balance": 31400 }
+      }
+    }
+  ],
+  "metadata": {}
+}

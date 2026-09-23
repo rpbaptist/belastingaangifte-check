@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <title>ABN AMRO jaaroverzicht sparen 2023 (synthetic fixture)</title>
+    <style>
+      /*
+        Synthetic jaaropgave fixture (#106, ADR 0009). Every text run is absolutely
+        positioned: there is NO table markup. All names, IBANs and amounts are invented.
+
+        Layout under test: two balance columns printed side by side at the same row — saldo
+        per 01-01-2023 and saldo per 31-12-2023 for the same account. Box 3 wealth tax uses
+        the 1 January peildatum, so the correct reading takes the LEFT column and must not
+        take the 31 December figure, average the two, or merge them into one number.
+        NL89ABNA0123456789 is the same account eval/fixtures/aangifte-2023 declares as
+        "ABN AMRO Spaarrekening" for 31.400 — the 1 January column here reconciles against
+        that aangifte entry exactly.
+      */
+      @page {
+        size: A4;
+        margin: 0;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      .page {
+        position: relative;
+        width: 210mm;
+        height: 297mm;
+        overflow: hidden;
+        font-family: "DejaVu Sans", sans-serif;
+        color: #111;
+      }
+      .run {
+        position: absolute;
+        font-size: 11px;
+        line-height: 14px;
+        white-space: nowrap;
+      }
+      .title {
+        font-size: 15px;
+        font-weight: bold;
+      }
+      .section {
+        font-size: 13px;
+        font-weight: bold;
+      }
+      .head {
+        font-weight: bold;
+        color: #555;
+      }
+      .naam {
+        left: 24mm;
+      }
+      .start {
+        left: 100mm;
+        width: 34mm;
+        text-align: right;
+      }
+      .eind {
+        left: 140mm;
+        width: 34mm;
+        text-align: right;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="page">
+      <div class="run title" style="top: 15mm; left: 24mm">ABN AMRO</div>
+      <div class="run" style="top: 22mm; left: 24mm">Jaaroverzicht sparen 2023</div>
+      <div class="run" style="top: 29mm; left: 24mm">
+        J. Fictief &nbsp; IBAN: NL89 ABNA 0123 4567 89
+      </div>
+
+      <div class="run head naam" style="top: 45mm">Rekening</div>
+      <div class="run head start" style="top: 45mm">Saldo per 01-01-2023</div>
+      <div class="run head eind" style="top: 45mm">Saldo per 31-12-2023</div>
+
+      <div class="run naam" style="top: 53mm">ABN AMRO Spaarrekening</div>
+      <div class="run start" style="top: 53mm">€ 31.400</div>
+      <div class="run eind" style="top: 53mm">€ 33.150</div>
+    </section>
+  </body>
+</html>
