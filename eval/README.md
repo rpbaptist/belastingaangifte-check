@@ -112,6 +112,13 @@ savings balance are the same figures declared there:
   side; Box 3 uses the 1 January peildatum, so the correct reading takes the left column, not
   the right one or an average of the two.
 
+## Interpretation fixtures
+
+The `expected.json` files here also feed the **Interpretation fixture** replay under
+`eval/interpretation/` (#104), which runs them through `buildReport` under `npm test`. Changing
+an `expected.json` here can therefore fail that replay; see
+[`eval/interpretation/README.md`](interpretation/README.md).
+
 ## Re-rendering the PDFs
 
 The PDFs are committed, but you can re-render them from source:
