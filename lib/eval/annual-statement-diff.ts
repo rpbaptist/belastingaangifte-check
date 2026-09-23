@@ -211,7 +211,9 @@ export function formatAnnualStatementDiffReport(name: string, diff: AnnualStatem
   );
 
   if (!diff.institution.match) {
-    lines.push(`  institution: expected "${diff.institution.expected}", got "${diff.institution.actual}"`);
+    lines.push(
+      `  institution: expected "${diff.institution.expected}", got "${diff.institution.actual}"`
+    );
   }
   if (!diff.institutionType.match) {
     lines.push(
@@ -227,7 +229,9 @@ export function formatAnnualStatementDiffReport(name: string, diff: AnnualStatem
     lines.push(`    expected: ${describeAccount(m.expected)}`);
     lines.push(`    actual:   ${describeAccount(m.actual)}`);
     for (const d of m.amountDiffs) {
-      lines.push(`      ${d.path}: expected ${d.expected ?? "(none)"}, got ${d.actual ?? "(none)"}`);
+      lines.push(
+        `      ${d.path}: expected ${d.expected ?? "(none)"}, got ${d.actual ?? "(none)"}`
+      );
     }
   }
   for (const a of diff.missing) {

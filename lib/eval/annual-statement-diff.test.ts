@@ -16,7 +16,10 @@ const account = (over: Partial<AccountData>): AccountData => ({
   ...over,
 });
 
-const doc = (accounts: AccountData[], over: Partial<AnnualStatementData> = {}): AnnualStatementData => ({
+const doc = (
+  accounts: AccountData[],
+  over: Partial<AnnualStatementData> = {}
+): AnnualStatementData => ({
   institution: "Rabobank",
   institutionType: "bank",
   taxYear: 2023,
@@ -77,7 +80,9 @@ describe("diffAnnualStatement", () => {
   });
 
   it("pairs a wrong-account misread by amount instead of reporting missing + unexpected", () => {
-    const expected = doc([account({ accountNumber: "NL18RABO0332211004", amounts: { bank: { balance: 15600 } } })]);
+    const expected = doc([
+      account({ accountNumber: "NL18RABO0332211004", amounts: { bank: { balance: 15600 } } }),
+    ]);
     const actual = doc([
       account({ accountNumber: "NL99WRNG0000000000", amounts: { bank: { balance: 15600 } } }),
     ]);
@@ -107,13 +112,15 @@ describe("diffAnnualStatement", () => {
 
   it("flags a mismatched institution, institutionType or tax year", () => {
     const expected = doc([]);
-    expect(isAnnualStatementPass(diffAnnualStatement(expected, doc([], { institution: "ABN AMRO" })))).toBe(
-      false
-    );
+    expect(
+      isAnnualStatementPass(diffAnnualStatement(expected, doc([], { institution: "ABN AMRO" })))
+    ).toBe(false);
     expect(
       isAnnualStatementPass(diffAnnualStatement(expected, doc([], { institutionType: "broker" })))
     ).toBe(false);
-    expect(isAnnualStatementPass(diffAnnualStatement(expected, doc([], { taxYear: 2024 })))).toBe(false);
+    expect(isAnnualStatementPass(diffAnnualStatement(expected, doc([], { taxYear: 2024 })))).toBe(
+      false
+    );
   });
 });
 
