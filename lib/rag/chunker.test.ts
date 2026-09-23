@@ -229,4 +229,89 @@ describe("chunkText", () => {
     const tailOfFirst = chunks[0].text.slice(-120);
     expect(chunks[1].text.startsWith(tailOfFirst)).toBe(true);
   });
+
+  // targetChars is a soft target, not a hard ceiling (issue #95): a chunk that starts
+  // a new section carries its heading run, and one that continues a section carries its
+  // last heading and an overlap tail, prepended to a fragment already sized up to
+  // targetChars, so the result can run over. These tests pin the documented bound on
+  // chunkText — see the doc comment there — and show it is genuinely exceeded, not just
+  // theoretically possible, so a future switch to a hard ceiling has to update both the
+  // tests and the docs.
+  it("stays within the documented bound when a heading precedes an oversized paragraph", () => {
+    const targetChars = 1000;
+    const overlapChars = 120;
+    const heading = "## Aftrekposten";
+    const paragraph = Array.from({ length: 350 }, (_, i) => `aftrekpost${i}`)
+      .join(" ")
+      .slice(0, 2199);
+
+    const chunks = chunkText(
+      {
+        url: "https://example.org/j",
+        title: "Kop met lange alinea",
+        text: `${heading}\n\n${paragraph}`,
+      },
+      { targetChars, overlapChars }
+    );
+
+    expect(chunks.length).toBeGreaterThan(1);
+    const bound = targetChars + heading.length + overlapChars + 4;
+    for (const chunk of chunks) {
+      expect(chunk.text.length).toBeLessThanOrEqual(bound);
+    }
+    expect(chunks.some((chunk) => chunk.text.length > targetChars)).toBe(true);
+  });
+
+  it("stays within the documented bound when overlap alone pushes a chunk over target", () => {
+    const targetChars = 1000;
+    const overlapChars = 120;
+    const paragraphA = Array.from({ length: 165 }, (_, i) => `woordA${i}`).join(" ");
+    const paragraphB = Array.from({ length: 165 }, (_, i) => `woordB${i}`).join(" ");
+
+    const chunks = chunkText(
+      {
+        url: "https://example.org/k",
+        title: "Twee lange alineas",
+        text: `${paragraphA}\n\n${paragraphB}`,
+      },
+      { targetChars, overlapChars }
+    );
+
+    expect(chunks.length).toBeGreaterThan(1);
+    const bound = targetChars + overlapChars + 4;
+    for (const chunk of chunks) {
+      expect(chunk.text.length).toBeLessThanOrEqual(bound);
+    }
+    expect(chunks.some((chunk) => chunk.text.length > targetChars)).toBe(true);
+  });
+
+  it("stays within the documented bound when a heading run opens an oversized paragraph", () => {
+    const targetChars = 1000;
+    const overlapChars = 20;
+    const headings = [
+      "# Box 3 sparen en beleggen",
+      "## Heffingsvrij vermogen",
+      "### Rendementsgrondslag",
+    ];
+    const headingRun = headings.join("\n\n");
+    const paragraph = Array.from({ length: 350 }, (_, i) => `grondslag${i}`)
+      .join(" ")
+      .slice(0, 2199);
+
+    const chunks = chunkText(
+      {
+        url: "https://example.org/l",
+        title: "Kopketen met lange alinea",
+        text: `${headingRun}\n\n${paragraph}`,
+      },
+      { targetChars, overlapChars }
+    );
+
+    expect(chunks.length).toBeGreaterThan(1);
+    const bound = targetChars + headingRun.length + overlapChars + 4;
+    for (const chunk of chunks) {
+      expect(chunk.text.length).toBeLessThanOrEqual(bound);
+    }
+    expect(chunks.some((chunk) => chunk.text.length > targetChars)).toBe(true);
+  });
 });
