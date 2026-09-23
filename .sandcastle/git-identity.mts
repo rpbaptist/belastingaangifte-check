@@ -2,8 +2,8 @@
 // hook. One shared constant because the build pass, the review pass and the
 // CI-fix pass all need it, and commits from the three must carry the same
 // author.
-const GIT_IDENTITY_NAME = "Ralph (belastingaangifte-check agent)";
-const GIT_IDENTITY_EMAIL = "ralph-agent@users.noreply.github.com";
+export const GIT_IDENTITY_NAME = "Ralph (belastingaangifte-check agent)";
+export const GIT_IDENTITY_EMAIL = "ralph-agent@users.noreply.github.com";
 
 // Written with --global, to /home/agent/.gitconfig in the container's own
 // home. A repo-level write would land in the bind-mounted parent git

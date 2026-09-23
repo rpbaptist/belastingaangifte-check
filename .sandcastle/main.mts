@@ -4,8 +4,9 @@ import { execFileSync } from "node:child_process";
 import { runReview } from "./review-lib.mts";
 import { getBuildAgent, type BuildHarness } from "./harness.mts";
 import { CheckpointTimeoutError, classifyRunError } from "./classify-run-error.mts";
-import { GIT_IDENTITY_COMMAND } from "./git-identity.mts";
+import { GIT_IDENTITY_COMMAND, GIT_IDENTITY_EMAIL } from "./git-identity.mts";
 import { resolvePullRequest } from "./pr-resolution.mts";
+import { syncResumedBranch, type ResumeOutcome } from "./resume-branch.mts";
 
 // Invoked per-issue by loop.sh:
 //   ISSUE_NUMBER=42 ISSUE_TITLE="..." ISSUE_BODY="..." npx tsx .sandcastle/main.mts
@@ -45,9 +46,37 @@ if (!Number.isFinite(CHECKPOINT_TIMEOUT_MS) || CHECKPOINT_TIMEOUT_MS <= 0) {
 // checked-out HEAD. The loop merges PRs through GitHub and never pulls, so
 // the host's master falls behind after every merge; a branch created from it
 // would redo or conflict with work that already landed. A resumed branch
-// already exists, and Sandcastle ignores baseBranch for it.
+// already exists, and Sandcastle ignores baseBranch for it, so it is rebased
+// here instead (see resume-branch.mts).
 const BASE_REF = "origin/master";
 execFileSync("git", ["fetch", "origin", "master"], { stdio: "inherit" });
+
+// A branch that cannot be synced unattended is left as it was, for a person:
+// exit 2, like a finished PR that needs a human. A retry would hit the same
+// conflict. No PR may exist yet, so the reason goes on the issue itself.
+const NEEDS_HUMAN: Partial<Record<ResumeOutcome, string>> = {
+  diverged: `origin/${branch} holds commits the local branch does not have, most likely pushed by a person.`,
+  "foreign-commits": `${branch} holds commits not authored by the agent, so it was not rebased unattended.`,
+  conflict: `${branch} does not rebase cleanly onto ${BASE_REF}.`,
+};
+const resumeOutcome = syncResumedBranch(BASE_REF, branch, GIT_IDENTITY_EMAIL);
+if (resumeOutcome === "rebased") console.log(`Rebased resumed ${branch} onto ${BASE_REF}.`);
+const needsHuman = NEEDS_HUMAN[resumeOutcome];
+if (needsHuman) {
+  console.error(`${needsHuman} Needs a human.`);
+  execFileSync(
+    "gh",
+    [
+      "issue",
+      "comment",
+      issueNumber,
+      "--body",
+      `RALPH did not start: ${needsHuman} Bring the branch up to date with ${BASE_REF} by hand, then relabel ready-for-agent.`,
+    ],
+    { stdio: "inherit" }
+  );
+  process.exit(2);
+}
 
 const checkpointController = new AbortController();
 const checkpointTimer = setTimeout(() => {
