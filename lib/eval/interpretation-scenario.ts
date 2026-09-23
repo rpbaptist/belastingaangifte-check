@@ -1,9 +1,10 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { z } from "zod";
 import { StatementExtractionSchema, TaxReturnEntrySchema, TaxReturnSchema } from "@/lib/schemas";
 import type { ExtractedData } from "@/lib/types";
-import { FIXTURES_DIR } from "./fixtures";
+import { splitStatements } from "@/lib/extraction-session";
+import { FIXTURES_DIR, listSubdirectories } from "./fixtures";
 import type { ReportSummary } from "./interpretation";
 
 // Interpretation fixtures live one directory each under eval/interpretation/ (#104). Each
@@ -35,11 +36,7 @@ const ScenarioManifestSchema = z
 type DocumentRef = z.infer<typeof DocumentRefSchema>;
 
 export function listScenarios(): string[] {
-  if (!existsSync(INTERPRETATION_DIR)) return [];
-  return readdirSync(INTERPRETATION_DIR, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .sort();
+  return listSubdirectories(INTERPRETATION_DIR);
 }
 
 function readJson(file: string): unknown {
@@ -70,19 +67,11 @@ export function loadScenario(name: string): { input: ExtractedData; expected: Re
   );
   taxReturn.entries.push(...manifest.taxReturn.extraEntries);
 
+  // The same split the extraction session applies, so a split bug fails the replay too.
   const input: ExtractedData = {
     taxReturn,
-    annualStatements: [],
-    propertyStatements: [],
-    unrecognizedDocuments: [],
+    ...splitStatements(manifest.bewijsstukken.map((ref) => readBewijsstuk(documentPath(dir, ref)))),
   };
-  for (const ref of manifest.bewijsstukken) {
-    const doc = readBewijsstuk(documentPath(dir, ref));
-    if (doc.documentKind === "jaaropgave") input.annualStatements.push(doc.annualStatement);
-    else if (doc.documentKind === "unrecognized") {
-      input.unrecognizedDocuments.push({ institution: doc.institution, taxYear: doc.taxYear });
-    } else input.propertyStatements.push(doc.propertyStatement);
-  }
 
   return { input, expected: readJson(path.join(dir, "expected.json")) as ReportSummary };
 }

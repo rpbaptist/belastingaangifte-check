@@ -104,7 +104,9 @@ export function summarizeReport(report: DeterministicReport): ReportSummary {
     findings: { count: report.findings.length, byKind },
     rulePoints: {
       count: report.rulePoints.length,
-      accountNumbers: report.rulePoints.flatMap((p) => (p.accountNumber ? [p.accountNumber] : [])),
+      accountNumbers: report.rulePoints
+        .flatMap((p) => (p.accountNumber ? [p.accountNumber] : []))
+        .sort(),
     },
   };
 }
