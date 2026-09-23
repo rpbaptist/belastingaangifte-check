@@ -1,0 +1,27 @@
+{
+  "institution": "Rabobank",
+  "institutionType": "bank",
+  "taxYear": 2023,
+  "accounts": [
+    {
+      "accountNumber": "NL18RABO0332211004",
+      "description": "Rabobank Spaarrekening",
+      "amounts": { "bank": { "balance": 13250 } }
+    },
+    {
+      "accountNumber": "NL64RABO0456789012",
+      "description": "Hypotheek eigen woning",
+      "amounts": {
+        "mortgage": { "interestPaid": 7310, "openingDebt": 215000, "remainingDebt": 207690 }
+      }
+    },
+    {
+      "accountNumber": "NL64RABO0456789077",
+      "description": "Hypotheek Zeeweg 12 (beleggingspand)",
+      "amounts": {
+        "mortgage": { "interestPaid": 3120, "openingDebt": 95000, "remainingDebt": 91880 }
+      }
+    }
+  ],
+  "metadata": {}
+}

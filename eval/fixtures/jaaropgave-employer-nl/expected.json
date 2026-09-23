@@ -1,0 +1,15 @@
+{
+  "institution": "Alpha B.V.",
+  "institutionType": "other",
+  "taxYear": 2023,
+  "accounts": [
+    {
+      "accountNumber": "135.689.600",
+      "description": "Jaaropgave loonheffingen 2023",
+      "amounts": {
+        "wage": { "taxableWage": 41200, "withheldTax": 10540, "holidayAllowance": 3296 }
+      }
+    }
+  ],
+  "metadata": {}
+}

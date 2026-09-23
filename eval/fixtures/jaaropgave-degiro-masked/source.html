@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <title>DEGIRO jaaroverzicht 2023 (synthetic fixture)</title>
+    <style>
+      /*
+        Synthetic jaaropgave fixture (#106, ADR 0009). Every text run is absolutely
+        positioned: there is NO table markup. All names, account IDs and amounts are
+        invented.
+
+        Layout under test: DEGIRO prints its beleggingsrekening identifier already masked
+        by the issuer ("******ist" — lib/reconciler.ts documents this). The correct reading
+        copies the mask exactly as shown; it must not be "unmasked", guessed, or masked
+        further. The linked geldrekening (cash) sits on a separate account with its own
+        IBAN, per the extractor's DEGIRO rule.
+      */
+      @page {
+        size: A4;
+        margin: 0;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      .page {
+        position: relative;
+        width: 210mm;
+        height: 297mm;
+        overflow: hidden;
+        font-family: "DejaVu Sans", sans-serif;
+        color: #111;
+      }
+      .run {
+        position: absolute;
+        font-size: 11px;
+        line-height: 14px;
+        white-space: nowrap;
+      }
+      .title {
+        font-size: 15px;
+        font-weight: bold;
+      }
+      .section {
+        font-size: 13px;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="page">
+      <div class="run title" style="top: 15mm; left: 24mm">DEGIRO</div>
+      <div class="run" style="top: 22mm; left: 24mm">Jaaroverzicht 2023</div>
+      <div class="run" style="top: 29mm; left: 24mm">Gebruikersnaam: ******ist</div>
+
+      <div class="run section" style="top: 45mm; left: 24mm">DEGIRO beleggingsrekening</div>
+      <div class="run" style="top: 54mm; left: 24mm">
+        Portefeuillewaarde per 01-01-2023 (excl. cash): € 18.200
+      </div>
+      <div class="run" style="top: 62mm; left: 24mm">
+        Brutodividend op aandelen of rente op obligaties 2023: € 540
+      </div>
+
+      <div class="run section" style="top: 80mm; left: 24mm">flatexDEGIRO Geldrekening EUR</div>
+      <div class="run" style="top: 89mm; left: 24mm">IBAN: DE89 3704 0044 0532 0130 00</div>
+      <div class="run" style="top: 97mm; left: 24mm">Saldo per 01-01-2023: € 500</div>
+    </section>
+  </body>
+</html>

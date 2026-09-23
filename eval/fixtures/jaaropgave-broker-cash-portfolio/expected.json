@@ -1,0 +1,16 @@
+{
+  "institution": "Saxo Bank",
+  "institutionType": "broker",
+  "taxYear": 2023,
+  "accounts": [
+    {
+      "accountNumber": "SAXO1234567",
+      "description": "Beleggingsrekening",
+      "amounts": {
+        "bank": { "balance": -450 },
+        "broker": { "balance": 14780 }
+      }
+    }
+  ],
+  "metadata": {}
+}

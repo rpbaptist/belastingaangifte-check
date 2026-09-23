@@ -1,0 +1,22 @@
+{
+  "institution": "DEGIRO",
+  "institutionType": "broker",
+  "taxYear": 2023,
+  "accounts": [
+    {
+      "accountNumber": "******ist",
+      "description": "DEGIRO beleggingsrekening",
+      "amounts": {
+        "broker": { "balance": 18200, "dividend": 540 }
+      }
+    },
+    {
+      "accountNumber": "DE89370400440532013000",
+      "description": "flatexDEGIRO Geldrekening EUR",
+      "amounts": {
+        "bank": { "balance": 500 }
+      }
+    }
+  ],
+  "metadata": {}
+}
