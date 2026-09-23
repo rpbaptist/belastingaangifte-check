@@ -208,9 +208,10 @@
     ]
   },
   "findings": {
-    "count": 2,
+    "count": 3,
     "byKind": {
-      "unknownAmountKind": 2
+      "unknownAmountKind": 2,
+      "duplicateRow": 1
     }
   },
   "rulePoints": {

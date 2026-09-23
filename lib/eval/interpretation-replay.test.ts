@@ -106,7 +106,12 @@ describe("Interpretation fixture aangifte-2023", () => {
   it("keeps both components of one account as two covered rows", () => {
     const asn = baseline.covered.rows.filter((r) => r.field === "ASN Themabeleggen");
     expect(asn.map((r) => r.amountTaxReturn).sort((a, b) => a - b)).toEqual([2140, 17630]);
-    expect(baseline.findings.byKind.duplicateRow).toBeUndefined();
+  });
+
+  it("collapses a fully identical aangifte row into one row and one finding", () => {
+    const sns = baseline.missingStatement.rows.filter((r) => r.field === "SNS Betaalrekening");
+    expect(sns).toHaveLength(1);
+    expect(baseline.findings.byKind.duplicateRow).toBe(1);
   });
 
   it("covers a joint account in two jaaropgaves once, and loses it when both are gone", () => {

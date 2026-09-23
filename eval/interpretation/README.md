@@ -61,6 +61,9 @@ fixtures, plus the #99 shape, added by hand:
 - **One account in two jaaropgaves.** Both fiscal partners' ING jaaropgaves list the joint
   account `NL22INGB0673345785`, written differently. The aangifte row is covered once; the
   second copy is not reported as not filled in.
+- **A fully identical row.** The `SNS Betaalrekening` aangifte row appears twice, identical in
+  every field — an extraction artifact. It collapses to one row plus one `duplicateRow` finding,
+  so the collapse path from #99 runs too.
 
 ## Known-wrong marker
 
